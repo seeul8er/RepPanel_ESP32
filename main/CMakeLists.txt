@@ -1,3 +1,24 @@
-idf_component_register(SRCS "main.c" reppanel.c reppanel.h custom_theme/lv_theme_rep_panel_light.c custom_theme/lv_theme_rep_panel_light.h
-                    INCLUDE_DIRS "."
-                    REQUIRES lvgl_touch lvgl_tft lvgl)
+#idf_component_register(SRCS "main.c"
+#        reppanel.c
+#        reppanel.h
+#        custom_theme/lv_theme_rep_panel_light.c
+#        custom_theme/lv_theme_rep_panel_light.h
+#        request.c
+#        request.h
+#        INCLUDE_DIRS "."
+#        REQUIRES nvs_flash lvgl_touch lvgl_tft lvgl)
+
+set(COMPONENT_REQUIRES nvs_flash lvgl_touch lvgl_tft lvgl esp_http_client)
+set(COMPONENT_PRIV_REQUIRES )
+
+set(COMPONENT_SRCS
+        "main.c"
+        "reppanel.c"
+        "reppanel.h"
+        "request.c"
+        "request.h"
+        "custom_theme/lv_theme_rep_panel_light.h"
+        "custom_theme/lv_theme_rep_panel_light.c")
+set(COMPONENT_ADD_INCLUDEDIRS "custom_theme" ".")
+
+register_component()

@@ -7,6 +7,7 @@
 #include <lvgl/src/lv_objx/lv_label.h>
 #include <lvgl/lvgl.h>
 #include "custom_theme/lv_theme_rep_panel_light.h"
+#include "reppanel.h"
 
 void draw_process();
 
@@ -27,7 +28,7 @@ void draw_process() {
     lv_obj_t *cont = lv_cont_create(lv_scr_act(), NULL);
     lv_cont_set_fit(cont, LV_FIT_FILL);
 
-    lv_obj_t *label_bed_temp = lv_label_create(cont, NULL);
+    label_bed_temp = lv_label_create(cont, NULL);
     static lv_style_t style_label;
     lv_style_copy(&style_label, &lv_style_plain);
     style_label.text.color = REP_PANEL_HIGHLIGHT;

@@ -1,0 +1,82 @@
+{
+  "status": "I",
+  "coords": {
+    "axesHomed": [
+      0,
+      0,
+      0
+    ],
+    "wpl": 1,
+    "xyz": [
+      0,
+      0,
+      0
+    ],
+    "machine": [
+      0,
+      0,
+      0
+    ],
+    "extr": [
+      0
+    ]
+  },
+  "speeds": {
+    "requested": 0,
+    "top": 0
+  },
+  "currentTool": -1,
+  "params": {
+    "atxPower": -1,
+    "fanPercent": [
+      0,
+      0,
+      0
+    ],
+    "speedFactor": 100,
+    "extrFactors": [
+      100
+    ],
+    "babystep": 0
+  },
+  "seq": 0,
+  "sensors": {
+    "ProbeValue": 1000,
+    "fanRPM": [
+      -1,
+      -1,
+      -1
+    ]
+  },
+  "temps": {
+    "bed": {
+      "current": 22,
+      "active": 0,
+      "standby": 0,
+      "state": 0,
+      "heater": 0
+    },
+    "current": [
+      22,
+      20.7
+    ],
+    "state": [
+      0,
+      0
+    ],
+    "tools": {
+      "active": [
+        [
+          0
+        ]
+      ],
+      "standby": [
+        [
+          0
+        ]
+      ]
+    },
+    "extra": []
+  },
+  "time": 3091
+}
