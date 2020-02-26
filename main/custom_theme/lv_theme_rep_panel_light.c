@@ -81,8 +81,8 @@ static void basic_init(void) {
     panel.body.padding.top = LV_DPI / 8;
     panel.body.padding.bottom = LV_DPI / 8;
     panel.body.padding.inner = LV_DPI / 12;
-    panel.text.color = lv_color_hex3(0x333);
-    panel.image.color = lv_color_hex3(0x333);
+    panel.text.color = REP_PANEL_DARK_TEXT;
+    panel.image.color = REP_PANEL_DARK_TEXT;
 
     lv_style_copy(&sb, &def);
     sb.body.main_color = LV_COLOR_BLACK;

@@ -1,8 +1,6 @@
-#include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <stdlib.h>
-#include <string.h>
 #include <esp_log.h>
 #include <esp_wifi_types.h>
 #include <esp_wifi.h>
@@ -146,7 +144,7 @@ void app_main() {
 
     rep_panel_ui_create();
     static uint32_t user_data = 10;
-    lv_task_t *request_task = lv_task_create(request_reprap_status, 2000, LV_TASK_PRIO_MID, &user_data);
+    lv_task_t *request_task = lv_task_create(request_reprap_status_updates, 750, LV_TASK_PRIO_MID, &user_data);
     lv_task_ready(request_task);
 
     //Initialize NVS

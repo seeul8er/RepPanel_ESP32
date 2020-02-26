@@ -29,8 +29,9 @@ extern "C" {
  *      DEFINES
  *********************/
 
-#define REP_PANEL_DARK LV_COLOR_MAKE(0x2C, 0x2C, 0x2C) // 262626
-#define REP_PANEL_HIGHLIGHT LV_COLOR_MAKE(0x19, 0xae, 0xff) // #19aeff
+#define REP_PANEL_DARK LV_COLOR_MAKE(0x12, 0x12, 0x12)
+#define REP_PANEL_DARK_HIGHLIGHT LV_COLOR_MAKE(0x19, 0xae, 0xff)
+#define REP_PANEL_DARK_TEXT LV_COLOR_MAKE(0xe6, 0xe6, 0xe6)
 
 /**********************
  *      TYPEDEFS

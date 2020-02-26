@@ -5,6 +5,9 @@
 #ifndef REPPANEL_ESP32_REQUEST_H
 #define REPPANEL_ESP32_REQUEST_H
 
-void request_reprap_status(lv_task_t *task);
+#define PRINTER_NAME            "CyberPrint"
+#define MAX_REQ_ADDR_LENGTH     1024
+
+void request_reprap_status_updates(lv_task_t *task);
 
 #endif //REPPANEL_ESP32_REQUEST_H
