@@ -71,13 +71,13 @@ void process_reprap_status(int type) {
     cJSON *duet_temps_current = cJSON_GetObjectItem(duet_temps, DUET_TEMPS_CURRENT);
     if (duet_temps_current) {
         sprintf(one_decimal_txt, "%.1f", cJSON_GetArrayItem(duet_temps_current, 1)->valuedouble);
-        lv_label_set_text(label_tool1_temp, one_decimal_txt);
+        //lv_label_set_text(label_tool1_temp, one_decimal_txt);
     }
 
     cJSON *print_progess = cJSON_GetObjectItem(root, REPRAP_FRAC_PRINTED);
     if (cJSON_IsNumber(print_progess)) {
         sprintf(one_decimal_txt, "%.0f%%", print_progess->valuedouble);
-        lv_label_set_text(label_progress_percent, one_decimal_txt);
+        //lv_label_set_text(label_progress_percent, one_decimal_txt);
     }
 
     cJSON_Delete(root);
