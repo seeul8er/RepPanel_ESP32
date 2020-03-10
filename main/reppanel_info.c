@@ -9,6 +9,7 @@
 #include <esp_log.h>
 #include "reppanel_info.h"
 #include "reppanel.h"
+#include "esp32_wifi.h"
 
 #define TAG "RepPanelInfo"
 
@@ -20,19 +21,20 @@ lv_obj_t *ta_reprap_pass;
 
 static lv_obj_t *kb;
 
-static void save_event(lv_obj_t *obj, lv_event_t event) {
+static void save_reppanel_settings_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         ESP_LOGI(TAG, "Saving settings\n");
         const char *ssid = lv_ta_get_text(ta_ssid);
-        strncpy(wifi_ssid, ssid, 32);
+        strncpy(wifi_ssid, ssid, MAX_SSID_LEN);
         const char *tmp_wifi_pass = lv_ta_get_text(ta_wifi_pass);
-        strncpy(wifi_pass, tmp_wifi_pass, 64);
+        strncpy(wifi_pass, tmp_wifi_pass, MAX_WIFI_PASS_LEN);
 
         const char *tmp_rep_addr = lv_ta_get_text(ta_printer_addr);
-        strncpy(rep_addr, tmp_rep_addr, 200);
+        strncpy(rep_addr, tmp_rep_addr, MAX_REP_ADDR_LEN);
         const char *tmp_rep_pass = lv_ta_get_text(ta_reprap_pass);
-        strncpy(rep_pass, tmp_rep_pass, 64);
+        strncpy(rep_pass, tmp_rep_pass, MAX_REP_PASS_LEN);
         write_settings_to_nvs();
+        reconnect_wifi();
     }
 }
 
@@ -51,7 +53,7 @@ static void ta_event_cb(lv_obj_t *ta, lv_event_t event) {
         if (kb == NULL) {
             kb = lv_kb_create(info_page, NULL);
             lv_obj_set_pos(kb, 0, 0);
-            lv_obj_set_size(kb, LV_HOR_RES - 50, 95);
+            lv_obj_set_size(kb, LV_HOR_RES - 50, 130);
             lv_kb_set_cursor_manage(kb, true); /* Automatically show/hide cursors on text areas */
             lv_kb_set_ta(kb, ta);
             lv_obj_set_event_cb(kb, kb_event_cb);
@@ -67,6 +69,8 @@ static void ta_event_cb(lv_obj_t *ta, lv_event_t event) {
 }
 
 void draw_info(lv_obj_t *parent_screen) {
+    read_settings_nvs();
+
     info_page = lv_page_create(parent_screen, NULL);
     lv_obj_set_size(info_page, lv_disp_get_hor_res(NULL), 250);
     lv_page_set_scrl_fit2(info_page, LV_FIT_TIGHT, LV_FIT_FILL);
@@ -113,7 +117,7 @@ void draw_info(lv_obj_t *parent_screen) {
     lv_ta_set_cursor_type(ta_printer_addr, LV_CURSOR_LINE | LV_CURSOR_HIDDEN);
     lv_obj_set_width(ta_printer_addr, LV_HOR_RES - 250);
     lv_obj_set_height(ta_printer_addr, 25);
-    lv_ta_set_text(ta_printer_addr, (const char *) wifi_ssid);
+    lv_ta_set_text(ta_printer_addr, (const char *) rep_addr);
     lv_obj_set_event_cb(ta_printer_addr, ta_event_cb);
     lv_ta_set_one_line(ta_ssid, true);
 
@@ -122,7 +126,7 @@ void draw_info(lv_obj_t *parent_screen) {
     lv_label_set_text(label_reprap_pass, "RepRap password:");
 
     ta_reprap_pass = lv_ta_create(reprap_pass_cnt, NULL);
-    lv_ta_set_text(ta_reprap_pass, (const char *) wifi_pass);
+    lv_ta_set_text(ta_reprap_pass, (const char *) rep_pass);
     lv_ta_set_pwd_mode(ta_reprap_pass, true);
     lv_ta_set_one_line(ta_reprap_pass, true);
     lv_obj_set_width(ta_reprap_pass, LV_HOR_RES - 260);
@@ -135,7 +139,7 @@ void draw_info(lv_obj_t *parent_screen) {
 //    lv_label_set_long_mode(label_sig_strength, LV_LABEL_LONG_BREAK);
 //    lv_label_set_text_fmt(label_sig_strength, "RepRap signal: %s-124dBm# RepPanel signal: %s-125dBm#",
 //            REP_PANEL_DARK_ACCENT_ALT2_STR, REP_PANEL_DARK_ACCENT_ALT2_STR);
-    create_button(info_page, save_bnt, "Save", save_event);
+    create_button(info_page, save_bnt, "Save", save_reppanel_settings_event);
 
 
 }

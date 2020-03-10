@@ -5,8 +5,10 @@
 #ifndef LVGL_REPPANEL_H
 #define LVGL_REPPANEL_H
 
+#include <stdint.h>
+
 #include "reppanel_helper.h"
-#include "reppanel_settings.h"
+#include "esp32_settings.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,9 +22,10 @@ extern "C" {
 
 #define VERSION_STR             "v0.1.0"
 
-void rep_panel_ui_create();
+extern uint8_t reppanel_conn_status;               // 0=no connection, 1=connected wifi, 2=disconnected wifi, 3=reconnecting wifi,
+                                            // 4=working UART
 
-extern lv_obj_t *process_scr;              // screen for the process settings
+extern lv_obj_t *process_scr;               // screen for the process settings
 extern lv_obj_t *mainmenu_scr;              // screen for the main_menue
 
 extern lv_obj_t *cont_main;
@@ -43,6 +46,10 @@ extern lv_obj_t *ta_wifi_pass;
 extern lv_obj_t *ta_ssid;
 extern lv_obj_t *ta_printer_addr;
 extern lv_obj_t *ta_reprap_pass;
+extern lv_obj_t *label_connection_status;
+
+void rep_panel_ui_create();
+void update_rep_panel_conn_status();
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -8,6 +8,9 @@
 #include "reppanel_machine.h"
 #include "reppanel_helper.h"
 
+static char *cali_opt_map[] = {"True Bed Leveling", "Mesh Bed Leveling"};
+static char *cali_opt_list = {"True Bed Leveling\nMesh Bed Leveling"};
+
 lv_obj_t *machine_page;
 lv_obj_t *ddlist_cali_options;
 

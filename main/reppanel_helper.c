@@ -5,7 +5,7 @@
 #include <lvgl/src/lv_core/lv_obj.h>
 #include <lvgl/src/lv_objx/lv_btn.h>
 #include <lvgl/src/lv_objx/lv_label.h>
-#include "reppanel_settings.h"
+#include "esp32_settings.h"
 
 void get_tmp_unit(char *buf) {
     if (temp_unit == 0)
