@@ -68,6 +68,14 @@ static void ta_event_cb(lv_obj_t *ta, lv_event_t event) {
     }
 }
 
+static void scan_wifi_event(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_RELEASED) {
+        char ssids[200];
+        get_avail_wifi_networks(ssids);
+        ESP_LOGI(TAG, "Found: %s", ssids);
+    }
+}
+
 void draw_info(lv_obj_t *parent_screen) {
     read_settings_nvs();
 
@@ -81,7 +89,7 @@ void draw_info(lv_obj_t *parent_screen) {
     lv_label_set_text_fmt(label_about, "%s RepPanel for ESP32# - %s", REP_PANEL_DARK_ACCENT_ALT1_STR, VERSION_STR);
 
     lv_obj_t *ssid_cnt = lv_cont_create(info_page, NULL);
-    lv_cont_set_layout(ssid_cnt, LV_LAYOUT_ROW_T);
+    lv_cont_set_layout(ssid_cnt, LV_LAYOUT_ROW_M);
     lv_cont_set_fit(ssid_cnt, LV_FIT_TIGHT);
     lv_obj_t *label_ssid = lv_label_create(ssid_cnt, NULL);
     lv_label_set_text(label_ssid, "WiFi SSID:");
@@ -94,6 +102,9 @@ void draw_info(lv_obj_t *parent_screen) {
     lv_ta_set_text(ta_ssid, (const char *) wifi_ssid);
     lv_obj_set_event_cb(ta_ssid, ta_event_cb);
     lv_ta_set_one_line(ta_ssid, true);
+
+    static lv_obj_t *scan_wifi_btn;
+    create_button(ssid_cnt, scan_wifi_btn, LV_SYMBOL_REFRESH, scan_wifi_event);
 
     lv_obj_t *wifi_pass_cnt = lv_cont_create(info_page, ssid_cnt);
     lv_obj_t *label_wifi_pass = lv_label_create(wifi_pass_cnt, NULL);

@@ -15,6 +15,7 @@
 #include "tp_spi.h"
 #include "touch_driver.h"
 #include "esp32_wifi.h"
+#include "reppanel_request.h"
 
 
 #define TAG "Main"
@@ -90,8 +91,8 @@ void app_main() {
     esp_register_freertos_tick_hook(lv_tick_task);
 
     static uint32_t user_data = 10;
-    // lv_task_t *request_task = lv_task_create(request_reprap_status_updates, 750, LV_TASK_PRIO_MID, &user_data);
-    // lv_task_ready(request_task);
+    lv_task_t *request_task = lv_task_create(request_reprap_status_updates, 750, LV_TASK_PRIO_MID, &user_data);
+    lv_task_ready(request_task);
 
     //Initialize NVS
     esp_err_t ret = nvs_flash_init();

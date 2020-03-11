@@ -76,8 +76,8 @@ static void basic_init(void)
     panel.body.shadow.color   = DEF_SHADOW_COLOR;
     panel.body.shadow.type    = LV_SHADOW_BOTTOM;
     panel.body.shadow.width   = 0;
-    panel.body.padding.left   = LV_DPI / 6;
-    panel.body.padding.right  = LV_DPI / 6;
+    panel.body.padding.left   = LV_DPI / 12;
+    panel.body.padding.right  = LV_DPI / 12;
     panel.body.padding.top    = LV_DPI / 100;
     panel.body.padding.bottom = LV_DPI / 50;
     panel.body.padding.inner  = LV_DPI / 9;
@@ -640,7 +640,7 @@ static void ddlist_init(void)
     static lv_style_t bg, sel;
     lv_style_copy(&bg, theme.style.panel);
     bg.body.padding.left   = LV_DPI / 12;
-    bg.body.padding.right  = LV_DPI / 12;
+    bg.body.padding.right  = LV_DPI / 6;
     bg.body.padding.top    = LV_DPI / 12;
     bg.body.padding.bottom = LV_DPI / 12;
     bg.text.line_space     = LV_DPI / 14;

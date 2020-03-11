@@ -11,9 +11,11 @@
 #include "reppanel_process.h"
 #include "reppanel_machine.h"
 #include "reppanel_info.h"
+#include "esp32_wifi.h"
 #include <stdio.h>
 
 void draw_header(lv_obj_t *parent_screen);
+
 void draw_main_menu(lv_obj_t *parent_screen);
 
 /**********************
@@ -43,7 +45,7 @@ void rep_panel_ui_create() {
     lv_scr_load(mainmenu_scr);
 }
 
-static void display_mainmenu_event(lv_obj_t * obj, lv_event_t event) {
+static void display_mainmenu_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         if (mainmenu_scr) lv_obj_del(mainmenu_scr);
         mainmenu_scr = lv_obj_create(NULL, NULL);
@@ -53,22 +55,22 @@ static void display_mainmenu_event(lv_obj_t * obj, lv_event_t event) {
     }
 }
 
-static void sevent_handler(lv_obj_t * obj, lv_event_t event)
-{
-    if(event == LV_EVENT_VALUE_CHANGED) {
-        printf("Button: %s\n", lv_mbox_get_active_btn_text(obj));
+static void close_conn_info_event_handler(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_VALUE_CHANGED) {
+        lv_mbox_start_auto_close(obj, 0);
     }
 }
 
-static void connection_info_event(lv_obj_t * obj, lv_event_t event) {
+static void connection_info_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
-        static const char * btns[] ={"Close", ""};
-
-        lv_obj_t * mbox1 = lv_mbox_create(lv_scr_act(), NULL);
-        lv_mbox_set_text(mbox1, "A message box with button.");
+        static const char *btns[] = {"Close", ""};
+        char conn_txt[200];
+        get_connection_info(conn_txt);
+        lv_obj_t *mbox1 = lv_mbox_create(lv_scr_act(), NULL);
+        lv_mbox_set_text(mbox1, conn_txt);
         lv_mbox_add_btns(mbox1, btns);
-        lv_obj_set_width(mbox1, 200);
-        lv_obj_set_event_cb(mbox1, sevent_handler);
+        lv_obj_set_width(mbox1, 500);
+        lv_obj_set_event_cb(mbox1, close_conn_info_event_handler);
         lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); /*Align to the corner*/
     }
 }
@@ -119,10 +121,12 @@ void draw_header(lv_obj_t *parent_screen) {
     lv_cont_set_layout(cont_header_right, LV_LAYOUT_ROW_M);
     lv_obj_align(cont_header_right, cont_header, LV_ALIGN_IN_RIGHT_MID, -80, -20);
 
-    label_connection_status = lv_label_create(cont_header_right, NULL);
+    lv_obj_t *click_cont = lv_cont_create(cont_header_right, NULL);
+    lv_cont_set_fit(click_cont, LV_FIT_TIGHT);
+    label_connection_status = lv_label_create(click_cont, NULL);
     lv_label_set_recolor(label_connection_status, true);
-    lv_obj_set_event_cb(label_connection_status, connection_info_event);
     update_rep_panel_conn_status();
+    lv_obj_set_event_cb(click_cont, connection_info_event);
 
     lv_obj_t *img_chamber_tmp = lv_img_create(cont_header_right, NULL);
     LV_IMG_DECLARE(chamber_tmp);
@@ -148,9 +152,9 @@ void draw_header(lv_obj_t *parent_screen) {
     lv_imgbtn_set_toggle(console_button, true);
 }
 
-static void main_menu_event_handler(lv_obj_t * obj, lv_event_t event) {
-    if(event == LV_EVENT_VALUE_CHANGED) {
-        const char * txt = lv_btnm_get_active_btn_text(obj);
+static void main_menu_event_handler(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_VALUE_CHANGED) {
+        const char *txt = lv_btnm_get_active_btn_text(obj);
         printf("%s was pressed\n", txt);
         update_rep_panel_conn_status();
         if (strcmp(txt, "Process") == 0) {
@@ -199,10 +203,10 @@ void update_rep_panel_conn_status() {
     }
 }
 
-static const char * main_menu_button_map[] = {"Process", "Job", "Machine", "\n", "Macros", "Info", ""};
+static const char *main_menu_button_map[] = {"Process", "Job", "Machine", "\n", "Macros", "Info", ""};
 
 void draw_main_menu(lv_obj_t *parent_screen) {
-    lv_obj_t * btnm1 = lv_btnm_create(parent_screen, NULL);
+    lv_obj_t *btnm1 = lv_btnm_create(parent_screen, NULL);
     lv_btnm_set_map(btnm1, main_menu_button_map);
     lv_btnm_set_btn_width(btnm1, 10, 2);        /*Make "Action1" twice as wide as "Action2"*/
     lv_obj_align(btnm1, NULL, LV_ALIGN_CENTER, 0, 0);

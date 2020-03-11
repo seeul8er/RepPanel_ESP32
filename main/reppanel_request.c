@@ -11,7 +11,7 @@
 #include <lvgl/lvgl.h>
 #include "duet_status_json.h"
 #include "reppanel.h"
-#include "request.h"
+#include "reppanel_request.h"
 
 #define TAG                 "RequestTask"
 #define JSON_BUFF_SIZE      1024
@@ -289,7 +289,7 @@ void wifi_get_config() {
 }
 
 void request_reprap_status_updates(lv_task_t *task) {
-    uint32_t *user_data = task->user_data;
     wifi_duet_get_status(1);
-    wifi_duet_get_status(3);
+    //wifi_duet_get_status(3);
+    sleep(1);
 }

@@ -16,6 +16,7 @@
 #define MAXIMUM_RETRY_WIFI  5
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT      BIT1
+#define DEFAULT_SCAN_LIST_SIZE  10
 
 static EventGroupHandle_t s_wifi_event_group;
 static int s_retry_num = 0;
@@ -74,4 +75,47 @@ void reconnect_wifi() {
     memcpy(wifi_config.sta.password, wifi_pass, MAX_WIFI_PASS_LEN);
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
     esp_wifi_connect();
+}
+
+void get_connection_info(char txt_buffer[200]) {
+    wifi_ap_record_t ap_info;
+    switch (reppanel_conn_status) {
+        default:
+        case 2:
+        case 0:
+            strcpy(txt_buffer, "Not connected");
+            break;
+        case 1:
+            memset(&ap_info, 0, sizeof(ap_info));
+            ESP_ERROR_CHECK(esp_wifi_sta_get_ap_info(&ap_info));
+            sprintf(txt_buffer, "Connected to %s\nSignal: %ddBm", ap_info.ssid, ap_info.rssi);
+            break;
+        case 3:
+            strcpy(txt_buffer, "Reconnecting");
+    }
+}
+
+void get_avail_wifi_networks(char *aps) {
+    uint16_t number = DEFAULT_SCAN_LIST_SIZE;
+    wifi_ap_record_t ap_info[DEFAULT_SCAN_LIST_SIZE];
+    uint16_t ap_count = 0;
+    memset(ap_info, 0, sizeof(ap_info));
+
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    ESP_ERROR_CHECK(esp_wifi_start());
+    ESP_ERROR_CHECK(esp_wifi_scan_start(NULL, true));
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
+    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_count));
+    ESP_LOGI(TAG, "Total APs scanned = %u", ap_count);
+    if (ap_count > 0) {
+        sprintf(aps, "%s", ap_info[0].ssid);
+    }
+    for (int i = 1; (i < DEFAULT_SCAN_LIST_SIZE) && (i < ap_count); i++) {
+        char tmp[50];
+        sprintf(tmp, "\n%s", ap_info[i].ssid);
+        strcat(aps, tmp);
+        //ESP_LOGI(TAG, "SSID \t\t%s", ap_info[i].ssid);
+        //ESP_LOGI(TAG, "RSSI \t\t%d", ap_info[i].rssi);
+        //ESP_LOGI(TAG, "Channel \t\t%d\n", ap_info[i].primary);
+    }
 }
