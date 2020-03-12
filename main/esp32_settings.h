@@ -40,5 +40,6 @@ extern int toolstates[MAX_NUM_TOOLS];       // 0=off, 1=standby, 2=active, 3=fau
 
 void write_settings_to_nvs();
 void read_settings_nvs();
+char get_temp_unit();
 
 #endif //LVGL_REPPANEL_SETTINGS_H

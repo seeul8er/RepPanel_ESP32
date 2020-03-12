@@ -55,29 +55,31 @@ void process_reprap_status(int type) {
         }
         return;
     }
-    static char one_decimal_txt[6];
     cJSON *name = cJSON_GetObjectItem(root, DUET_STATUS);
     if (cJSON_IsString(name) && (name->valuestring != NULL)) {
-        lv_label_set_text(label_status, decode_reprap_status(name->valuestring));
+        strlcpy(reppanel_status, decode_reprap_status(name->valuestring), MAX_REPRAP_STATUS_LEN);
+        if (label_status != NULL) lv_label_set_text(label_status, reppanel_status);
     }
 
     cJSON *duet_temps = cJSON_GetObjectItem(root, DUET_TEMPS);
     cJSON *duet_temps_bed = cJSON_GetObjectItem(duet_temps, DUET_TEMPS_BED);
     if (duet_temps_bed) {
-        sprintf(one_decimal_txt, "%.1f", cJSON_GetObjectItem(duet_temps_bed, DUET_TEMPS_BED_CURRENT)->valuedouble);
-        lv_label_set_text(label_bed_temp, one_decimal_txt);
+        sprintf(reppanel_bed_temp, "%.1f°%c", cJSON_GetObjectItem(duet_temps_bed, DUET_TEMPS_BED_CURRENT)->valuedouble,
+                get_temp_unit());
+        if (label_bed_temp != NULL) lv_label_set_text(label_bed_temp, reppanel_bed_temp);
     }
 
     cJSON *duet_temps_current = cJSON_GetObjectItem(duet_temps, DUET_TEMPS_CURRENT);
     if (duet_temps_current) {
-        sprintf(one_decimal_txt, "%.1f", cJSON_GetArrayItem(duet_temps_current, 1)->valuedouble);
-        //lv_label_set_text(label_tool1_temp, one_decimal_txt);
+        sprintf(reppanel_tool_temp, "%.1f°%c", cJSON_GetArrayItem(duet_temps_current, 1)->valuedouble, get_temp_unit());
+        if (label_tool_temp != NULL) lv_label_set_text(label_tool_temp, reppanel_tool_temp);
+        if (label_chamber_temp != NULL) lv_label_set_text(label_chamber_temp, reppanel_tool_temp);
     }
 
     cJSON *print_progess = cJSON_GetObjectItem(root, REPRAP_FRAC_PRINTED);
     if (cJSON_IsNumber(print_progess)) {
-        sprintf(one_decimal_txt, "%.0f%%", print_progess->valuedouble);
-        //lv_label_set_text(label_progress_percent, one_decimal_txt);
+        sprintf(reppanel_job_progess, "%.0f%%", print_progess->valuedouble);
+        //lv_label_set_text(label_progress_percent, reppanel_job_progess);
     }
 
     cJSON_Delete(root);
@@ -127,11 +129,13 @@ esp_err_t _http_event_handle(esp_http_client_event_t *evt) {
     return ESP_OK;
 }
 
-void wifi_duet_authorise() {
+void wifi_duet_authorise(bool get_d2wc_config) {
+    char printer_url[MAX_REQ_ADDR_LENGTH];
+    sprintf(printer_url, "%s/rr_connect?password=%s", rep_addr, rep_pass);
     esp_http_client_config_t config = {
-            .url = "http://CyberPrint.local/rr_connect?password=deimam",
+            .url = printer_url,
             .event_handler = _http_event_handle,
-    }; // http://cyberprint.local/rr_connect?password=deimam&time=2020-2-24T22%3A59%3A0
+    };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
 
@@ -141,11 +145,12 @@ void wifi_duet_authorise() {
                  esp_http_client_get_content_length(client));
     }
     esp_http_client_cleanup(client);
+    if (get_d2wc_config) reprap_wifi_download("0%3A%2Fsys%2Fdwc2settings.json");
 }
 
 void wifi_duet_get_status(int type) {
     char request_addr[MAX_REQ_ADDR_LENGTH];
-    sprintf(request_addr, "http://%s.local/rr_status?type=%i", PRINTER_NAME, type);
+    sprintf(request_addr, "%s/rr_status?type=%i", rep_addr, type);
     esp_http_client_config_t config = {
             .url = request_addr,
             .event_handler = _http_event_handle,
@@ -157,24 +162,27 @@ void wifi_duet_get_status(int type) {
         ESP_LOGI(TAG, "Status = %d, content_length = %d",
                  esp_http_client_get_status_code(client),
                  esp_http_client_get_content_length(client));
-    }
-    switch (esp_http_client_get_status_code(client)) {
-        case 200:
-            process_reprap_status(type);
-            break;
-        case 401:
-            ESP_LOGI(TAG, "Authorising with Duet");
-            wifi_duet_authorise();
-            break;
-        default:
-            break;
+
+        switch (esp_http_client_get_status_code(client)) {
+            case 200:
+                process_reprap_status(type);
+                break;
+            case 401:
+                ESP_LOGI(TAG, "Authorising with Duet");
+                wifi_duet_authorise(true);
+                break;
+            default:
+                break;
+        }
+    } else {
+        ESP_LOGW(TAG, "Error requesting RepRap status: %s", esp_err_to_name(err));
     }
     esp_http_client_cleanup(client);
 }
 
-void wifi_send_gcode(char *gcode) {
+void reprap_wifi_send_gcode(char *gcode) {
     char request_addr[MAX_REQ_ADDR_LENGTH];
-    sprintf(request_addr, "http://%s.local/rr_gcode?gcode=%s", PRINTER_NAME, gcode);
+    sprintf(request_addr, "%s/rr_gcode?gcode=%s", rep_addr, gcode);
     esp_http_client_config_t config = {
             .url = request_addr,
             .event_handler = _http_event_handle,
@@ -193,7 +201,7 @@ void wifi_send_gcode(char *gcode) {
             break;
         case 401:
             ESP_LOGI(TAG, "Authorising with Duet");
-            wifi_duet_authorise();
+            wifi_duet_authorise(false);
             break;
         default:
             break;
@@ -201,9 +209,9 @@ void wifi_send_gcode(char *gcode) {
     esp_http_client_cleanup(client);
 }
 
-void wifi_get_filelist(char *directory) {
+void reprap_wifi_get_filelist(char *directory) {
     char request_addr[MAX_REQ_ADDR_LENGTH];
-    sprintf(request_addr, "http://%s.local/rr_filelist?dir=%s", PRINTER_NAME, directory);
+    sprintf(request_addr, "%s/rr_filelist?dir=%s", rep_addr, directory);
     esp_http_client_config_t config = {
             .url = request_addr,
             .event_handler = _http_event_handle,
@@ -222,7 +230,7 @@ void wifi_get_filelist(char *directory) {
             break;
         case 401:
             ESP_LOGI(TAG, "Authorising with Duet");
-            wifi_duet_authorise();
+            wifi_duet_authorise(false);
             break;
         default:
             break;
@@ -230,9 +238,9 @@ void wifi_get_filelist(char *directory) {
     esp_http_client_cleanup(client);
 }
 
-void wifi_get_fileinfo(char *filename) {
+void reprap_wifi_get_fileinfo(char *filename) {
     char request_addr[MAX_REQ_ADDR_LENGTH];
-    sprintf(request_addr, "http://%s.local/rr_fileinfo?dir=%s", PRINTER_NAME, filename);
+    sprintf(request_addr, "%s/rr_fileinfo?dir=%s", rep_addr, filename);
     esp_http_client_config_t config = {
             .url = request_addr,
             .event_handler = _http_event_handle,
@@ -251,7 +259,7 @@ void wifi_get_fileinfo(char *filename) {
             break;
         case 401:
             ESP_LOGI(TAG, "Authorising with Duet");
-            wifi_duet_authorise();
+            wifi_duet_authorise(false);
             break;
         default:
             break;
@@ -259,9 +267,9 @@ void wifi_get_fileinfo(char *filename) {
     esp_http_client_cleanup(client);
 }
 
-void wifi_get_config() {
+void reprap_wifi_get_config() {
     char request_addr[MAX_REQ_ADDR_LENGTH];
-    sprintf(request_addr, "http://%s.local/rr_config", PRINTER_NAME);
+    sprintf(request_addr, "%s/rr_config", rep_addr);
     esp_http_client_config_t config = {
             .url = request_addr,
             .event_handler = _http_event_handle,
@@ -280,7 +288,7 @@ void wifi_get_config() {
             break;
         case 401:
             ESP_LOGI(TAG, "Authorising with Duet");
-            wifi_duet_authorise();
+            wifi_duet_authorise(false);
             break;
         default:
             break;
@@ -288,8 +296,41 @@ void wifi_get_config() {
     esp_http_client_cleanup(client);
 }
 
+void reprap_wifi_download(char *file) {
+    char request_addr[MAX_REQ_ADDR_LENGTH];
+    sprintf(request_addr, "%s/rr_download?name=%s", rep_addr, file);
+    esp_http_client_config_t config = {
+            .url = request_addr,
+            .event_handler = _http_event_handle,
+    };
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    esp_err_t err = esp_http_client_perform(client);
+
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "Status = %d, content_length = %d",
+                 esp_http_client_get_status_code(client),
+                 esp_http_client_get_content_length(client));
+
+        switch (esp_http_client_get_status_code(client)) {
+            case 200:
+                // TODO: process Duet 2 Web Control settings
+                break;
+            case 401:
+                ESP_LOGI(TAG, "Authorising with Duet");
+                wifi_duet_authorise(false);
+                break;
+            default:
+                break;
+        }
+    } else {
+        ESP_LOGW(TAG, "Error requesting RepRap status: %s", esp_err_to_name(err));
+    }
+    esp_http_client_cleanup(client);
+}
+
 void request_reprap_status_updates(lv_task_t *task) {
-    wifi_duet_get_status(1);
-    //wifi_duet_get_status(3);
-    sleep(1);
+    if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
+        wifi_duet_get_status(1);
+        //wifi_duet_get_status(3);
+    }
 }

@@ -18,6 +18,8 @@ lv_obj_t *ta_wifi_pass;
 lv_obj_t *ta_ssid;
 lv_obj_t *ta_printer_addr;
 lv_obj_t *ta_reprap_pass;
+static lv_obj_t *cont_overlay;
+static lv_obj_t *ddl_ssid;
 
 static lv_obj_t *kb;
 
@@ -53,7 +55,7 @@ static void ta_event_cb(lv_obj_t *ta, lv_event_t event) {
         if (kb == NULL) {
             kb = lv_kb_create(info_page, NULL);
             lv_obj_set_pos(kb, 0, 0);
-            lv_obj_set_size(kb, LV_HOR_RES - 50, 130);
+            lv_obj_set_size(kb, LV_HOR_RES - 30, 120);
             lv_kb_set_cursor_manage(kb, true); /* Automatically show/hide cursors on text areas */
             lv_kb_set_ta(kb, ta);
             lv_obj_set_event_cb(kb, kb_event_cb);
@@ -68,11 +70,53 @@ static void ta_event_cb(lv_obj_t *ta, lv_event_t event) {
     }
 }
 
+static void set_ssid_event(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_RELEASED) {
+        char buf[33];
+        lv_ddlist_get_selected_str(ddl_ssid, buf, sizeof(buf));
+        lv_ta_set_text(ta_ssid, buf);
+        lv_obj_del(cont_overlay);
+    }
+}
+
+static void cancel_ssid_event(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_RELEASED) {
+        lv_obj_del(cont_overlay);
+    }
+}
+
 static void scan_wifi_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_RELEASED) {
         char ssids[200];
         get_avail_wifi_networks(ssids);
-        ESP_LOGI(TAG, "Found: %s", ssids);
+
+        cont_overlay = lv_cont_create(lv_layer_top(), NULL);
+        static lv_style_t somestyle;
+        lv_style_copy(&somestyle, lv_cont_get_style(cont_overlay, LV_CONT_STYLE_MAIN));
+        somestyle.body.border.width = 1;
+        somestyle.body.border.color = REP_PANEL_DARK_ACCENT;
+        somestyle.body.padding.left = LV_DPI / 6;
+        somestyle.body.padding.right = LV_DPI / 6;
+        somestyle.body.padding.top = LV_DPI / 12;
+        somestyle.body.padding.bottom = LV_DPI / 12;
+        somestyle.body.padding.inner = LV_DPI / 9;
+        lv_cont_set_style(cont_overlay, LV_CONT_STYLE_MAIN, &somestyle);
+
+        lv_cont_set_fit(cont_overlay, LV_FIT_TIGHT);
+        lv_cont_set_layout(cont_overlay, LV_LAYOUT_PRETTY);
+        lv_obj_align_origo(cont_overlay, NULL, LV_ALIGN_CENTER, 0, -100);
+
+        lv_obj_t *l = lv_label_create(cont_overlay, NULL);
+        lv_label_set_text(l, "Select SSID");
+        ddl_ssid = lv_ddlist_create(cont_overlay, NULL);
+        lv_ddlist_set_sb_mode(ddl_ssid, LV_SB_MODE_AUTO);
+        lv_ddlist_set_fix_height(ddl_ssid, LV_HOR_RES-350);
+        lv_ddlist_set_align(ddl_ssid, LV_LABEL_ALIGN_LEFT);
+        lv_ddlist_set_options(ddl_ssid, ssids);
+        static lv_obj_t *ok_buttn;
+        create_button(cont_overlay, ok_buttn, "OK", set_ssid_event);
+        static lv_obj_t *cancel_buttn;
+        create_button(cont_overlay, cancel_buttn, "Cancel", cancel_ssid_event);
     }
 }
 

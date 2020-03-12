@@ -23,6 +23,9 @@ static lv_obj_t * cont_filament;
 
 static int current_visible_heater_indx = 0;     // heater/tool/extruder that is currently visible within the UI
 
+char reppanel_bed_temp[MAX_PREPANEL_TEMP_LEN];
+char reppanel_tool_temp[MAX_PREPANEL_TEMP_LEN];
+
 /**
  * Send command to RepRap
  * @param new_tmp
@@ -214,7 +217,7 @@ void draw_process(lv_obj_t *parent_screen) {
     lv_obj_t *label_bed = lv_label_create(holder_bed, NULL);
     lv_label_set_text(label_bed, "Bed");
     label_bed_temp = lv_label_create(holder2, NULL);
-    lv_label_set_text(label_bed_temp, "100.6°C");
+    lv_label_set_text(label_bed_temp, reppanel_bed_temp);
 
     ddlist_bed_temp_active = lv_ddlist_create(holder2, NULL);
     lv_ddlist_set_options(ddlist_bed_temp_active, bed_tmps_active);
@@ -251,7 +254,7 @@ void draw_process(lv_obj_t *parent_screen) {
     lv_label_set_text(next_extruder_label, LV_SYMBOL_RIGHT);
 
     label_tool_temp = lv_label_create(holder3, NULL);
-    lv_label_set_text(label_tool_temp, "258.7°C");
+    lv_label_set_text(label_tool_temp, reppanel_tool_temp);
 
     ddlist_tool_temp_active = lv_ddlist_create(holder3, NULL);
     lv_ddlist_set_options(ddlist_tool_temp_active, extruder_tmps_active);

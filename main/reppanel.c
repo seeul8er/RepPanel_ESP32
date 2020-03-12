@@ -22,7 +22,7 @@ void draw_main_menu(lv_obj_t *parent_screen);
  *  STATIC VARIABLES
  **********************/
 
-uint8_t reppanel_conn_status = 0;
+uint8_t reppanel_conn_status = REPPANEL_NO_CONNECTION;
 
 lv_obj_t *process_scr;              // screen for the process settings
 lv_obj_t *machine_scr;
@@ -30,10 +30,14 @@ lv_obj_t *mainmenu_scr;              // screen for the main_menue
 lv_obj_t *info_scr;              // screen for the info
 
 lv_obj_t *label_status;
-// lv_obj_t *label_progress_percent;
+lv_obj_t *label_chamber_temp;
 lv_obj_t *main_menu_button;
 lv_obj_t *console_button;
 lv_obj_t *label_connection_status;
+
+char reppanel_status[MAX_REPRAP_STATUS_LEN];
+char reppanel_chamber_temp[MAX_REPRAP_STATUS_LEN];
+char reppanel_job_progess[MAX_PREPANEL_TEMP_LEN];
 
 void rep_panel_ui_create() {
     lv_theme_t *th = lv_theme_reppanel_light_init(210, &reppanel_font_roboto_regular_22);
@@ -66,10 +70,10 @@ static void connection_info_event(lv_obj_t *obj, lv_event_t event) {
         static const char *btns[] = {"Close", ""};
         char conn_txt[200];
         get_connection_info(conn_txt);
-        lv_obj_t *mbox1 = lv_mbox_create(lv_scr_act(), NULL);
+        lv_obj_t *mbox1 = lv_mbox_create(lv_layer_top(), NULL);
         lv_mbox_set_text(mbox1, conn_txt);
         lv_mbox_add_btns(mbox1, btns);
-        lv_obj_set_width(mbox1, 500);
+        lv_obj_set_width(mbox1, 250);
         lv_obj_set_event_cb(mbox1, close_conn_info_event_handler);
         lv_obj_align(mbox1, NULL, LV_ALIGN_CENTER, 0, 0); /*Align to the corner*/
     }
@@ -114,7 +118,7 @@ void draw_header(lv_obj_t *parent_screen) {
     style_status_label.text.color = REP_PANEL_DARK_ACCENT;
     style_status_label.text.font = &reppanel_font_roboto_bold_22;
     lv_obj_set_style(label_status, &style_status_label);
-    lv_label_set_text(label_status, "PRINTING");
+    lv_label_set_text(label_status, reppanel_status);
 
     lv_obj_t *cont_header_right = lv_cont_create(cont_header, NULL);
     lv_cont_set_fit(cont_header_right, LV_FIT_TIGHT);
@@ -132,8 +136,8 @@ void draw_header(lv_obj_t *parent_screen) {
     LV_IMG_DECLARE(chamber_tmp);
     lv_img_set_src(img_chamber_tmp, &chamber_tmp);
 
-    label_status = lv_label_create(cont_header_right, NULL);
-    lv_label_set_text(label_status, "150°C");
+    label_chamber_temp = lv_label_create(cont_header_right, NULL);
+    lv_label_set_text(label_chamber_temp, reppanel_chamber_temp);
 
     LV_IMG_DECLARE(consolebutton);
     static lv_style_t style_console_button;
@@ -153,7 +157,7 @@ void draw_header(lv_obj_t *parent_screen) {
 }
 
 static void main_menu_event_handler(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_VALUE_CHANGED) {
+    if (event == LV_EVENT_RELEASED) {
         const char *txt = lv_btnm_get_active_btn_text(obj);
         printf("%s was pressed\n", txt);
         update_rep_panel_conn_status();
@@ -185,19 +189,19 @@ static void main_menu_event_handler(lv_obj_t *obj, lv_event_t event) {
 void update_rep_panel_conn_status() {
     switch (reppanel_conn_status) {
         default:
-        case 0:     // no connection
+        case REPPANEL_NO_CONNECTION:     // no connection
             lv_label_set_text_fmt(label_connection_status, "#e84e43 "LV_SYMBOL_WARNING"#");
             break;
-        case 1:     // connected wifi
+        case REPPANEL_WIFI_CONNECTED:     // connected wifi
             lv_label_set_text_fmt(label_connection_status, REP_PANEL_DARK_ACCENT_STR" "LV_SYMBOL_WIFI);
             break;
-        case 2:     // disconnected wifi
+        case REPPANEL_WIFI_DISCONNECTED:     // disconnected wifi
             lv_label_set_text_fmt(label_connection_status, "#e84e43 "LV_SYMBOL_WIFI);
             break;
-        case 3:     // reconnecting wifi
+        case REPPANEL_WIFI_RECONNECTING:     // reconnecting wifi
             lv_label_set_text_fmt(label_connection_status, "#e89e43 "LV_SYMBOL_REFRESH);
             break;
-        case 4:     // working UART
+        case REPPANEL_UART_CONNECTED:     // working UART
             lv_label_set_text_fmt(label_connection_status, REP_PANEL_DARK_ACCENT_STR" "LV_SYMBOL_USB);
             break;
     }

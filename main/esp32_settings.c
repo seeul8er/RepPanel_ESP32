@@ -25,6 +25,13 @@ char *extruder_tmps_active = "0°C\n100°C\n160°C\n200°C";
 char *extruder_tmps_standby = "0°C\n100°C\n160°C\n200°C";
 int toolstates[MAX_NUM_TOOLS];
 
+char get_temp_unit(){
+    if (temp_unit == 0) {
+        return 'C';
+    } else {
+        return 'F';
+    }
+}
 
 void print_settings() {
     ESP_LOGI(TAG, "Wifi SSID: %s", wifi_ssid);
