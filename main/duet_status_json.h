@@ -10,6 +10,7 @@
 #define DUET_TEMPS_BED  "bed"
 #define DUET_TEMPS_CURRENT  "current"
 #define DUET_TEMPS_BED_CURRENT  "current"
+#define DUET_TEMPS_BED_STATE  "state"
 
 #define REPRAP_FRAC_PRINTED "fractionPrinted"
 

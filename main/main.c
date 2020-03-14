@@ -46,6 +46,25 @@
 static void configure_shared_spi_bus(void);
 #endif
 
+double reprap_chamber_temp_buff[NUM_TEMPS_BUFF] = {0};
+int reprap_chamber_temp_curr_pos = 0;
+double reprap_babysteps_amount = 0.05;
+double reprap_extruder_amounts[NUM_TEMPS_BUFF];
+double reprap_extruder_feedrates[NUM_TEMPS_BUFF];
+double reprap_move_feedrate = 6000;
+char bed_tmps_active[MAX_LEN_TMPS_DDLIST_LEN];
+char bed_tmps_standby[MAX_LEN_TMPS_DDLIST_LEN];
+char tool_tmps_active[MAX_LEN_TMPS_DDLIST_LEN];
+char tool_tmps_standby[MAX_LEN_TMPS_DDLIST_LEN];
+double reprap_mcu_temp = 0;
+char reprap_firmware_name[100];
+char reprap_firmware_version[5];
+int num_tools = 0;
+reprap_tool_t reprap_tools[MAX_NUM_TOOLS];
+reprap_bed_t reprap_bed;
+reprap_tool_poss_temps_t reprap_tool_poss_temps;
+reprap_bed_poss_temps_t reprap_bed_poss_temps;
+
 static void IRAM_ATTR lv_tick_task(void);
 
 void app_main() {
@@ -90,8 +109,10 @@ void app_main() {
 
     esp_register_freertos_tick_hook(lv_tick_task);
 
+    init_reprap_buffers();
+
     static uint32_t user_data = 10;
-    lv_task_t *request_task = lv_task_create(request_reprap_status_updates, 750, LV_TASK_PRIO_MID, &user_data);
+    lv_task_t *request_task = lv_task_create(request_reprap_status_updates, 750, LV_TASK_PRIO_LOW, &user_data);
     lv_task_ready(request_task);
 
     //Initialize NVS

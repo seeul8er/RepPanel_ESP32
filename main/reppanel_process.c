@@ -21,10 +21,9 @@ lv_obj_t *process_container;
 static lv_obj_t *ddlist_selected_filament;
 static lv_obj_t * cont_filament;
 
-static int current_visible_heater_indx = 0;     // heater/tool/extruder that is currently visible within the UI
+int current_visible_tool_indx = 0;     // heater/tool/extruder that is currently visible within the UI
 
 char reppanel_bed_temp[MAX_PREPANEL_TEMP_LEN];
-char reppanel_tool_temp[MAX_PREPANEL_TEMP_LEN];
 
 /**
  * Send command to RepRap
@@ -55,6 +54,7 @@ void set_heater_status(char *new_tmp, int id) {
  * @param ddlist_standby ddlist for standby value
  */
 void apply_heater_style(int state, lv_obj_t *ddlist_active, lv_obj_t *ddlist_standby) {
+    if (ddlist_active == NULL || ddlist_standby == NULL) return;
     static lv_style_t style_ddlist_off;
     lv_style_copy(&style_ddlist_off, lv_ddlist_get_style(ddlist_bed_temp_active, LV_DDLIST_STYLE_BG));
     style_ddlist_off.text.color = REP_PANEL_DARK_TEXT;
@@ -83,15 +83,15 @@ void apply_heater_style(int state, lv_obj_t *ddlist_active, lv_obj_t *ddlist_sta
 /**
  * Update UI based on RepRap response
  */
-void update_heater_status(const int states[MAX_NUM_TOOLS], int num_heaters) {
-    for (int i = 0; i < num_heaters; i++) {
+void update_heater_status(const int states[MAX_NUM_TOOLS], int _num_heaters) {
+    for (int i = 0; i < _num_heaters; i++) {
         if (i == 0) {
             apply_heater_style(states[i], ddlist_bed_temp_active, ddlist_bed_temp_standby);
-        } else if (i == (current_visible_heater_indx+1)) {
+        } else if (i == (current_visible_tool_indx + 1)) {
             apply_heater_style(states[i], ddlist_tool_temp_active, ddlist_tool_temp_standby);
         }
     }
-    memcpy(toolstates, states, MAX_NUM_TOOLS);
+    memcpy(heater_states, states, MAX_NUM_TOOLS);
 }
 
 /**
@@ -222,7 +222,7 @@ void draw_process(lv_obj_t *parent_screen) {
     ddlist_bed_temp_active = lv_ddlist_create(holder2, NULL);
     lv_ddlist_set_options(ddlist_bed_temp_active, bed_tmps_active);
     lv_ddlist_set_fix_width(ddlist_bed_temp_active, 130);
-    lv_ddlist_set_draw_arrow(ddlist_bed_temp_active, false);
+    lv_ddlist_set_draw_arrow(ddlist_bed_temp_active, true);
     lv_ddlist_set_fix_height(ddlist_bed_temp_active, 110);
     lv_ddlist_set_sb_mode(ddlist_bed_temp_active, LV_SB_MODE_AUTO);
     lv_obj_align(ddlist_bed_temp_active, holder2, LV_ALIGN_IN_TOP_MID, 0, 0);
@@ -234,7 +234,7 @@ void draw_process(lv_obj_t *parent_screen) {
     lv_obj_set_auto_realign(ddlist_bed_temp_standby, true);
     lv_ddlist_set_fix_width(ddlist_bed_temp_standby, 130);
     lv_ddlist_set_fix_height(ddlist_bed_temp_standby, 110);
-    lv_ddlist_set_draw_arrow(ddlist_bed_temp_standby, false);
+    lv_ddlist_set_draw_arrow(ddlist_bed_temp_standby, true);
     lv_ddlist_set_sb_mode(ddlist_bed_temp_standby, LV_SB_MODE_AUTO);
     lv_obj_align(ddlist_bed_temp_standby, holder2, LV_ALIGN_IN_BOTTOM_MID, 0, 0);
     lv_obj_set_event_cb(ddlist_bed_temp_standby, extruder_usr_tmp_change_event);
@@ -248,29 +248,31 @@ void draw_process(lv_obj_t *parent_screen) {
     lv_label_set_text(prev_extruder_label, LV_SYMBOL_LEFT);
 
     label_extruder_name = lv_label_create(holder_extruder, NULL);
-    lv_label_set_text(label_extruder_name, tool_names_map[0]);
+    lv_label_set_text(label_extruder_name, reprap_tools[current_visible_tool_indx].name);
 
     lv_obj_t *next_extruder_label = lv_label_create(holder_extruder, NULL);
     lv_label_set_text(next_extruder_label, LV_SYMBOL_RIGHT);
 
+    char reppanel_tool_temp[MAX_PREPANEL_TEMP_LEN];
     label_tool_temp = lv_label_create(holder3, NULL);
+    sprintf(reppanel_tool_temp, "%.1f°%c", reprap_tools[current_visible_tool_indx].temp_buff[reprap_tools[current_visible_tool_indx].temp_hist_curr_pos], get_temp_unit());
     lv_label_set_text(label_tool_temp, reppanel_tool_temp);
 
     ddlist_tool_temp_active = lv_ddlist_create(holder3, NULL);
-    lv_ddlist_set_options(ddlist_tool_temp_active, extruder_tmps_active);
+    lv_ddlist_set_options(ddlist_tool_temp_active, tool_tmps_active);
     lv_ddlist_set_fix_width(ddlist_tool_temp_active, 130);
     lv_ddlist_set_fix_height(ddlist_tool_temp_active, 110);
-    lv_ddlist_set_draw_arrow(ddlist_tool_temp_active, false);
+    lv_ddlist_set_draw_arrow(ddlist_tool_temp_active, true);
     lv_ddlist_set_sb_mode(ddlist_tool_temp_active, LV_SB_MODE_AUTO);
     lv_obj_align(ddlist_tool_temp_active, holder3, LV_ALIGN_IN_TOP_MID, 0, 0);
     lv_obj_set_event_cb(ddlist_tool_temp_active, extruder_usr_tmp_change_event);
     lv_obj_set_user_data(ddlist_tool_temp_active, (lv_obj_user_data_t) DDLIST_TOOL_TMP_ACTIVE);
 
     ddlist_tool_temp_standby = lv_ddlist_create(holder3, NULL);
-    lv_ddlist_set_options(ddlist_tool_temp_standby, extruder_tmps_standby);
+    lv_ddlist_set_options(ddlist_tool_temp_standby, tool_tmps_standby);
     lv_ddlist_set_fix_width(ddlist_tool_temp_standby, 130);
     lv_ddlist_set_fix_height(ddlist_tool_temp_standby, 110);
-    lv_ddlist_set_draw_arrow(ddlist_tool_temp_standby, false);
+    lv_ddlist_set_draw_arrow(ddlist_tool_temp_standby, true);
     lv_ddlist_set_sb_mode(ddlist_tool_temp_standby, LV_SB_MODE_AUTO);
     lv_obj_align(ddlist_tool_temp_standby, holder3, LV_ALIGN_IN_TOP_MID, 0, 0);
     lv_obj_set_event_cb(ddlist_tool_temp_standby, extruder_usr_tmp_change_event);

@@ -19,12 +19,6 @@ int temp_unit = 0;   // 0=Celsius, 1=Fahrenheit
 char *tool_names_map[] = {"E0", "E1", "E2", "E3", "E4", "E5", "E6"};
 char *filament_names = {"Not set"};
 
-char *bed_tmps_active = "0°C\n40°C\n60°C\n100°C";
-char *bed_tmps_standby = "0°C\n40°C\n60°C\n100°C";
-char *extruder_tmps_active = "0°C\n100°C\n160°C\n200°C";
-char *extruder_tmps_standby = "0°C\n100°C\n160°C\n200°C";
-int toolstates[MAX_NUM_TOOLS];
-
 char get_temp_unit(){
     if (temp_unit == 0) {
         return 'C';

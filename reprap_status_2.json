@@ -1,0 +1,149 @@
+{
+  "status": "I",
+  "coords": {
+    "axesHomed": [
+      0,
+      0,
+      0
+    ],
+    "wpl": 1,
+    "xyz": [
+      0,
+      0,
+      0
+    ],
+    "machine": [
+      0,
+      0,
+      0
+    ],
+    "extr": [
+      0
+    ]
+  },
+  "speeds": {
+    "requested": 0,
+    "top": 0
+  },
+  "currentTool": 0,
+  "params": {
+    "atxPower": -1,
+    "fanPercent": [
+      0,
+      30,
+      0
+    ],
+    "fanNames": [
+      "PartCoolingFan",
+      "HotendFan",
+      ""
+    ],
+    "speedFactor": 100,
+    "extrFactors": [
+      100
+    ],
+    "babystep": 0
+  },
+  "seq": 1,
+  "sensors": {
+    "probeValue": 1000,
+    "fanRPM": [
+      -1,
+      -1,
+      -1
+    ]
+  },
+  "temps": {
+    "bed": {
+      "current": 19.4,
+      "active": 0,
+      "standby": 0,
+      "state": 0,
+      "heater": 0
+    },
+    "current": [
+      19.4,
+      19.2
+    ],
+    "state": [
+      0,
+      2
+    ],
+    "names": [
+      "",
+      ""
+    ],
+    "tools": {
+      "active": [
+        [
+          0
+        ]
+      ],
+      "standby": [
+        [
+          0
+        ]
+      ]
+    },
+    "extra": []
+  },
+  "time": 8468,
+  "coldExtrudeTemp": 160,
+  "coldRetractTemp": 90,
+  "compensation": "None",
+  "controllableFans": 1,
+  "tempLimit": 290,
+  "endstops": 4,
+  "firmwareName": "RepRapFirmware for Duet 2 WiFi/Ethernet",
+  "firmwareVersion": "3.0",
+  "geometry": "coreXY",
+  "axes": 3,
+  "totalAxes": 3,
+  "axisNames": "XYZ",
+  "volumes": 2,
+  "mountedVolumes": 1,
+  "mode": "FFF",
+  "name": "CyberPrint",
+  "probe": {
+    "threshold": 500,
+    "height": 0.7,
+    "type": 0
+  },
+  "tools": [
+    {
+      "number": 0,
+      "name": "PrimeExtruder",
+      "heaters": [
+        1
+      ],
+      "drives": [
+        0
+      ],
+      "axisMap": [
+        [
+          0
+        ],
+        [
+          1
+        ]
+      ],
+      "fans": 1,
+      "filament": "",
+      "offsets": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "mcutemp": {
+    "min": 14.8,
+    "cur": 31.8,
+    "max": 32.5
+  },
+  "vin": {
+    "min": 23.9,
+    "cur": 24.1,
+    "max": 24.3
+  }
+}

@@ -39,6 +39,9 @@ char reppanel_status[MAX_REPRAP_STATUS_LEN];
 char reppanel_chamber_temp[MAX_REPRAP_STATUS_LEN];
 char reppanel_job_progess[MAX_PREPANEL_TEMP_LEN];
 
+int heater_states[MAX_NUM_TOOLS];
+int num_heaters = 1;
+
 void rep_panel_ui_create() {
     lv_theme_t *th = lv_theme_reppanel_light_init(210, &reppanel_font_roboto_regular_22);
     lv_theme_set_current(th);
