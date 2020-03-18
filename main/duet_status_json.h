@@ -11,6 +11,13 @@
 #define DUET_TEMPS_CURRENT  "current"
 #define DUET_TEMPS_BED_CURRENT  "current"
 #define DUET_TEMPS_BED_STATE  "state"
+#define DUET_TEMPS_BED_HEATER  "heater"
+#define DUET_TOOLS              "tools"
+#define DUET_MCU_TEMP   "mcutemp"
+#define DUET_FIRM_NAME  "firmwareName"
+#define DUET_FIRM_VER   "firmwareVersion"
+#define DUET_TEMPS_ACTIVE   "active"
+#define DUET_TEMPS_STANDBY   "standby"
 
 #define REPRAP_FRAC_PRINTED "fractionPrinted"
 

@@ -28,20 +28,24 @@ static void cali_opt_selected_event(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
-static void home_all_event(lv_obj_t *obj, lv_event_t event) {
+static void _home_all_event(lv_obj_t *obj, lv_event_t event) {
     // TODO: Implement Home All
 }
 
-static void home_x_event(lv_obj_t *obj, lv_event_t event) {
+static void _home_x_event(lv_obj_t *obj, lv_event_t event) {
     // TODO: Implement Home X
 }
 
-static void home_y_event(lv_obj_t *obj, lv_event_t event) {
+static void _home_y_event(lv_obj_t *obj, lv_event_t event) {
     // TODO: Implement Home Y
 }
 
-static void home_z_event(lv_obj_t *obj, lv_event_t event) {
+static void _home_z_event(lv_obj_t *obj, lv_event_t event) {
     // TODO: Implement Home Z
+}
+
+static void _start_cali_event(lv_obj_t *obj, lv_event_t event) {
+    // TODO: Implement calibration based on selection
 }
 
 void draw_machine(lv_obj_t *parent_screen) {
@@ -50,13 +54,19 @@ void draw_machine(lv_obj_t *parent_screen) {
     lv_page_set_scrl_fit2(machine_page, LV_FIT_FILL, LV_FIT_FILL);
     lv_page_set_scrl_layout(machine_page, LV_LAYOUT_COL_M);
 
-    ddlist_cali_options = lv_ddlist_create(machine_page, NULL);
+    lv_obj_t *cont_cali = lv_cont_create(machine_page, NULL);
+    lv_cont_set_fit(cont_cali, LV_FIT_TIGHT);
+    lv_cont_set_layout(cont_cali, LV_LAYOUT_ROW_M);
+
+    ddlist_cali_options = lv_ddlist_create(cont_cali, NULL);
     lv_ddlist_set_options(ddlist_cali_options, cali_opt_list);
     lv_ddlist_set_draw_arrow(ddlist_cali_options, true);
     lv_ddlist_set_fix_height(ddlist_cali_options, 110);
     lv_ddlist_set_sb_mode(ddlist_cali_options, LV_SB_MODE_AUTO);
-    lv_obj_align(ddlist_cali_options, machine_page, LV_ALIGN_IN_TOP_MID, 0, 0);
     lv_obj_set_event_cb(ddlist_cali_options, cali_opt_selected_event);
+
+    static lv_obj_t *do_cali_butn;
+    create_button(cont_cali, do_cali_butn, "Start", _start_cali_event);
 
     lv_obj_t *home_cont = lv_cont_create(machine_page, NULL);
     lv_cont_set_layout(home_cont, LV_LAYOUT_ROW_M);
@@ -64,8 +74,8 @@ void draw_machine(lv_obj_t *parent_screen) {
     lv_obj_t *label_home = lv_label_create(home_cont, NULL);
     lv_label_set_text(label_home, "Home:");
     static lv_obj_t *btn_home_all, *btn_home_y, *btn_home_x, *btn_home_z;
-    create_button(home_cont, btn_home_all, "  All Axis  ", home_all_event);
-    create_button(home_cont, btn_home_x, " X ", home_x_event);
-    create_button(home_cont, btn_home_y, " Y ", home_y_event);
-    create_button(home_cont, btn_home_z, " Z ", home_z_event);
+    create_button(home_cont, btn_home_all, "  All Axis  ", _home_all_event);
+    create_button(home_cont, btn_home_x, " X ", _home_x_event);
+    create_button(home_cont, btn_home_y, " Y ", _home_y_event);
+    create_button(home_cont, btn_home_z, " Z ", _home_z_event);
 }

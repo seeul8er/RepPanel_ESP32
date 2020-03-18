@@ -5,6 +5,7 @@
 #include <string.h>
 #include <esp_log.h>
 #include "esp32_settings.h"
+#include "reppanel.h"
 
 #define TAG "RepPanelSettings"
 
@@ -16,8 +17,7 @@ char rep_pass[MAX_REP_PASS_LEN];
 
 int temp_unit = 0;   // 0=Celsius, 1=Fahrenheit
 
-char *tool_names_map[] = {"E0", "E1", "E2", "E3", "E4", "E5", "E6"};
-char *filament_names = {"Not set"};
+char filament_names[MAX_LEN_STR_FILAMENT_LIST] = {"Not set\nNot set"};
 
 char get_temp_unit(){
     if (temp_unit == 0) {

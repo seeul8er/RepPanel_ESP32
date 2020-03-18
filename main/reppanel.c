@@ -12,6 +12,7 @@
 #include "reppanel_machine.h"
 #include "reppanel_info.h"
 #include "esp32_wifi.h"
+#include "reppanel_macros.h"
 #include <stdio.h>
 
 void draw_header(lv_obj_t *parent_screen);
@@ -24,10 +25,11 @@ void draw_main_menu(lv_obj_t *parent_screen);
 
 uint8_t reppanel_conn_status = REPPANEL_NO_CONNECTION;
 
-lv_obj_t *process_scr;              // screen for the process settings
+lv_obj_t *process_scr;  // screen for the process settings
 lv_obj_t *machine_scr;
-lv_obj_t *mainmenu_scr;              // screen for the main_menue
-lv_obj_t *info_scr;              // screen for the info
+lv_obj_t *mainmenu_scr; // screen for the main_menue
+lv_obj_t *info_scr;     // screen for the info
+lv_obj_t *macro_scr;    // macro screen
 
 lv_obj_t *label_status;
 lv_obj_t *label_chamber_temp;
@@ -140,7 +142,9 @@ void draw_header(lv_obj_t *parent_screen) {
     lv_img_set_src(img_chamber_tmp, &chamber_tmp);
 
     label_chamber_temp = lv_label_create(cont_header_right, NULL);
-    lv_label_set_text(label_chamber_temp, reppanel_chamber_temp);
+    lv_label_set_text_fmt(label_chamber_temp, "%.01f°%c",
+                          reprap_tools[current_visible_tool_indx].temp_buff[reprap_tools[current_visible_tool_indx].temp_hist_curr_pos],
+                          get_temp_unit());
 
     LV_IMG_DECLARE(consolebutton);
     static lv_style_t style_console_button;
@@ -185,6 +189,13 @@ static void main_menu_event_handler(lv_obj_t *obj, lv_event_t event) {
             draw_header(info_scr);
             draw_info(info_scr);
             lv_scr_load(info_scr);
+        } else if (strcmp(txt, "Macros") == 0) {
+            if (macro_scr) lv_obj_del(macro_scr);
+            macro_scr = lv_cont_create(NULL, NULL);
+            lv_cont_set_layout(macro_scr, LV_LAYOUT_COL_M);
+            draw_header(macro_scr);
+            draw_macro(macro_scr);
+            lv_scr_load(macro_scr);
         }
     }
 }

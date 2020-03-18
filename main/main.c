@@ -10,41 +10,12 @@
 #include "reppanel.h"
 #include "esp32_settings.h"
 
-#include "disp_spi.h"
-#include "disp_driver.h"
-#include "tp_spi.h"
 #include "touch_driver.h"
 #include "esp32_wifi.h"
 #include "reppanel_request.h"
-
+#include "lvgl_driver.h"
 
 #define TAG "Main"
-
-// Detect the use of a shared SPI Bus and verify the user specified the same SPI bus for both touch and tft
-#if (CONFIG_LVGL_TOUCH_CONTROLLER == 1 || CONFIG_LVGL_TOUCH_CONTROLLER == 3) && TP_SPI_MOSI == DISP_SPI_MOSI && TP_SPI_CLK == DISP_SPI_CLK
-#if CONFIG_LVGL_TFT_DISPLAY_SPI_HSPI == 1
-#define TFT_SPI_HOST HSPI_HOST
-#else
-#define TFT_SPI_HOST VSPI_HOST
-#endif
-
-#if CONFIG_LVGL_TOUCH_CONTROLLER_SPI_HSPI == 1
-#define TOUCH_SPI_HOST HSPI_HOST
-#else
-#define TOUCH_SPI_HOST VSPI_HOST
-#endif
-
-#if TFT_SPI_HOST != TOUCH_SPI_HOST
-#error You must specifiy the same SPI host for both display and input driver
-#endif
-
-#define SHARED_SPI_BUS
-#endif
-
-#ifdef SHARED_SPI_BUS
-/* Example function that configure two spi devices (tft and touch controllers) into the same spi bus */
-static void configure_shared_spi_bus(void);
-#endif
 
 double reprap_chamber_temp_buff[NUM_TEMPS_BUFF] = {0};
 int reprap_chamber_temp_curr_pos = 0;
@@ -52,13 +23,10 @@ double reprap_babysteps_amount = 0.05;
 double reprap_extruder_amounts[NUM_TEMPS_BUFF];
 double reprap_extruder_feedrates[NUM_TEMPS_BUFF];
 double reprap_move_feedrate = 6000;
-char bed_tmps_active[MAX_LEN_TMPS_DDLIST_LEN];
-char bed_tmps_standby[MAX_LEN_TMPS_DDLIST_LEN];
-char tool_tmps_active[MAX_LEN_TMPS_DDLIST_LEN];
-char tool_tmps_standby[MAX_LEN_TMPS_DDLIST_LEN];
 double reprap_mcu_temp = 0;
 char reprap_firmware_name[100];
 char reprap_firmware_version[5];
+char *reprap_macro_names[MAX_NUM_MACROS];
 int num_tools = 0;
 reprap_tool_t reprap_tools[MAX_NUM_TOOLS];
 reprap_bed_t reprap_bed;
@@ -69,25 +37,7 @@ static void IRAM_ATTR lv_tick_task(void);
 
 void app_main() {
     lv_init();
-
-    /* Interface and driver initialization */
-#ifdef SHARED_SPI_BUS
-    /* Configure one SPI bus for the two devices */
-    configure_shared_spi_bus();
-
-    /* Configure the drivers */
-    disp_driver_init(false);
-#if CONFIG_LVGL_TOUCH_CONTROLLER != TOUCH_CONTROLLER_NONE
-    touch_driver_init(false);
-#endif
-#else
-    /* Otherwise configure the SPI bus and devices separately inside the drivers*/
-    disp_driver_init(true);
-#if CONFIG_LVGL_TOUCH_CONTROLLER != TOUCH_CONTROLLER_NONE
-    touch_driver_init(true);
-#endif
-#endif
-
+    lvgl_driver_init();
     static lv_color_t buf1[DISP_BUF_SIZE];
     static lv_color_t buf2[DISP_BUF_SIZE];
     static lv_disp_buf_t disp_buf;
@@ -112,8 +62,11 @@ void app_main() {
     init_reprap_buffers();
 
     static uint32_t user_data = 10;
-    lv_task_t *request_task = lv_task_create(request_reprap_status_updates, 750, LV_TASK_PRIO_LOW, &user_data);
-    lv_task_ready(request_task);
+    lv_task_t *request_simple_printer_status_task = lv_task_create(request_reprap_status_updates, 750, LV_TASK_PRIO_LOW, &user_data);
+    lv_task_ready(request_simple_printer_status_task);
+
+    lv_task_t *get_ext_printer_status_task = lv_task_create(request_reprap_ext_status_updates, 5000, LV_TASK_PRIO_LOW, NULL);
+    lv_task_ready(get_ext_printer_status_task);
 
     //Initialize NVS
     esp_err_t ret = nvs_flash_init();

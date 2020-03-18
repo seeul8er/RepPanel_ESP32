@@ -1,8 +1,3 @@
-/**
- * @file lv_theme_material.h
- *
- */
-
 #ifndef LV_THEME_REP_PANEL_LIGHT_H
 #define LV_THEME_REP_PANEL_LIGHT_H
 
@@ -13,15 +8,10 @@ extern "C" {
 /*********************
  *      INCLUDES
  *********************/
-#ifdef LV_CONF_INCLUDE_SIMPLE
 #include <lvgl/lvgl.h>
 #include "lv_conf.h"
-#else
 
-#include <lvgl/lvgl.h>
-#include "lv_conf.h"
-#endif
-
+#if LV_USE_THEME_REP_PANEL_LIGHT
 
 /*********************
  *      DEFINES
@@ -71,3 +61,4 @@ lv_theme_t * lv_theme_get_reppanel_light(void);
 } /* extern "C" */
 #endif
 
+#endif /*LV_THEME_REP_PANEL_LIGHT_H*/
