@@ -13,6 +13,7 @@
 #define DUET_TEMPS_BED_STATE  "state"
 #define DUET_TEMPS_BED_HEATER  "heater"
 #define DUET_TOOLS              "tools"
+#define DUET_TEMPS_TOOLS        DUET_TOOLS
 #define DUET_MCU_TEMP   "mcutemp"
 #define DUET_FIRM_NAME  "firmwareName"
 #define DUET_FIRM_VER   "firmwareVersion"

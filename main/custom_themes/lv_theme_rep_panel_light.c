@@ -74,7 +74,7 @@ static void basic_init(void) {
     panel.body.shadow.width = 0;
     panel.body.padding.left = LV_DPI / 12;
     panel.body.padding.right = LV_DPI / 12;
-    panel.body.padding.top = LV_DPI / 100;
+    panel.body.padding.top = LV_DPI / 25;
     panel.body.padding.bottom = LV_DPI / 50;
     panel.body.padding.inner = LV_DPI / 9;
     panel.text.color = REP_PANEL_DARK_TEXT;
@@ -539,7 +539,7 @@ static void page_init(void) {
 
 static void ta_init(void) {
 #if LV_USE_TA
-    static lv_style_t oneline;
+    static lv_style_t oneline, style_area;
 
     lv_style_copy(&oneline, &def_style);
     oneline.body.opa = LV_OPA_TRANSP;
@@ -550,7 +550,16 @@ static void ta_init(void) {
     oneline.body.border.opa = LV_OPA_COVER;
     oneline.text.color = lv_color_hex3(0x333);
 
-    theme.style.ta.area = theme.style.panel;
+    lv_style_copy(&style_area, theme.style.panel);
+    style_area.body.opa = LV_OPA_TRANSP;
+    style_area.body.radius = 0;
+    style_area.body.border.part = LV_BORDER_BOTTOM;
+    style_area.body.border.width = 1;
+    style_area.body.border.color = REP_PANEL_DARK_ACCENT;
+    style_area.body.border.opa = LV_OPA_COVER;
+    style_area.text.color = REP_PANEL_DARK_TEXT;
+
+    theme.style.ta.area = &style_area;
     theme.style.ta.oneline = &oneline;
     theme.style.ta.cursor = NULL; /*Let library to calculate the cursor's style*/
     theme.style.ta.sb = &sb;
@@ -587,6 +596,7 @@ static void list_init(void) {
     rel.body.border.opa = LV_OPA_30;
     rel.body.border.width = 1;
     rel.body.border.part = LV_BORDER_BOTTOM;
+    rel.text.color = REP_PANEL_DARK;
 
     lv_style_copy(&pr, &rel);
     pr.glass = 0;
@@ -596,7 +606,6 @@ static void list_init(void) {
     pr.body.opa = LV_OPA_COVER;
     pr.body.radius = 0;
     pr.text.font = _font;
-    pr.text.color = REP_PANEL_DARK;
 
     lv_style_copy(&tgl_rel, &pr);
     tgl_rel.body.main_color = lv_color_hsv_to_rgb(_hue, 90, 70);

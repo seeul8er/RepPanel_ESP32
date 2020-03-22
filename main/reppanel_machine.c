@@ -5,8 +5,12 @@
 #include <stdio.h>
 #include <lvgl/src/lv_objx/lv_page.h>
 #include <lvgl/src/lv_objx/lv_ddlist.h>
+#include <esp_log.h>
 #include "reppanel_machine.h"
 #include "reppanel_helper.h"
+#include "reppanel_request.h"
+
+#define TAG     "Machine"
 
 static char *cali_opt_map[] = {"True Bed Leveling", "Mesh Bed Leveling"};
 static char *cali_opt_list = {"True Bed Leveling\nMesh Bed Leveling"};
@@ -14,38 +18,42 @@ static char *cali_opt_list = {"True Bed Leveling\nMesh Bed Leveling"};
 lv_obj_t *machine_page;
 lv_obj_t *ddlist_cali_options;
 
-static void cali_opt_selected_event(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_VALUE_CHANGED) {
-        char val_txt_buff[50];
-        lv_ddlist_get_selected_str(obj, val_txt_buff, 50);
-        if (strcmp(val_txt_buff, cali_opt_map[0]) == 0) {
-            printf("true bed leveling\n");
-            // TODO: Implement true bed leveling call
-        } else if (strcmp(val_txt_buff, cali_opt_map[1]) == 0) {
-            // TODO: Implement mesh bed leveling call
-            printf("mesh bed leveling\n");
-        }
+static void _home_all_event(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_RELEASED) {
+        reprap_send_gcode("G28");
     }
 }
 
-static void _home_all_event(lv_obj_t *obj, lv_event_t event) {
-    // TODO: Implement Home All
-}
-
 static void _home_x_event(lv_obj_t *obj, lv_event_t event) {
-    // TODO: Implement Home X
+    if (event == LV_EVENT_RELEASED) {
+        reprap_send_gcode("G28 X");
+    }
 }
 
 static void _home_y_event(lv_obj_t *obj, lv_event_t event) {
-    // TODO: Implement Home Y
+    if (event == LV_EVENT_RELEASED) {
+        reprap_send_gcode("G28 Y");
+    }
 }
 
 static void _home_z_event(lv_obj_t *obj, lv_event_t event) {
-    // TODO: Implement Home Z
+    if (event == LV_EVENT_RELEASED) {
+        reprap_send_gcode("G28 Z");
+    }
 }
 
 static void _start_cali_event(lv_obj_t *obj, lv_event_t event) {
-    // TODO: Implement calibration based on selection
+    if (event == LV_EVENT_RELEASED) {
+        char val_txt_buff[50];
+        lv_ddlist_get_selected_str(obj, val_txt_buff, 50);
+        if (strcmp(val_txt_buff, cali_opt_map[0]) == 0) {
+            ESP_LOGI(TAG, "true bed leveling");
+            // TODO: Implement true bed leveling call
+        } else if (strcmp(val_txt_buff, cali_opt_map[1]) == 0) {
+            // TODO: Implement mesh bed leveling call
+            ESP_LOGI(TAG, "mesh bed leveling");
+        }
+    }
 }
 
 void draw_machine(lv_obj_t *parent_screen) {
@@ -63,7 +71,6 @@ void draw_machine(lv_obj_t *parent_screen) {
     lv_ddlist_set_draw_arrow(ddlist_cali_options, true);
     lv_ddlist_set_fix_height(ddlist_cali_options, 110);
     lv_ddlist_set_sb_mode(ddlist_cali_options, LV_SB_MODE_AUTO);
-    lv_obj_set_event_cb(ddlist_cali_options, cali_opt_selected_event);
 
     static lv_obj_t *do_cali_butn;
     create_button(cont_cali, do_cali_butn, "Start", _start_cali_event);

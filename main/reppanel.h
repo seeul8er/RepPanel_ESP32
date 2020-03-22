@@ -122,8 +122,11 @@ extern reprap_bed_poss_temps_t reprap_bed_poss_temps;
 
 extern char filament_names[MAX_LEN_STR_FILAMENT_LIST];
 
+extern bool job_running;
+
 void rep_panel_ui_create();
 void update_rep_panel_conn_status();
+void display_jobstatus();
 
 #ifdef __cplusplus
 } /* extern "C" */

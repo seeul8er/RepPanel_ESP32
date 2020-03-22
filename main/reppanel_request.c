@@ -13,6 +13,7 @@
 #include "reppanel.h"
 #include "reppanel_request.h"
 #include "reppanel_process.h"
+#include "reppanel_jobstatus.h"
 
 #define TAG                 "RequestTask"
 #define JSON_BUFF_SIZE      10240
@@ -26,24 +27,34 @@ static bool got_duet_settings = false;
 const char *_decode_reprap_status(const char *valuestring) {
     switch (*valuestring) {
         case REPRAP_STATUS_PROCESS_CONFIG:
+            job_running = false;
             return "Reading config";
         case REPRAP_STATUS_IDLE:
+            job_running = true;
             return "Idle";
         case REPRAP_STATUS_BUSY:
+            job_running = false;
             return "Busy";
         case REPRAP_STATUS_PRINTING:
+            job_running = true;
             return "Printing";
         case REPRAP_STATUS_DECELERATING:
+            job_running = false;
             return "Decelerating";
         case REPRAP_STATUS_STOPPED:
+            job_running = false;
             return "Stopped";
         case REPRAP_STATUS_RESUMING:
+            job_running = true;
             return "Resuming";
         case REPRAP_STATUS_HALTED:
+            job_running = false;
             return "Halted";
         case REPRAP_STATUS_FLASHING:
+            job_running = false;
             return "Flashing";
         case REPRAP_STATUS_CHANGINGTOOL:
+            job_running = true;
             return "Tool change";
         default:
             break;
@@ -77,9 +88,6 @@ void _process_reprap_status(int type) {
         }
         reprap_bed.temp_buff[reprap_bed.temp_hist_curr_pos] = cJSON_GetObjectItem(duet_temps_bed,
                                                                                   DUET_TEMPS_BED_CURRENT)->valuedouble;
-        if (label_bed_temp != NULL)
-            lv_label_set_text_fmt(label_bed_temp, "%.1f°%c",
-                                  reprap_bed.temp_buff[reprap_bed.temp_hist_curr_pos], get_temp_unit());
     }
     // Get bed heater index
     cJSON *duet_temps_bed_heater = cJSON_GetObjectItem(duet_temps_bed, DUET_TEMPS_BED_HEATER);    // bed heater state
@@ -102,6 +110,7 @@ void _process_reprap_status(int type) {
     if (duet_temps_bed_state && cJSON_IsNumber(duet_temps_bed_state)) {
         _heater_states[0] = duet_temps_bed_state->valueint;
     }
+    update_bed_temps_ui();  // update UI with new values
 
     // Get tool heater state
     cJSON *duet_temps_state = cJSON_GetObjectItem(duet_temps, DUET_TEMPS_BED_STATE);        // all other heater states
@@ -117,7 +126,7 @@ void _process_reprap_status(int type) {
     }
     num_heaters = pos;
     num_tools = pos - 1;
-    update_heater_status(_heater_states, num_heaters);
+    update_heater_status(_heater_states, num_heaters);  // update UI with new values
 
     if (type == 2) {
         got_status_two = true;
@@ -169,20 +178,30 @@ void _process_reprap_status(int type) {
             reprap_tools[i].temp_buff[reprap_tools[i].temp_hist_curr_pos] = cJSON_GetArrayItem(duet_temps_current,
                                                                                                reprap_tools[i].heater_indx)->valuedouble;
         }
-        if (label_tool_temp != NULL)
-            lv_label_set_text_fmt(label_tool_temp, "%.1f°%c",
-                                  reprap_tools[current_visible_tool_indx].temp_buff[reprap_tools[current_visible_tool_indx].temp_hist_curr_pos],
-                                  get_temp_unit());
-        if (label_chamber_temp != NULL)
-            lv_label_set_text_fmt(label_chamber_temp, "%.1f°%c",
-                                  reprap_tools[current_visible_tool_indx].temp_buff[reprap_tools[current_visible_tool_indx].temp_hist_curr_pos],
-                                  get_temp_unit());
     }
+    // Get active & standby tool temperatures. As for now there is only support one heater per tool
+    cJSON *duet_temps_tools = cJSON_GetObjectItem(duet_temps, DUET_TEMPS_TOOLS);
+    cJSON *duet_temps_tools_active = cJSON_GetObjectItem(duet_temps_tools, DUET_TEMPS_ACTIVE);
+    cJSON *duet_temps_tools_standby = cJSON_GetObjectItem(duet_temps_tools, DUET_TEMPS_STANDBY);
+    if (duet_temps_tools_active && cJSON_IsArray(duet_temps_tools_active) && duet_temps_tools_standby &&
+        cJSON_IsArray(duet_temps_tools_standby)) {
+        for (int i = 0; i < num_tools; i++) {
+            cJSON *tool_active_temps_arr = cJSON_GetArrayItem(duet_temps_tools_active,
+                                                              reprap_tools[i].number);
+            cJSON *tool_standby_temps_arr = cJSON_GetArrayItem(duet_temps_tools_standby,
+                                                               reprap_tools[i].number);
+            reprap_tools[i].active_temp = cJSON_GetArrayItem(tool_active_temps_arr,
+                                                             0)->valuedouble;
+            reprap_tools[i].standby_temp = cJSON_GetArrayItem(tool_standby_temps_arr,
+                                                              0)->valuedouble;
+        }
+    }
+    update_current_tool_temps_ui();     // update UI with new values
 
     cJSON *print_progess = cJSON_GetObjectItem(root, REPRAP_FRAC_PRINTED);
     if (cJSON_IsNumber(print_progess)) {
         sprintf(reppanel_job_progess, "%.0f%%", print_progess->valuedouble);
-        //lv_label_set_text(label_progress_percent, reppanel_job_progess);
+        lv_label_set_text(label_job_progress_percent, reppanel_job_progess);
     }
     cJSON_Delete(root);
 }

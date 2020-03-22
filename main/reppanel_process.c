@@ -86,9 +86,42 @@ void update_heater_status(const int states[MAX_NUM_TOOLS], int _num_heaters) {
     memcpy(heater_states, states, MAX_NUM_TOOLS);
 }
 
+void update_bed_temps_ui() {
+    if (label_bed_temp != NULL)
+        lv_label_set_text_fmt(label_bed_temp, "%.1f°%c", reprap_bed.temp_buff[reprap_bed.temp_hist_curr_pos],
+                              get_temp_unit());
+    if (label_bed_temp_active != NULL)
+        lv_label_set_text_fmt(label_bed_temp_active, "%.0f°%c", reprap_bed.active_temp, get_temp_unit());
+    if (label_bed_temp_standby != NULL)
+        lv_label_set_text_fmt(label_bed_temp_standby, "%.0f°%c", reprap_bed.standby_temp, get_temp_unit());
+}
+
+void update_current_tool_temps_ui() {
+    if (label_tool_temp != NULL) {
+        lv_label_set_text_fmt(label_tool_temp, "%.1f°%c",
+                              reprap_tools[current_visible_tool_indx].temp_buff[reprap_tools[current_visible_tool_indx].temp_hist_curr_pos],
+                              get_temp_unit());
+        lv_label_set_text_fmt(label_tool_temp_active, "%.0f°%c", reprap_tools[current_visible_tool_indx].active_temp,
+                              get_temp_unit());
+        lv_label_set_text_fmt(label_tool_temp_standby, "%.0f°%c", reprap_tools[current_visible_tool_indx].standby_temp,
+                              get_temp_unit());
+        if (label_chamber_temp != NULL)
+            lv_label_set_text_fmt(label_chamber_temp, "%.1f°%c",
+                                  reprap_tools[current_visible_tool_indx].temp_buff[reprap_tools[current_visible_tool_indx].temp_hist_curr_pos],
+                                  get_temp_unit());
+    }
+}
+
+static void _choose_prev_tool_event_handler(lv_obj_t *obj, lv_event_t event) {
+}
+
+static void _choose_next_tool_event_handler(lv_obj_t *obj, lv_event_t event) {
+
+}
+
 static void _redraw_process_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_RELEASED) {
-        lv_obj_del(cont_fila_overlay);
+        lv_obj_del_async(cont_fila_overlay);
     }
 }
 
@@ -118,37 +151,18 @@ static void change_tmp_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_RELEASED) {
         const char *val_txt_buff = lv_btnm_get_active_btn_text(obj);
         if (val_txt_buff != NULL) {
-            unsigned long len = strlen(val_txt_buff);
-            char new_temp_txt[len];
-            strcpy(new_temp_txt, val_txt_buff);
-            new_temp_txt[len - 3] = '\0';     // cut off °C/F
-            char gcode_buff[20];
             switch ((int) (lv_obj_user_data_t) obj->user_data) {
                 case BTN_BED_TMP_ACTIVE:
                     lv_label_set_text(label_bed_temp_active, val_txt_buff);
-                    sprintf(gcode_buff, "M140 P%i S%s", reprap_bed.heater_indx, new_temp_txt);
-                    reprap_send_gcode(gcode_buff);
                     break;
                 case BTN_BED_TMP_STANDBY:
                     lv_label_set_text(label_bed_temp_standby, val_txt_buff);
-                    sprintf(gcode_buff, "M144 P%i", reprap_bed.heater_indx);
-                    reprap_send_gcode(gcode_buff);
                     break;
                 case BTN_TOOL_TMP_ACTIVE:
                     lv_label_set_text(label_tool_temp_active, val_txt_buff);
-                    sprintf(gcode_buff, "G10 P%i S%s", reprap_tools[current_visible_tool_indx].number, new_temp_txt);
-                    reprap_send_gcode(gcode_buff);
-
-                    sprintf(gcode_buff, "T%i", reprap_tools[current_visible_tool_indx].number);
-                    reprap_send_gcode(gcode_buff);
                     break;
                 case BTN_TOOL_TMP_STANDBY:
                     lv_label_set_text(label_tool_temp_standby, val_txt_buff);
-                    sprintf(gcode_buff, "G10 P%i R%s", reprap_tools[current_visible_tool_indx].number, new_temp_txt);
-                    reprap_send_gcode(gcode_buff);
-
-                    sprintf(gcode_buff, "T-1");
-                    reprap_send_gcode(gcode_buff);
                     break;
                 default:
                     break;
@@ -166,7 +180,13 @@ static void close_popup_page(lv_obj_t *obj, lv_event_t event) {
 
 static void set_bed_temp_status_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_SHORT_CLICKED) {
-        printf("Change heater temperature\n");
+        ESP_LOGI(TAG, "Change heater temperature");
+        // keep current selection. Toggle buttons will otherwise switch
+        if (lv_btn_get_state(obj) == LV_BTN_STATE_TGL_REL) {
+            lv_btn_set_state(obj, LV_BTN_STATE_REL);
+        } else if (lv_btn_get_state(obj) == LV_BTN_STATE_REL) {
+            lv_btn_set_state(obj, LV_BTN_STATE_TGL_REL);
+        }
         popup_page = lv_page_create(lv_layer_top(), NULL);
         static lv_style_t style_bg;
         lv_style_copy(&style_bg, lv_page_get_style(popup_page, LV_PAGE_STYLE_BG));
@@ -205,8 +225,8 @@ static void set_bed_temp_status_event_handler(lv_obj_t *obj, lv_event_t event) {
                 temps = reprap_bed_poss_temps.temps_active;
                 break;
         }
-        for (int i=0; i < NUM_TEMPS_BUFF + 1; i++) {
-            if (i != 0 && i%6 == 0) {
+        for (int i = 0; i < NUM_TEMPS_BUFF + 1; i++) {
+            if (i != 0 && i % 6 == 0) {
                 temp_map_tmp[map_indx] = "\n";
                 map_indx++;
             }
@@ -227,6 +247,60 @@ static void set_bed_temp_status_event_handler(lv_obj_t *obj, lv_event_t event) {
         create_button(popup_page, cancle_btn, "Cancel", close_popup_page);
     } else if (event == LV_EVENT_LONG_PRESSED) {
         printf("Change heater status\n");
+        char gcode_buff[20];
+        if (lv_btn_get_state(obj) == LV_BTN_STATE_PR) {
+            ESP_LOGI(TAG, "\tActivating");
+            char *temp_txt;
+            if ((int) (lv_obj_user_data_t) obj->user_data == BTN_BED_TMP_ACTIVE) {
+                lv_btn_set_state(btn_bed_temp_standby, LV_BTN_STATE_REL);
+                temp_txt = lv_label_get_text(label_bed_temp_active);
+                char char_temp_only[strlen(temp_txt)];
+                strcpy(char_temp_only, temp_txt);
+                char_temp_only[strlen(temp_txt) - 3] = '\0';     // cut off °C/F
+                sprintf(gcode_buff, "M140 P%i S%s", reprap_bed.heater_indx, char_temp_only);
+                reprap_send_gcode(gcode_buff);
+            } else if ((int) (lv_obj_user_data_t) obj->user_data == BTN_BED_TMP_STANDBY) {
+                lv_btn_set_state(btn_bed_temp_active, LV_BTN_STATE_REL);
+                sprintf(gcode_buff, "M144 P%i", reprap_bed.heater_indx);
+                reprap_send_gcode(gcode_buff);
+            } else if ((int) (lv_obj_user_data_t) obj->user_data == BTN_TOOL_TMP_ACTIVE) {
+                lv_btn_set_state(btn_tool_temp_standby, LV_BTN_STATE_REL);
+                temp_txt = lv_label_get_text(label_tool_temp_active);
+                char char_temp_only[strlen(temp_txt)];
+                strcpy(char_temp_only, temp_txt);
+                char_temp_only[strlen(temp_txt) - 3] = '\0';     // cut off °C/F
+                sprintf(gcode_buff, "G10 P%i S%s", reprap_tools[current_visible_tool_indx].number, char_temp_only);
+                reprap_send_gcode(gcode_buff);
+
+                sprintf(gcode_buff, "T%i", reprap_tools[current_visible_tool_indx].number);
+                reprap_send_gcode(gcode_buff);
+            } else {
+                lv_btn_set_state(btn_tool_temp_active, LV_BTN_STATE_REL);
+                temp_txt = lv_label_get_text(label_tool_temp_standby);
+                char char_temp_only[strlen(temp_txt)];
+                strcpy(char_temp_only, temp_txt);
+                char_temp_only[strlen(temp_txt) - 3] = '\0';     // cut off °C/F
+                sprintf(gcode_buff, "G10 P%i R%s", reprap_tools[current_visible_tool_indx].number, char_temp_only);
+                reprap_send_gcode(gcode_buff);
+
+                sprintf(gcode_buff, "T-1");
+                reprap_send_gcode(gcode_buff);
+            }
+        } else {
+            switch ((int) (lv_obj_user_data_t) obj->user_data) {
+                case BTN_BED_TMP_ACTIVE:
+                case BTN_BED_TMP_STANDBY:
+                    ESP_LOGI(TAG, "\tDeactivating bed heater\n");
+                    // TODO Deactivate bed heater
+                    break;
+                case BTN_TOOL_TMP_ACTIVE:
+                case BTN_TOOL_TMP_STANDBY:
+                default:
+                    ESP_LOGI(TAG, "\tDeactivating tool %i heater\n", current_visible_tool_indx);
+                    // TODO: Deactivate tool heater
+                    break;
+            }
+        }
     }
 }
 
@@ -324,7 +398,8 @@ void draw_process(lv_obj_t *parent_screen) {
     lv_obj_t *label_bed = lv_label_create(holder_bed, NULL);
     lv_label_set_text(label_bed, "Bed");
     label_bed_temp = lv_label_create(holder2, NULL);
-    lv_label_set_text_fmt(label_bed_temp, "%.1f°%c", reprap_bed.temp_buff[reprap_bed.temp_hist_curr_pos], get_temp_unit());
+    lv_label_set_text_fmt(label_bed_temp, "%.1f°%c", reprap_bed.temp_buff[reprap_bed.temp_hist_curr_pos],
+                          get_temp_unit());
 
     const lv_style_t *panel_style = lv_cont_get_style(holder_empty, LV_CONT_STYLE_MAIN);
 
