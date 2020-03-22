@@ -11,28 +11,45 @@
 
 #define TAG "Macros"
 
+file_tree_elem_t reprap_macros[MAX_NUM_JOBS];
+
 lv_obj_t *macro_container;
 lv_obj_t *macro_list;
 
-static void _macro_clicked_event_handler(lv_obj_t * obj, lv_event_t event) {
-    if(event == LV_EVENT_RELEASED) {
-        ESP_LOGI(TAG, "Clicked: %s\n", lv_list_get_btn_text(obj));
+static void _macro_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_RELEASED) {
+        int selected_indx = lv_list_get_btn_index(macro_list, obj);
+        if (reprap_macros[selected_indx].type == TREE_FILE_ELEM) {
+            ESP_LOGI(TAG, "Clicked file %s", lv_list_get_btn_text(obj));
+            char tmp_txt[strlen(((reprap_macro_t *) reprap_macros[selected_indx].element)->dir) +
+                         strlen(((reprap_macro_t *) reprap_macros[selected_indx].element)->name) + 10];
+            sprintf(tmp_txt, "M98 P\"%s/%s\"", ((reprap_macro_t *) reprap_macros[selected_indx].element)->dir,
+                    ((reprap_macro_t *) reprap_macros[selected_indx].element)->name);
+            reprap_send_gcode(tmp_txt);
+        } else if (reprap_macros[selected_indx].type == TREE_FOLDER_ELEM) {
+            ESP_LOGI(TAG, "Clicked folder %s", lv_list_get_btn_text(obj));
+            // TODO: List folder elements
+        }
     }
 }
 
 void draw_macro(lv_obj_t *parent_screen) {
-    request_macros();
     macro_container = lv_cont_create(parent_screen, NULL);
     lv_cont_set_layout(macro_container, LV_LAYOUT_ROW_T);
     lv_cont_set_fit2(macro_container, LV_FIT_FILL, LV_FIT_FILL);
 
     macro_list = lv_list_create(macro_container, NULL);
-    lv_obj_set_size(macro_list, LV_HOR_RES-10, LV_VER_RES-50);
+    lv_obj_set_size(macro_list, LV_HOR_RES - 10, 270);
     lv_obj_align(macro_list, NULL, LV_ALIGN_IN_TOP_MID, 0, 50);
 
-    lv_obj_t * list_btn;
-    for (int i = 0; reprap_macro_names[i] != NULL; i++) {
-        list_btn = lv_list_add_btn(macro_list, LV_SYMBOL_FILE, reprap_macro_names[i]);
+    request_macros();
+    lv_obj_t *list_btn;
+    for (int i = 0; reprap_macros[i].element != NULL; i++) {
+        if (reprap_macros[i].type == TREE_FOLDER_ELEM)
+            list_btn = lv_list_add_btn(macro_list, LV_SYMBOL_DIRECTORY,
+                                       ((reprap_macro_t *) reprap_macros[i].element)->name);
+        else
+            list_btn = lv_list_add_btn(macro_list, LV_SYMBOL_FILE, ((reprap_macro_t *) reprap_macros[i].element)->name);
         lv_obj_set_event_cb(list_btn, _macro_clicked_event_handler);
     }
 }

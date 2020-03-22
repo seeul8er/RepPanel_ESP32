@@ -30,7 +30,7 @@ const char *_decode_reprap_status(const char *valuestring) {
             job_running = false;
             return "Reading config";
         case REPRAP_STATUS_IDLE:
-            job_running = true;
+            job_running = false;
             return "Idle";
         case REPRAP_STATUS_BUSY:
             job_running = false;
@@ -56,6 +56,9 @@ const char *_decode_reprap_status(const char *valuestring) {
         case REPRAP_STATUS_CHANGINGTOOL:
             job_running = true;
             return "Tool change";
+        case REPRAP_STATUS_SIMULATING:
+            job_running = true;
+            return "Simulating";
         default:
             break;
     }
@@ -198,11 +201,26 @@ void _process_reprap_status(int type) {
     }
     update_current_tool_temps_ui();     // update UI with new values
 
-    cJSON *print_progess = cJSON_GetObjectItem(root, REPRAP_FRAC_PRINTED);
-    if (cJSON_IsNumber(print_progess)) {
-        sprintf(reppanel_job_progess, "%.0f%%", print_progess->valuedouble);
-        lv_label_set_text(label_job_progress_percent, reppanel_job_progess);
+    if (type == 3) {
+        // print job status
+        cJSON *print_progess = cJSON_GetObjectItem(root, REPRAP_FRAC_PRINTED);
+        if (cJSON_IsNumber(print_progess)) {
+            reprap_job_percent = print_progess->valuedouble;
+        }
+
+        cJSON *job_dur = cJSON_GetObjectItem(root, REPRAP_JOB_DUR);
+        if (job_dur && cJSON_IsNumber(job_dur)) {
+            reprap_job_duration = job_dur->valuedouble;
+        }
+
+        cJSON *job_curr_layer = cJSON_GetObjectItem(root, REPRAP_CURR_LAYER);
+        if (job_curr_layer && cJSON_IsNumber(job_curr_layer)) {
+            reprap_job_curr_layer = job_curr_layer->valueint;
+        }
+
+        update_print_job_status_ui();
     }
+
     cJSON_Delete(root);
 }
 
@@ -300,6 +318,10 @@ void _process_reprap_filelist() {
         cJSON_Delete(root);
         return;
     }
+    cJSON *next = cJSON_GetObjectItem(root, "next");
+    if (next != NULL && next->valueint != 0) {
+        // TODO: Not only get first list. Get all items. Check for next item
+    }
     cJSON *dir_name = cJSON_GetObjectItem(root, "dir");
     if (strncmp("0:/filaments", dir_name->valuestring, 12) == 0) {
         ESP_LOGI(TAG, "Processing filament names");
@@ -324,21 +346,121 @@ void _process_reprap_filelist() {
         ESP_LOGI(TAG, "Processing macros");
         cJSON *_folders = cJSON_GetObjectItem(root, "files");
         cJSON *iterator = NULL;
-        int pos = 0;
         for (int i = 0; i < MAX_NUM_MACROS; i++) {
-            free(reprap_macro_names[pos]);
+            if (reprap_macros[i].element != NULL) {
+                free(((reprap_macro_t*) reprap_macros[i].element)->name);
+                free(((reprap_macro_t*) reprap_macros[i].element)->last_mod);
+                free(((reprap_macro_t*) reprap_macros[i].element)->dir);
+                free((reprap_macro_t*) reprap_macros[i].element);
+                reprap_macros[i].element = NULL;
+            }
+            reprap_macros[i].type = TREE_EMPTY_ELEM;
         }
+        int pos = 0;
         cJSON_ArrayForEach(iterator, _folders) {
             if (cJSON_IsObject(iterator)) {
-                if (strncmp("f", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0 && pos < MAX_NUM_MACROS) {
-                    reprap_macro_names[pos] = malloc(strlen(cJSON_GetObjectItem(iterator, "name")->valuestring) + 1);
-                    strcpy(reprap_macro_names[pos], cJSON_GetObjectItem(iterator, "name")->valuestring);
+                if (pos < MAX_NUM_MACROS) {
+                    if (reprap_macros[pos].element == NULL) {
+                        reprap_macros[pos].element = (reprap_macro_t*) malloc(sizeof(reprap_macro_t));
+                    }
+                    ((reprap_macro_t*) reprap_macros[pos].element)->name = malloc(strlen(cJSON_GetObjectItem(iterator, "name")->valuestring) + 1);
+                    ((reprap_macro_t*) reprap_macros[pos].element)->dir = malloc(strlen(dir_name->valuestring) + 1);
+                    ((reprap_macro_t*) reprap_macros[pos].element)->last_mod = malloc(1 + 1);
+                    strcpy(((reprap_macro_t*) reprap_macros[pos].element)->name, cJSON_GetObjectItem(iterator, "name")->valuestring);
+                    strcpy(((reprap_macro_t*) reprap_macros[pos].element)->dir, dir_name->valuestring);
+                    if (strncmp("f", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0) {
+                        reprap_macros[pos].type = TREE_FILE_ELEM;
+                    } else {
+                        reprap_macros[pos].type = TREE_FOLDER_ELEM;
+                    }
+                    pos++;
+                }
+            }
+        }
+    } else if (strncmp("0:/gcodes", dir_name->valuestring, 9) == 0) {
+        ESP_LOGI(TAG, "Processing jobs");
+        cJSON *_folders = cJSON_GetObjectItem(root, "files");
+        cJSON *iterator = NULL;
+        for (int i = 0; i < MAX_NUM_JOBS; i++) {  // clear array
+            if (reprap_jobs[i].element != NULL) {
+                free(((reprap_job_t*) reprap_jobs[i].element)->name);
+                free(((reprap_job_t*) reprap_jobs[i].element)->last_mod);
+                free(((reprap_job_t*) reprap_jobs[i].element)->generator);
+                free(((reprap_job_t*) reprap_jobs[i].element)->dir);
+                free((reprap_job_t*) reprap_jobs[i].element);
+                reprap_jobs[i].element = NULL;
+            }
+            reprap_jobs[i].type = TREE_EMPTY_ELEM;
+        }
+        int pos = 0;
+        cJSON_ArrayForEach(iterator, _folders) {
+            if (cJSON_IsObject(iterator)) {
+                if (pos < MAX_NUM_JOBS) {
+                    if (reprap_jobs[pos].element == NULL) {
+                        reprap_jobs[pos].element = (reprap_job_t*) malloc(sizeof(reprap_job_t));
+                    }
+                    ((reprap_job_t*) reprap_jobs[pos].element)->name = malloc(strlen(cJSON_GetObjectItem(iterator, "name")->valuestring) + 1);
+                    ((reprap_job_t*) reprap_jobs[pos].element)->dir = malloc(strlen(dir_name->valuestring) + 1);
+                    ((reprap_job_t*) reprap_jobs[pos].element)->last_mod = malloc(1 + 1);
+                    ((reprap_job_t*) reprap_jobs[pos].element)->generator = malloc(1 + 1);
+                    strcpy(((reprap_job_t*) reprap_jobs[pos].element)->name, cJSON_GetObjectItem(iterator, "name")->valuestring);
+                    strcpy(((reprap_job_t*) reprap_jobs[pos].element)->dir, dir_name->valuestring);
+                    if (strncmp("f", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0) {
+                        reprap_jobs[pos].type = TREE_FILE_ELEM;
+                    } else {
+                        reprap_jobs[pos].type = TREE_FOLDER_ELEM;
+                    }
                     pos++;
                 }
             }
         }
     }
     cJSON_Delete(root);
+}
+
+void _process_reprap_fileinfo() {
+    cJSON *root = cJSON_Parse(json_buffer);
+    if (root == NULL) {
+        const char *error_ptr = cJSON_GetErrorPtr();
+        if (error_ptr != NULL) {
+            ESP_LOGE(TAG, "Error before: %s\n", error_ptr);
+        }
+        return;
+    }
+    cJSON *err_resp = cJSON_GetObjectItem(root, DUET_ERR);
+    if (err_resp->valueint != 0) {     // maybe no active print
+        cJSON_Delete(root);
+        return;
+    }
+    cJSON *job_time_sim = cJSON_GetObjectItem(root, REPRAP_SIMTIME);
+    if (job_time_sim && cJSON_IsNumber(job_time_sim)) {
+        reprap_job_time_sim = job_time_sim->valueint;
+    } else {
+        reprap_job_time_sim = -1;
+    }
+
+    cJSON *job_print_time = cJSON_GetObjectItem(root, REPRAP_PRINTTIME);
+    if (job_print_time && cJSON_IsNumber(job_print_time)) {
+        reprap_job_time_file = job_print_time->valueint;
+    }
+
+    cJSON *job_name = cJSON_GetObjectItem(root, "fileName");
+    if (job_name && cJSON_IsString(job_name)) {
+        strncpy(current_job_name, &job_name->valuestring[10], MAX_FILA_NAME_LEN);
+    }
+
+    cJSON *job_height = cJSON_GetObjectItem(root, "height");
+    if (job_height && cJSON_IsNumber(job_height)) {
+        reprap_job_height = job_height->valuedouble;
+    }
+    cJSON *job_first_layer_height = cJSON_GetObjectItem(root, "firstLayerHeight");
+    if (job_first_layer_height && cJSON_IsNumber(job_first_layer_height)) {
+        reprap_job_first_layer_height = job_first_layer_height->valuedouble;
+    }
+    cJSON *job_layer_height = cJSON_GetObjectItem(root, "layerHeight");
+    if (job_layer_height && cJSON_IsNumber(job_layer_height)) {
+        reprap_job_layer_height = job_layer_height->valuedouble;
+    }
 }
 
 esp_err_t _http_event_handle(esp_http_client_event_t *evt) {
@@ -506,9 +628,13 @@ void reprap_wifi_get_filelist(char *directory) {
 
 void reprap_wifi_get_fileinfo(char *filename) {
     char request_addr[MAX_REQ_ADDR_LENGTH];
-    char encoded_filename[strlen(filename) * 3];
-    url_encode((unsigned char *) filename, encoded_filename);
-    sprintf(request_addr, "%s/rr_fileinfo?dir=%s", rep_addr, encoded_filename);
+    if (filename != NULL) {
+        char encoded_filename[strlen(filename) * 3];
+        url_encode((unsigned char *) filename, encoded_filename);
+        sprintf(request_addr, "%s/rr_fileinfo?dir=%s", rep_addr, encoded_filename);
+    } else {
+        sprintf(request_addr, "%s/rr_fileinfo", rep_addr);
+    }
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
@@ -524,7 +650,7 @@ void reprap_wifi_get_fileinfo(char *filename) {
     }
     switch (esp_http_client_get_status_code(client)) {
         case 200:
-            // TODO process_reprap_fileinfo();
+            _process_reprap_fileinfo();
             break;
         case 401:
             ESP_LOGI(TAG, "Authorising with Duet");
@@ -625,6 +751,24 @@ void request_macros() {
     }
 }
 
+void request_fileinfo(char *file_name) {
+    if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
+        ESP_LOGI(TAG, "Requesting file info");
+        reprap_wifi_get_fileinfo(file_name);
+    } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
+        ESP_LOGW(TAG, "Using UART not supported for now");
+    }
+}
+
+void request_jobs() {
+    if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
+        ESP_LOGI(TAG, "Requesting jobs");
+        reprap_wifi_get_filelist("0:/gcodes&first=0");
+    } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
+        ESP_LOGW(TAG, "Using UART not supported for now");
+    }
+}
+
 /**
  * Called most of the time
  * @param task
@@ -634,7 +778,13 @@ void request_reprap_status_updates(lv_task_t *task) {
         if (!got_duet_settings) reprap_wifi_download("0%3A%2Fsys%2Fdwc2settings.json");
         if (!got_filaments) request_filaments();
         if (!got_status_two) wifi_duet_get_status(2);
-        wifi_duet_get_status(1);
+        bool old_job_status = job_running;
+        if (!job_running)
+            wifi_duet_get_status(1);
+        else
+            wifi_duet_get_status(3);
+        if (old_job_status != job_running)
+            request_fileinfo(NULL); // Someone started a print job (ext. application). Get the info.
     } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
         ESP_LOGW(TAG, "Using UART not supported for now");
     }

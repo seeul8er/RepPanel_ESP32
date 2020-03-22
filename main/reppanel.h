@@ -35,7 +35,12 @@ extern "C" {
 #define MAX_TOOL_NAME_LEN   100
 #define MAX_LEN_STR_FILAMENT_LIST   1024*2
 #define MAX_NUM_MACROS      256
+#define MAX_NUM_JOBS        MAX_NUM_MACROS
 #define MAX_LEN_MACRO_STR   256
+
+#define TREE_EMPTY_ELEM     -1
+#define TREE_FOLDER_ELEM    0
+#define TREE_FILE_ELEM      1
 
 extern uint8_t reppanel_conn_status;               // 0=no connection, 1=connected wifi, 2=disconnected wifi, 3=reconnecting wifi,
                                             // 4=working UART
@@ -63,8 +68,6 @@ extern lv_obj_t *label_connection_status;
 
 // Temp variable for writing to label. Contains current temp + °C or °F
 extern char reppanel_status[MAX_REPRAP_STATUS_LEN];
-extern char reppanel_chamber_temp[MAX_REPRAP_STATUS_LEN];
-extern char reppanel_job_progess[MAX_PREPANEL_TEMP_LEN];
 
 extern int reprap_chamber_temp_curr_pos;
 extern double reprap_chamber_temp_buff[NUM_TEMPS_BUFF];
@@ -75,9 +78,19 @@ extern double reprap_extruder_amounts[NUM_TEMPS_BUFF];
 extern double reprap_extruder_feedrates[NUM_TEMPS_BUFF];
 extern double reprap_move_feedrate;
 extern double reprap_mcu_temp;
+extern double reprap_job_percent;
+extern int reprap_job_file_pos;
+extern double reprap_job_duration;
+extern int reprap_job_curr_layer;
+extern int reprap_job_time_file;
+extern int reprap_job_time_sim;
+extern double reprap_job_first_layer_height;
+extern double reprap_job_layer_height;
+extern double reprap_job_height;
+extern char current_job_name[MAX_FILA_NAME_LEN];
 extern char reprap_firmware_name[100];
 extern char reprap_firmware_version[5];
-extern char *reprap_macro_names[MAX_NUM_MACROS];    // pointers to macro file names. Use malloc & free!
+
 
 typedef struct {
     int number;
@@ -108,6 +121,33 @@ typedef struct {
     double temps_standby[NUM_TEMPS_BUFF];
     double temps_active[NUM_TEMPS_BUFF];
 } reprap_bed_poss_temps_t;
+
+typedef struct {
+    char *name;
+    char *last_mod;
+    char *dir;
+    char *generator;        // slicer engine
+    int size;
+    double height;
+    double layer_height;
+    int print_time;
+    int sim_print_time;
+} reprap_job_t;
+
+typedef struct {
+    char *name;
+    char *last_mod;
+    char *dir;
+    int size;
+} reprap_macro_t;
+
+typedef struct {
+    void *element;  // reprap_macro_t or reprap_job_t
+    int type;       // TREE_FOLDER_ELEM, TREE_FILE_ELEM
+} file_tree_elem_t;
+
+extern file_tree_elem_t reprap_jobs[MAX_NUM_JOBS];
+extern file_tree_elem_t reprap_macros[MAX_NUM_MACROS];
 
 // pos 0 is bed temp, rest are tool heaters
 extern int heater_states[MAX_NUM_TOOLS];       // 0=off, 1=standby, 2=active, 3=fault - Storage for incoming data

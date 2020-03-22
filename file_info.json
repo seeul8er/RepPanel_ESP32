@@ -1,0 +1,16 @@
+{
+  "err": 0,
+  "size": 7623761,
+  "lastModified": "2020-03-19T14:47:02",
+  "height": 44.10,
+  "firstLayerHeight": 0.30,
+  "layerHeight": 0.15,
+  "printTime": 4830,
+  "simulatedTime": 13891,
+  "filament": [
+    4026.3
+  ],
+  "printDuration": 245,
+  "fileName": "0:/gcodes/CFFFP_v3-solid-virus.gcode",
+  "generatedBy": "Cura_SteamEngine 4.5.0"
+}

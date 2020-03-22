@@ -16,6 +16,8 @@ void reprap_wifi_get_filelist(char *directory);
 void reprap_wifi_send_gcode(char *gcode);
 void request_filaments();
 void request_macros();
+void request_jobs();
+void request_fileinfo(char *file_name);
 void reprap_send_gcode(char *gcode_command);
 
 #endif //REPPANEL_ESP32_REPPANEL_REQUEST_H

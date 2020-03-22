@@ -26,7 +26,6 @@ double reprap_move_feedrate = 6000;
 double reprap_mcu_temp = 0;
 char reprap_firmware_name[100];
 char reprap_firmware_version[5];
-char *reprap_macro_names[MAX_NUM_MACROS];
 int num_tools = 0;
 reprap_tool_t reprap_tools[MAX_NUM_TOOLS];
 reprap_bed_t reprap_bed;
@@ -62,8 +61,8 @@ void app_main() {
     init_reprap_buffers();
 
     static uint32_t user_data = 10;
-    lv_task_t *request_simple_printer_status_task = lv_task_create(request_reprap_status_updates, 750, LV_TASK_PRIO_LOW, &user_data);
-    lv_task_ready(request_simple_printer_status_task);
+    lv_task_t *request_printer_status_task = lv_task_create(request_reprap_status_updates, 750, LV_TASK_PRIO_LOW, &user_data);
+    lv_task_ready(request_printer_status_task);
 
     lv_task_t *get_ext_printer_status_task = lv_task_create(request_reprap_ext_status_updates, 5000, LV_TASK_PRIO_LOW, NULL);
     lv_task_ready(get_ext_printer_status_task);

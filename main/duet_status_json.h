@@ -19,8 +19,15 @@
 #define DUET_FIRM_VER   "firmwareVersion"
 #define DUET_TEMPS_ACTIVE   "active"
 #define DUET_TEMPS_STANDBY   "standby"
+#define DUET_ERR            "err"
 
 #define REPRAP_FRAC_PRINTED "fractionPrinted"
+#define REPRAP_CURR_LAYER "currentLayer"
+#define REPRAP_JOB_DUR "printDuration"
+#define REPRAP_TIMES_LEFT "timesLeft"
+#define REPRAP_TIMES_LEFT_FILE "file"
+#define REPRAP_SIMTIME "simulatedTime"
+#define REPRAP_PRINTTIME "printTime"
 
 #define REPRAP_STATUS_PROCESS_CONFIG    'C'
 #define REPRAP_STATUS_IDLE              'I'
@@ -32,5 +39,6 @@
 #define REPRAP_STATUS_HALTED            'H'
 #define REPRAP_STATUS_FLASHING          'F'
 #define REPRAP_STATUS_CHANGINGTOOL      'T'
+#define REPRAP_STATUS_SIMULATING        'M'
 
 #endif //REPPANEL_ESP32_DUET_STATUS_JSON_H

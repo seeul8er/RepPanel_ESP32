@@ -47,7 +47,12 @@ void init_reprap_buffers() {
         reprap_chamber_temp_buff[i] = -1;
     }
     for (int i = 0; i < MAX_NUM_MACROS; i++) {
-        reprap_macro_names[i] = NULL;
+        reprap_macros[i].type = TREE_EMPTY_ELEM;
+        reprap_macros[i].element = NULL;
+    }
+    for (int i = 0; i < MAX_NUM_JOBS; i++) {
+        reprap_jobs[i].type = TREE_EMPTY_ELEM;
+        reprap_jobs[i].element = NULL;
     }
     for (int i = 0; i < NUM_TEMPS_BUFF; i++) {
         reprap_bed_poss_temps.temps_active[i] = -1;

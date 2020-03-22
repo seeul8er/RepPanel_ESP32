@@ -1,0 +1,98 @@
+{
+  "status": "I",
+  "coords": {
+    "axesHomed": [
+      0,
+      0,
+      0
+    ],
+    "wpl": 1,
+    "xyz": [
+      0.000,
+      0.000,
+      0.000
+    ],
+    "machine": [
+      0.000,
+      0.000,
+      0.000
+    ],
+    "extr": [
+      -0.3
+    ]
+  },
+  "speeds": {
+    "requested": 0.0,
+    "top": 0.0
+  },
+  "currentTool": 0,
+  "params": {
+    "atxPower": -1,
+    "fanPercent": [
+      0,
+      30,
+      0
+    ],
+    "speedFactor": 100.0,
+    "extrFactors": [
+      100.0
+    ],
+    "babystep": 0.000
+  },
+  "seq": 2,
+  "sensors": {
+    "probeValue": 1000,
+    "fanRPM": [
+      -1,
+      -1,
+      -1
+    ]
+  },
+  "temps": {
+    "bed": {
+      "current": 20.5,
+      "active": 0.0,
+      "standby": 0.0,
+      "state": 0,
+      "heater": 0
+    },
+    "current": [
+      20.5,
+      20.3
+    ],
+    "state": [
+      0,
+      0
+    ],
+    "tools": {
+      "active": [
+        [
+          0.0
+        ]
+      ],
+      "standby": [
+        [
+          0.0
+        ]
+      ]
+    },
+    "extra": []
+  },
+  "time": 8669.0,
+  "currentLayer": 0,
+  "currentLayerTime": 0.0,
+  "extrRaw": [
+    479.9
+  ],
+  "fractionPrinted": 0.0,
+  "filePosition": 0,
+  "firstLayerDuration": 0.0,
+  "firstLayerHeight": 0.68,
+  "printDuration": 0.0,
+  "warmUpDuration": 0.0,
+  "timesLeft": {
+    "file": 0.0,
+    "filament": 0.0,
+    "layer": 0.0
+  }
+}
