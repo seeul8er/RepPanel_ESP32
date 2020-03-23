@@ -1,14 +1,14 @@
 //
-// Created by cyber on 01.03.20.
-//
+// Copyright (c) 2020 Wolfgang Christl
+// Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
-#include <stdio.h>
 #include <lvgl/src/lv_objx/lv_page.h>
 #include <lvgl/src/lv_objx/lv_ddlist.h>
 #include <esp_log.h>
 #include "reppanel_machine.h"
 #include "reppanel_helper.h"
 #include "reppanel_request.h"
+#include "reppanel.h"
 
 #define TAG     "Machine"
 
@@ -58,7 +58,7 @@ static void _start_cali_event(lv_obj_t *obj, lv_event_t event) {
 
 void draw_machine(lv_obj_t *parent_screen) {
     machine_page = lv_page_create(parent_screen, NULL);
-    lv_obj_set_size(machine_page, lv_disp_get_hor_res(NULL), 250);
+    lv_obj_set_size(machine_page, lv_disp_get_hor_res(NULL), lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
     lv_page_set_scrl_fit2(machine_page, LV_FIT_FILL, LV_FIT_FILL);
     lv_page_set_scrl_layout(machine_page, LV_LAYOUT_COL_M);
 

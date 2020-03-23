@@ -1,12 +1,12 @@
 //
-// Created by cyber on 20.03.20.
-//
+// Copyright (c) 2020 Wolfgang Christl
+// Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
 #include <lvgl/src/lv_core/lv_obj.h>
 #include <lvgl/src/lv_objx/lv_cont.h>
 #include <lvgl/src/lv_objx/lv_page.h>
 #include <lvgl/lvgl.h>
-#include <custom_themes/lv_theme_rep_panel_light.h>
+#include <custom_themes/lv_theme_rep_panel_dark.h>
 #include <esp_log.h>
 #include "reppanel.h"
 #include "reppanel_request.h"
@@ -156,7 +156,7 @@ void _pause_job_event(lv_obj_t * obj, lv_event_t event) {
 
 void draw_jobstatus(lv_obj_t *parent_screen) {
     jobstatus_page = lv_page_create(parent_screen, NULL);
-    lv_obj_set_size(jobstatus_page, lv_disp_get_hor_res(NULL), 270);
+    lv_obj_set_size(jobstatus_page, lv_disp_get_hor_res(NULL), lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
     lv_page_set_scrl_fit(jobstatus_page, LV_FIT_FLOOD);
     lv_page_set_scrl_layout(jobstatus_page, LV_LAYOUT_OFF);
     static lv_style_t style_jobstatus_page;

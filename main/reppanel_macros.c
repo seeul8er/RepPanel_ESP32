@@ -1,7 +1,6 @@
 //
-// Created by cyber on 15.03.20.
-//
-
+// Copyright (c) 2020 Wolfgang Christl
+// Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
 #include <lvgl/src/lv_core/lv_obj.h>
 #include <lvgl/lvgl.h>
@@ -39,7 +38,7 @@ void draw_macro(lv_obj_t *parent_screen) {
     lv_cont_set_fit2(macro_container, LV_FIT_FILL, LV_FIT_FILL);
 
     macro_list = lv_list_create(macro_container, NULL);
-    lv_obj_set_size(macro_list, LV_HOR_RES - 10, 270);
+    lv_obj_set_size(macro_list, LV_HOR_RES - 10, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
     lv_obj_align(macro_list, NULL, LV_ALIGN_IN_TOP_MID, 0, 50);
 
     request_macros();

@@ -1,6 +1,6 @@
 //
-// Created by cyber on 01.03.20.
-//
+// Copyright (c) 2020 Wolfgang Christl
+// Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
 #ifndef LVGL_REPPANEL_PROCESS_H
 #define LVGL_REPPANEL_PROCESS_H

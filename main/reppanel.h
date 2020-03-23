@@ -1,6 +1,6 @@
 //
-// Created by cyber on 16.02.20.
-//
+// Copyright (c) 2020 Wolfgang Christl
+// Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
 #ifndef LVGL_REPPANEL_H
 #define LVGL_REPPANEL_H
@@ -47,6 +47,7 @@ extern uint8_t reppanel_conn_status;               // 0=no connection, 1=connect
 
 extern lv_obj_t *process_scr;               // screen for the process settings
 extern lv_obj_t *mainmenu_scr;              // screen for the main_menue
+extern lv_obj_t *cont_header;
 
 extern lv_obj_t *label_status;
 extern lv_obj_t *label_chamber_temp;

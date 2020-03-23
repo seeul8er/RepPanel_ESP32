@@ -1,6 +1,6 @@
 //
-// Created by cyber on 25.02.20.
-//
+// Copyright (c) 2020 Wolfgang Christl
+// Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
 #ifndef REPPANEL_ESP32_DUET_STATUS_JSON_H
 #define REPPANEL_ESP32_DUET_STATUS_JSON_H

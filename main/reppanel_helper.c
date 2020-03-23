@@ -1,6 +1,6 @@
 //
-// Created by cyber on 29.02.20.
-//
+// Copyright (c) 2020 Wolfgang Christl
+// Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
 #include <lvgl/src/lv_core/lv_obj.h>
 #include <lvgl/src/lv_objx/lv_btn.h>

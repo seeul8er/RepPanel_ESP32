@@ -1,6 +1,6 @@
 //
-// Created by cyber on 10.03.20.
-//
+// Copyright (c) 2020 Wolfgang Christl
+// Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
 #include <esp_wifi_types.h>
 #include <esp_wifi.h>

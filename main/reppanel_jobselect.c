@@ -1,11 +1,11 @@
 //
-// Created by cyber on 21.03.20.
-//
+// Copyright (c) 2020 Wolfgang Christl
+// Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
 #include <stdio.h>
 #include <lvgl/lvgl.h>
 #include <stdlib.h>
-#include <custom_themes/lv_theme_rep_panel_light.h>
+#include <custom_themes/lv_theme_rep_panel_dark.h>
 #include <esp_log.h>
 #include "reppanel.h"
 #include "reppanel_request.h"
@@ -124,7 +124,7 @@ void draw_jobselect(lv_obj_t *parent_screen) {
     lv_label_set_text(label_info, "Select print job");
 
     jobs_list = lv_list_create(jobs_container, NULL);
-    lv_obj_set_size(jobs_list, LV_HOR_RES-10, lv_disp_get_ver_res(NULL) - 100);
+    lv_obj_set_size(jobs_list, LV_HOR_RES-10, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 50));
 
     for (int i = 0; reprap_jobs[i].element != NULL; i++) {
         lv_obj_t *list_btn;

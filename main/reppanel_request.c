@@ -1,6 +1,6 @@
 //
-// Created by cyber on 24.02.20.
-// https://github.com/chrishamm/DuetWebControl/tree/legacy
+// Copyright (c) 2020 Wolfgang Christl
+// Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
 #include <lvgl/src/lv_misc/lv_task.h>
 #include <esp_log.h>
@@ -348,10 +348,10 @@ void _process_reprap_filelist() {
         cJSON *iterator = NULL;
         for (int i = 0; i < MAX_NUM_MACROS; i++) {
             if (reprap_macros[i].element != NULL) {
-                free(((reprap_macro_t*) reprap_macros[i].element)->name);
-                free(((reprap_macro_t*) reprap_macros[i].element)->last_mod);
-                free(((reprap_macro_t*) reprap_macros[i].element)->dir);
-                free((reprap_macro_t*) reprap_macros[i].element);
+                free(((reprap_macro_t *) reprap_macros[i].element)->name);
+                free(((reprap_macro_t *) reprap_macros[i].element)->last_mod);
+                free(((reprap_macro_t *) reprap_macros[i].element)->dir);
+                free((reprap_macro_t *) reprap_macros[i].element);
                 reprap_macros[i].element = NULL;
             }
             reprap_macros[i].type = TREE_EMPTY_ELEM;
@@ -361,13 +361,15 @@ void _process_reprap_filelist() {
             if (cJSON_IsObject(iterator)) {
                 if (pos < MAX_NUM_MACROS) {
                     if (reprap_macros[pos].element == NULL) {
-                        reprap_macros[pos].element = (reprap_macro_t*) malloc(sizeof(reprap_macro_t));
+                        reprap_macros[pos].element = (reprap_macro_t *) malloc(sizeof(reprap_macro_t));
                     }
-                    ((reprap_macro_t*) reprap_macros[pos].element)->name = malloc(strlen(cJSON_GetObjectItem(iterator, "name")->valuestring) + 1);
-                    ((reprap_macro_t*) reprap_macros[pos].element)->dir = malloc(strlen(dir_name->valuestring) + 1);
-                    ((reprap_macro_t*) reprap_macros[pos].element)->last_mod = malloc(1 + 1);
-                    strcpy(((reprap_macro_t*) reprap_macros[pos].element)->name, cJSON_GetObjectItem(iterator, "name")->valuestring);
-                    strcpy(((reprap_macro_t*) reprap_macros[pos].element)->dir, dir_name->valuestring);
+                    ((reprap_macro_t *) reprap_macros[pos].element)->name = malloc(
+                            strlen(cJSON_GetObjectItem(iterator, "name")->valuestring) + 1);
+                    ((reprap_macro_t *) reprap_macros[pos].element)->dir = malloc(strlen(dir_name->valuestring) + 1);
+                    ((reprap_macro_t *) reprap_macros[pos].element)->last_mod = malloc(1 + 1);
+                    strcpy(((reprap_macro_t *) reprap_macros[pos].element)->name,
+                           cJSON_GetObjectItem(iterator, "name")->valuestring);
+                    strcpy(((reprap_macro_t *) reprap_macros[pos].element)->dir, dir_name->valuestring);
                     if (strncmp("f", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0) {
                         reprap_macros[pos].type = TREE_FILE_ELEM;
                     } else {
@@ -383,11 +385,11 @@ void _process_reprap_filelist() {
         cJSON *iterator = NULL;
         for (int i = 0; i < MAX_NUM_JOBS; i++) {  // clear array
             if (reprap_jobs[i].element != NULL) {
-                free(((reprap_job_t*) reprap_jobs[i].element)->name);
-                free(((reprap_job_t*) reprap_jobs[i].element)->last_mod);
-                free(((reprap_job_t*) reprap_jobs[i].element)->generator);
-                free(((reprap_job_t*) reprap_jobs[i].element)->dir);
-                free((reprap_job_t*) reprap_jobs[i].element);
+                free(((reprap_job_t *) reprap_jobs[i].element)->name);
+                free(((reprap_job_t *) reprap_jobs[i].element)->last_mod);
+                free(((reprap_job_t *) reprap_jobs[i].element)->generator);
+                free(((reprap_job_t *) reprap_jobs[i].element)->dir);
+                free((reprap_job_t *) reprap_jobs[i].element);
                 reprap_jobs[i].element = NULL;
             }
             reprap_jobs[i].type = TREE_EMPTY_ELEM;
@@ -397,14 +399,16 @@ void _process_reprap_filelist() {
             if (cJSON_IsObject(iterator)) {
                 if (pos < MAX_NUM_JOBS) {
                     if (reprap_jobs[pos].element == NULL) {
-                        reprap_jobs[pos].element = (reprap_job_t*) malloc(sizeof(reprap_job_t));
+                        reprap_jobs[pos].element = (reprap_job_t *) malloc(sizeof(reprap_job_t));
                     }
-                    ((reprap_job_t*) reprap_jobs[pos].element)->name = malloc(strlen(cJSON_GetObjectItem(iterator, "name")->valuestring) + 1);
-                    ((reprap_job_t*) reprap_jobs[pos].element)->dir = malloc(strlen(dir_name->valuestring) + 1);
-                    ((reprap_job_t*) reprap_jobs[pos].element)->last_mod = malloc(1 + 1);
-                    ((reprap_job_t*) reprap_jobs[pos].element)->generator = malloc(1 + 1);
-                    strcpy(((reprap_job_t*) reprap_jobs[pos].element)->name, cJSON_GetObjectItem(iterator, "name")->valuestring);
-                    strcpy(((reprap_job_t*) reprap_jobs[pos].element)->dir, dir_name->valuestring);
+                    ((reprap_job_t *) reprap_jobs[pos].element)->name = malloc(
+                            strlen(cJSON_GetObjectItem(iterator, "name")->valuestring) + 1);
+                    ((reprap_job_t *) reprap_jobs[pos].element)->dir = malloc(strlen(dir_name->valuestring) + 1);
+                    ((reprap_job_t *) reprap_jobs[pos].element)->last_mod = malloc(1 + 1);
+                    ((reprap_job_t *) reprap_jobs[pos].element)->generator = malloc(1 + 1);
+                    strcpy(((reprap_job_t *) reprap_jobs[pos].element)->name,
+                           cJSON_GetObjectItem(iterator, "name")->valuestring);
+                    strcpy(((reprap_job_t *) reprap_jobs[pos].element)->dir, dir_name->valuestring);
                     if (strncmp("f", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0) {
                         reprap_jobs[pos].type = TREE_FILE_ELEM;
                     } else {
@@ -578,17 +582,19 @@ void reprap_wifi_send_gcode(char *gcode) {
         ESP_LOGI(TAG, "Status = %d, content_length = %d",
                  esp_http_client_get_status_code(client),
                  esp_http_client_get_content_length(client));
-    }
-    switch (esp_http_client_get_status_code(client)) {
-        case 200:
-            // TODO process_reprap_gcode();
-            break;
-        case 401:
-            ESP_LOGI(TAG, "Authorising with Duet");
-            wifi_duet_authorise(false);
-            break;
-        default:
-            break;
+        switch (esp_http_client_get_status_code(client)) {
+            case 200:
+                // TODO process_reprap_gcode();
+                break;
+            case 401:
+                ESP_LOGI(TAG, "Authorising with Duet");
+                wifi_duet_authorise(false);
+                break;
+            default:
+                break;
+        }
+    } else {
+        ESP_LOGW(TAG, "Error sending GCode via WiFi: %s", esp_err_to_name(err));
     }
     esp_http_client_cleanup(client);
 }
@@ -611,17 +617,20 @@ void reprap_wifi_get_filelist(char *directory) {
         ESP_LOGI(TAG, "Status = %d, content_length = %d",
                  esp_http_client_get_status_code(client),
                  esp_http_client_get_content_length(client));
-    }
-    switch (esp_http_client_get_status_code(client)) {
-        case 200:
-            _process_reprap_filelist();
-            break;
-        case 401:
-            ESP_LOGI(TAG, "Authorising with Duet");
-            wifi_duet_authorise(false);
-            break;
-        default:
-            break;
+
+        switch (esp_http_client_get_status_code(client)) {
+            case 200:
+                _process_reprap_filelist();
+                break;
+            case 401:
+                ESP_LOGI(TAG, "Authorising with Duet");
+                wifi_duet_authorise(false);
+                break;
+            default:
+                break;
+        }
+    } else {
+        ESP_LOGW(TAG, "Error getting file list via WiFi: %s", esp_err_to_name(err));
     }
     esp_http_client_cleanup(client);
 }
@@ -647,17 +656,20 @@ void reprap_wifi_get_fileinfo(char *filename) {
         ESP_LOGI(TAG, "Status = %d, content_length = %d",
                  esp_http_client_get_status_code(client),
                  esp_http_client_get_content_length(client));
-    }
-    switch (esp_http_client_get_status_code(client)) {
-        case 200:
-            _process_reprap_fileinfo();
-            break;
-        case 401:
-            ESP_LOGI(TAG, "Authorising with Duet");
-            wifi_duet_authorise(false);
-            break;
-        default:
-            break;
+
+        switch (esp_http_client_get_status_code(client)) {
+            case 200:
+                _process_reprap_fileinfo();
+                break;
+            case 401:
+                ESP_LOGI(TAG, "Authorising with Duet");
+                wifi_duet_authorise(false);
+                break;
+            default:
+                break;
+        }
+    } else {
+        ESP_LOGW(TAG, "Error getting file info via WiFi: %s", esp_err_to_name(err));
     }
     esp_http_client_cleanup(client);
 }

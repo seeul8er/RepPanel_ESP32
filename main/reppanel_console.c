@@ -1,13 +1,14 @@
 //
-// Created by cyber on 21.03.20.
-//
+// Copyright (c) 2020 Wolfgang Christl
+// Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
 #include <stdio.h>
 #include <lvgl/src/lv_objx/lv_cont.h>
 #include <lvgl/lvgl.h>
 #include <lvgl/src/lv_core/lv_style.h>
-#include <custom_themes/lv_theme_rep_panel_light.h>
+#include <custom_themes/lv_theme_rep_panel_dark.h>
 #include "reppanel_console.h"
+#include "reppanel.h"
 
 
 lv_obj_t *console_container;
@@ -102,7 +103,7 @@ void update_entries(console_entry_t enties[MAX_CONSOLE_ENTRY_COUNT]) {
 
 void draw_console(lv_obj_t *parent_screen) {
     console_page = lv_page_create(parent_screen, NULL);
-    lv_obj_set_size(console_page, lv_disp_get_hor_res(NULL), lv_disp_get_ver_res(NULL) - 50);
+    lv_obj_set_size(console_page, lv_disp_get_hor_res(NULL), lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
     lv_obj_align(console_page, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
     lv_page_set_scrl_layout(console_page, LV_LAYOUT_COL_M);
 

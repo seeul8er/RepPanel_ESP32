@@ -1,12 +1,16 @@
+//
+// Copyright (c) 2020 Wolfgang Christl
+// Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
+
 /*********************
  *      INCLUDES
  *********************/
 #include <lvgl/src/lv_core/lv_style.h>
 #include <lvgl/lvgl.h>
 #include "lvgl/src/lv_themes/lv_theme.h"
-#include "lv_theme_rep_panel_light.h"
+#include "lv_theme_rep_panel_dark.h"
 
-#if LV_USE_THEME_REP_PANEL_LIGHT
+#if LV_USE_THEME_REP_PANEL_DARK
 
 /*********************
  *      DEFINES

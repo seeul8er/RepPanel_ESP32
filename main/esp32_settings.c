@@ -1,6 +1,7 @@
 //
-// Created by cyber on 08.03.20.
-//
+// Copyright (c) 2020 Wolfgang Christl
+// Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
+
 #include <nvs.h>
 #include <string.h>
 #include <esp_log.h>

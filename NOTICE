@@ -1,0 +1,16 @@
+RepPanel - Copyright 2020 Wolfgang Christl
+
+Dependencies:
+    - esp-idf 4.x:  Apache License 2.0 - Espressif Systems
+            (https://github.com/espressif/esp-idf)
+
+    - littlevgl v6.1.1: MIT licence - Copyright (c) 2016 Gábor Kiss-Vámosi
+            (https://github.com/littlevgl/lvgl)
+
+    - lv_port_esp32: MIT licence - Copyright (c) 2019 Littlev Graphics Library
+            (https://github.com/littlevgl/lv_port_esp32)
+
+    - Google Material icons: Apache License 2.0
+
+    - Google Roboto font: Apache License 2.0
+            (https://fonts.google.com/specimen/Roboto)

@@ -1,9 +1,9 @@
 //
-// Created by cyber on 01.03.20.
-//
+// Copyright (c) 2020 Wolfgang Christl
+// Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
 #include <stdio.h>
-#include <custom_themes/lv_theme_rep_panel_light.h>
+#include <custom_themes/lv_theme_rep_panel_dark.h>
 #include <esp_log.h>
 #include "reppanel_process.h"
 #include "reppanel.h"

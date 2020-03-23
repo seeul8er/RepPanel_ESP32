@@ -1,11 +1,11 @@
 //
-// Created by cyber on 01.03.20.
-//
+// Copyright (c) 2020 Wolfgang Christl
+// Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
 #include <stdio.h>
 #include <lvgl/src/lv_objx/lv_page.h>
 #include <lvgl/lvgl.h>
-#include <custom_themes/lv_theme_rep_panel_light.h>
+#include <custom_themes/lv_theme_rep_panel_dark.h>
 #include <esp_log.h>
 #include "reppanel_info.h"
 #include "reppanel.h"
@@ -124,7 +124,7 @@ void draw_info(lv_obj_t *parent_screen) {
     read_settings_nvs();
 
     info_page = lv_page_create(parent_screen, NULL);
-    lv_obj_set_size(info_page, lv_disp_get_hor_res(NULL), 270);
+    lv_obj_set_size(info_page, lv_disp_get_hor_res(NULL), lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
     lv_page_set_scrl_fit2(info_page, LV_FIT_TIGHT, LV_FIT_FILL);
     lv_page_set_scrl_layout(info_page, LV_LAYOUT_COL_L);
 
