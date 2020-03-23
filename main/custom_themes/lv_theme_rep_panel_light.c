@@ -131,6 +131,7 @@ static void btn_init(void) {
     pr.body.grad_color = REP_PANEL_DARK;
     pr.text.color = REP_PANEL_DARK_ACCENT;
     pr.body.border.color = REP_PANEL_DARK_ACCENT;
+    pr.body.border.width = 1;
     pr.body.shadow.width = 0;
 
     lv_style_copy(&tgl_rel, &rel);
