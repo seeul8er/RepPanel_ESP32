@@ -112,20 +112,7 @@ static void _job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
-
-void draw_jobselect(lv_obj_t *parent_screen) {
-    request_jobs();
-
-    jobs_container = lv_cont_create(parent_screen, NULL);
-    lv_cont_set_layout(jobs_container, LV_LAYOUT_COL_M);
-    lv_cont_set_fit(jobs_container, LV_FIT_FILL);
-
-    lv_obj_t *label_info = lv_label_create(jobs_container, NULL);
-    lv_label_set_text(label_info, "Select print job");
-
-    jobs_list = lv_list_create(jobs_container, NULL);
-    lv_obj_set_size(jobs_list, LV_HOR_RES-10, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 50));
-
+void update_job_list_ui(){
     for (int i = 0; reprap_jobs[i].element != NULL; i++) {
         lv_obj_t *list_btn;
         if (reprap_jobs[i].type == TREE_FOLDER_ELEM) {
@@ -135,4 +122,18 @@ void draw_jobselect(lv_obj_t *parent_screen) {
         }
         lv_obj_set_event_cb(list_btn, _job_clicked_event_handler);
     }
+}
+
+
+void draw_jobselect(lv_obj_t *parent_screen) {
+    jobs_container = lv_cont_create(parent_screen, NULL);
+    lv_cont_set_layout(jobs_container, LV_LAYOUT_COL_M);
+    lv_cont_set_fit(jobs_container, LV_FIT_FILL);
+
+    lv_obj_t *label_info = lv_label_create(jobs_container, NULL);
+    lv_label_set_text(label_info, "Select print job");
+
+    jobs_list = lv_list_create(jobs_container, NULL);
+    lv_obj_set_size(jobs_list, LV_HOR_RES-10, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 50));
+    request_jobs_async();
 }

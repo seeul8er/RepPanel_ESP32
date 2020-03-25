@@ -14,6 +14,9 @@
 #include "reppanel_request.h"
 #include "reppanel_process.h"
 #include "reppanel_jobstatus.h"
+#include "main.h"
+#include "reppanel_macros.h"
+#include "reppanel_jobselect.h"
 
 #define TAG                 "RequestTask"
 #define JSON_BUFF_SIZE      10240
@@ -23,6 +26,7 @@ static char json_buffer[JSON_BUFF_SIZE];
 static bool got_filaments = false;
 static bool got_status_two = false;
 static bool got_duet_settings = false;
+
 
 const char *_decode_reprap_status(const char *valuestring) {
     switch (*valuestring) {
@@ -62,7 +66,7 @@ const char *_decode_reprap_status(const char *valuestring) {
         default:
             break;
     }
-    return "Unknown status";
+    return "UnknownStatus";
 }
 
 void _process_reprap_status(int type) {
@@ -379,6 +383,10 @@ void _process_reprap_filelist() {
                 }
             }
         }
+        if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
+            update_macro_list_ui();
+            xSemaphoreGive(xGuiSemaphore);
+        }
     } else if (strncmp("0:/gcodes", dir_name->valuestring, 9) == 0) {
         ESP_LOGI(TAG, "Processing jobs");
         cJSON *_folders = cJSON_GetObjectItem(root, "files");
@@ -417,6 +425,10 @@ void _process_reprap_filelist() {
                     pos++;
                 }
             }
+        }
+        if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
+            update_job_list_ui();
+            xSemaphoreGive(xGuiSemaphore);
         }
     }
     cJSON_Delete(root);
@@ -549,7 +561,11 @@ void wifi_duet_get_status(int type) {
 
         switch (esp_http_client_get_status_code(client)) {
             case 200:
-                _process_reprap_status(type);
+                // Wait for time slot to update GUI
+                if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
+                    _process_reprap_status(type);
+                    xSemaphoreGive(xGuiSemaphore);
+                }
                 break;
             case 401:
                 ESP_LOGI(TAG, "Authorising with Duet");
@@ -633,6 +649,52 @@ void reprap_wifi_get_filelist(char *directory) {
         ESP_LOGW(TAG, "Error getting file list via WiFi: %s", esp_err_to_name(err));
     }
     esp_http_client_cleanup(client);
+}
+
+/**
+ *
+ * @param params Char array describing path to directory on pritner
+ */
+void reprap_wifi_get_filelist_task(void *params) {
+    char *directory = params;
+    char request_addr[MAX_REQ_ADDR_LENGTH];
+    char encoded_dir[strlen(directory) * 3];
+    url_encode((unsigned char *) directory, encoded_dir);
+    sprintf(request_addr, "%s/rr_filelist?dir=%s", rep_addr, encoded_dir);
+    ESP_LOGI("FileListTask", "%s", request_addr);
+    esp_http_client_config_t config = {
+            .url = request_addr,
+            .timeout_ms = REQUEST_TIMEOUT_MS,
+            .event_handler = _http_event_handle,
+    };
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    esp_err_t err = esp_http_client_perform(client);
+
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "Status = %d, content_length = %d",
+                 esp_http_client_get_status_code(client),
+                 esp_http_client_get_content_length(client));
+
+        switch (esp_http_client_get_status_code(client)) {
+            case 200:
+//                if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
+//                    _process_reprap_filelist();
+//                    xSemaphoreGive(xGuiSemaphore);
+//                }
+                _process_reprap_filelist();
+                break;
+            case 401:
+                ESP_LOGI(TAG, "Authorising with Duet");
+                wifi_duet_authorise(false);
+                break;
+            default:
+                break;
+        }
+    } else {
+        ESP_LOGW(TAG, "Error getting file list via WiFi: %s", esp_err_to_name(err));
+    }
+    esp_http_client_cleanup(client);
+    vTaskDelete(NULL);
 }
 
 void reprap_wifi_get_fileinfo(char *filename) {
@@ -722,7 +784,10 @@ void reprap_wifi_download(char *file) {
 
         switch (esp_http_client_get_status_code(client)) {
             case 200:
-                _process_duet_settings();
+                if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
+                    _process_duet_settings();
+                    xSemaphoreGive(xGuiSemaphore);
+                }
                 break;
             case 401:
                 ESP_LOGI(TAG, "Authorising with Duet");
@@ -737,6 +802,10 @@ void reprap_wifi_download(char *file) {
     esp_http_client_cleanup(client);
 }
 
+/**
+ * Send GCode to the printer. Blocking call
+ * @param gcode_command
+ */
 void reprap_send_gcode(char *gcode_command) {
     if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
         reprap_wifi_send_gcode(gcode_command);
@@ -754,6 +823,18 @@ void request_filaments() {
     }
 }
 
+void request_macros_async() {
+    if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
+        ESP_LOGI(TAG, "Requesting macros");
+        TaskHandle_t get_filelist_async_task_handle = NULL;
+        xTaskCreate(reprap_wifi_get_filelist_task, "macros request task", 1024*3, "0:/macros&first=0",
+                    tskIDLE_PRIORITY, &get_filelist_async_task_handle);
+        configASSERT(get_filelist_async_task_handle);
+    } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
+        ESP_LOGW(TAG, "Using UART not supported for now");
+    }
+}
+
 void request_macros() {
     if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
         ESP_LOGI(TAG, "Requesting macros");
@@ -763,10 +844,29 @@ void request_macros() {
     }
 }
 
+/**
+ * Updates internal global variables with file info
+ * @param file_name Path to file name on printer local storage. NULL in case you need file info of currently printed file
+ */
 void request_fileinfo(char *file_name) {
     if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
         ESP_LOGI(TAG, "Requesting file info");
         reprap_wifi_get_fileinfo(file_name);
+    } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
+        ESP_LOGW(TAG, "Using UART not supported for now");
+    }
+}
+
+/**
+ * Launches a new thread that requests job list. Updates Job list in GUI on success. Non blocking call.
+ */
+void request_jobs_async() {
+    if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
+        ESP_LOGI(TAG, "Requesting jobs");
+        TaskHandle_t get_filelist_async_task_handle = NULL;
+        xTaskCreate(reprap_wifi_get_filelist_task, "jobs request task", 1024*3, "0:/gcodes&first=0",
+                    tskIDLE_PRIORITY, &get_filelist_async_task_handle);
+        configASSERT(get_filelist_async_task_handle);
     } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
         ESP_LOGW(TAG, "Using UART not supported for now");
     }
@@ -782,33 +882,41 @@ void request_jobs() {
 }
 
 /**
- * Called most of the time
+ * Called every 750ms
  * @param task
  */
-void request_reprap_status_updates(lv_task_t *task) {
-    if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
-        if (!got_duet_settings) reprap_wifi_download("0%3A%2Fsys%2Fdwc2settings.json");
-        if (!got_filaments) request_filaments();
-        if (!got_status_two) wifi_duet_get_status(2);
-        bool old_job_status = job_running;
-        if (!job_running)
-            wifi_duet_get_status(1);
-        else
-            wifi_duet_get_status(3);
-        if (old_job_status != job_running)
-            request_fileinfo(NULL); // Someone started a print job (ext. application). Get the info.
-    } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
-        ESP_LOGW(TAG, "Using UART not supported for now");
+void request_reprap_status_updates(void *params) {
+    UBaseType_t uxHighWaterMark;
+    TickType_t xLastWakeTime;
+    const TickType_t xFrequency = (750 / portTICK_PERIOD_MS);
+    xLastWakeTime = xTaskGetTickCount();
+    int i = 6;
+    uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
+    while (1) {
+        vTaskDelayUntil(&xLastWakeTime, xFrequency);
+        if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
+            if (!got_duet_settings) reprap_wifi_download("0%3A%2Fsys%2Fdwc2settings.json");
+            if (!got_filaments) request_filaments();
+            if (!got_status_two) wifi_duet_get_status(2);
+            bool old_job_status = job_running;
+            if (!job_running)
+                wifi_duet_get_status(1);
+            else
+                wifi_duet_get_status(3);
+//            if (old_job_status != job_running)
+//                request_fileinfo(NULL); // Someone started a print job (ext. application). Get the info.
+            if (i%6 == 0) {
+                wifi_duet_get_status(2);
+                request_fileinfo(NULL);
+                i = 0;
+            } else {
+                i++;
+            }
+        } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
+            ESP_LOGW(TAG, "Using UART not supported for now");
+        }
+        uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
+        ESP_LOGI(TAG, "%i free bytes" , uxHighWaterMark*4);
     }
-}
-
-/**
- * Get additional status info from printer. No not call too often.
- * @param task
- */
-void request_reprap_ext_status_updates(lv_task_t *task) {
-    if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
-        if (!got_duet_settings) reprap_wifi_download("0%3A%2Fsys%2Fdwc2settings.json");
-        wifi_duet_get_status(2);
-    }
+    vTaskDelete(NULL);
 }

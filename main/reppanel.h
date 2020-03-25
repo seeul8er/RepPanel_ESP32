@@ -42,8 +42,8 @@ extern "C" {
 #define TREE_FOLDER_ELEM    0
 #define TREE_FILE_ELEM      1
 
-extern uint8_t reppanel_conn_status;               // 0=no connection, 1=connected wifi, 2=disconnected wifi, 3=reconnecting wifi,
-                                            // 4=working UART
+extern uint8_t reppanel_conn_status;     // 0=no connection, 1=connected wifi, 2=disconnected wifi, 3=reconnecting wifi,
+                                         // 4=working UART
 
 extern lv_obj_t *process_scr;               // screen for the process settings
 extern lv_obj_t *mainmenu_scr;              // screen for the main_menue
@@ -61,10 +61,6 @@ extern lv_obj_t *label_extruder_name;
 extern lv_obj_t *button_tool_filament;
 extern lv_obj_t *ddlist_selected_filament;
 extern lv_obj_t *label_sig_strength;
-extern lv_obj_t *ta_wifi_pass;
-extern lv_obj_t *ta_ssid;
-extern lv_obj_t *ta_printer_addr;
-extern lv_obj_t *ta_reprap_pass;
 extern lv_obj_t *label_connection_status;
 
 // Temp variable for writing to label. Contains current temp + °C or °F

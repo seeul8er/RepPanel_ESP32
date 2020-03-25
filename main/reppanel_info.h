@@ -7,6 +7,11 @@
 
 #include <lvgl/src/lv_core/lv_obj.h>
 
+extern lv_obj_t *ta_wifi_pass;
+extern lv_obj_t *ta_ssid;
+extern lv_obj_t *ta_printer_addr;
+extern lv_obj_t *ta_reprap_pass;
+
 void draw_info(lv_obj_t *parent_screen);
 
 #endif //LVGL_REPPANEL_INFO_H

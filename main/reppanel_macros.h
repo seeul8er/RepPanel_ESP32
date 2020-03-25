@@ -6,5 +6,6 @@
 #define REPPANEL_ESP32_REPPANEL_MACROS_H
 
 void draw_macro(lv_obj_t *parent_screen);
+void update_macro_list_ui();
 
 #endif //REPPANEL_ESP32_REPPANEL_MACROS_H

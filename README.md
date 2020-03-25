@@ -59,9 +59,28 @@ Other display modules with a resolution of 480x320 should also work as long as t
   
 **All Duet2 boards or newer with RepRap Firmware v3.x should work.**
 
+## Installation
+
+### Compile yourself
+**Set up ESP-IDF**
+
+
+**Clone Project**  
+
+
+**Configure Project**  
+```bash
+
+```
+See [Littlevgl port for the ESP32](https://github.com/littlevgl/lv_port_esp32) for further instructions.
+
+**Compile & Flash**  
+
+### Use ready made images
+**Ready made images are only available for selected hardware combinations! Please compile the project by yourself in 
+case you use different hardware or want a different pin connection layout**
+
 ## Known Bugs
-- UI freeze if connected to WiFi but can not connect to DuetWebControl
-  - Workaround: Make sure to enter all credentials under info on first boot. Delete flash otherwise to reset board.
 - Multiple tools supported but not tested
 - Can not list files on subfolders (Macros & Jobs)
 - Can not list all files within a directory in case DuetWebControl API requires multiple requests per listing
