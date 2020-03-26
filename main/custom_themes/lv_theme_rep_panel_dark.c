@@ -228,7 +228,7 @@ static void bar_init(void) {
     static lv_style_t bar_bg, bar_indic;
 
     lv_style_copy(&bar_bg, &def_style);
-    bar_bg.body.main_color = lv_color_hsv_to_rgb(_hue, 15, 95);
+    bar_bg.body.main_color = lv_color_hsv_to_rgb(_hue, 30, 20);
     bar_bg.body.grad_color = bar_bg.body.main_color;
     bar_bg.body.radius = 3;
     bar_bg.body.border.width = 0;
@@ -238,7 +238,7 @@ static void bar_init(void) {
     bar_bg.body.padding.bottom = LV_DPI / 16;
 
     lv_style_copy(&bar_indic, &bar_bg);
-    bar_indic.body.main_color = lv_color_hsv_to_rgb(_hue, 85, 70);
+    bar_indic.body.main_color = lv_color_hsv_to_rgb(_hue, 72, 98);
     bar_indic.body.grad_color = bar_indic.body.main_color;
     bar_indic.body.padding.left = 0;
     bar_indic.body.padding.right = 0;
@@ -298,7 +298,7 @@ static void lmeter_init(void) {
 #if LV_USE_LMETER != 0
     static lv_style_t lmeter;
     lv_style_copy(&lmeter, &def_style);
-    lmeter.body.main_color = lv_color_hsv_to_rgb(_hue, 75, 90);
+    lmeter.body.main_color = lv_color_hsv_to_rgb(_hue, 72, 98);
     lmeter.body.grad_color = lmeter.body.main_color;
     lmeter.body.padding.left = LV_DPI / 10; /*Scale line length*/
     lmeter.line.color = lv_color_hex3(0x999);
@@ -313,14 +313,14 @@ static void gauge_init(void) {
 
     static lv_style_t gauge;
     lv_style_copy(&gauge, &def_style);
-    gauge.body.main_color = lv_color_hsv_to_rgb(_hue, 10, 60);
+    gauge.body.main_color = lv_color_hsv_to_rgb(_hue, 30, 20);
     gauge.body.grad_color = gauge.body.main_color;
     gauge.body.padding.left = LV_DPI / 16; /*Scale line length*/
     gauge.body.padding.inner = LV_DPI / 8;
     gauge.body.border.color = lv_color_hex3(0x999);
     gauge.text.color = lv_color_hex3(0x333);
     gauge.line.width = 3;
-    gauge.line.color = lv_color_hsv_to_rgb(_hue, 95, 70);
+    gauge.line.color = lv_color_hsv_to_rgb(_hue, 72, 98);
 
     theme.style.gauge = &gauge;
 #endif
@@ -331,12 +331,12 @@ static void arc_init(void) {
 
     static lv_style_t arc;
     lv_style_copy(&arc, &def_style);
-    arc.line.width = 10;
-    arc.line.color = lv_color_hsv_to_rgb(_hue, 90, 90);
+    arc.line.width = 7;
+    arc.line.color = lv_color_hsv_to_rgb(_hue, 72, 98);
 
-    /*For prelaoder*/
-    arc.body.border.width = 10;
-    arc.body.border.color = lv_color_hsv_to_rgb(_hue, 30, 90);
+    /*For preloader*/
+    arc.body.border.width = 7;
+    arc.body.border.color = lv_color_hsv_to_rgb(_hue, 30, 20);
     arc.body.padding.left = 0;
     arc.body.padding.right = 0;
     arc.body.padding.top = 0;

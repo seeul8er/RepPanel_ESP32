@@ -7,11 +7,9 @@
 
 #include <lvgl/src/lv_core/lv_obj.h>
 
-#define CONSOLE_TYPE_INFO   0
-#define CONSOLE_TYPE_WARN   1
-#define CONSOLE_TYPE_REPPANEL   2
-
 #define MAX_CONSOLE_ENTRY_COUNT   20
+
+enum {CONSOLE_TYPE_INFO, CONSOLE_TYPE_WARN, CONSOLE_TYPE_REPPANEL};
 
 void draw_console(lv_obj_t *parent_screen);
 

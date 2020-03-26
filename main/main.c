@@ -126,7 +126,7 @@ void guiTask() {
             xSemaphoreGive(xGuiSemaphore);
         }
         uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
-        ESP_LOGI(TAG, "%i free bytes" , uxHighWaterMark*4);
+        // ESP_LOGI(TAG, "%i free bytes" , uxHighWaterMark*4);
     }
     //A task should NEVER return
 //    vTaskDelete(printer_ext_status_task_handle);

@@ -53,7 +53,7 @@ int num_heaters = 1;
 bool job_running = false;
 
 void rep_panel_ui_create() {
-    lv_theme_t *th = lv_theme_reppanel_light_init(210, &reppanel_font_roboto_regular_22);
+    lv_theme_t *th = lv_theme_reppanel_light_init(81, &reppanel_font_roboto_regular_22);
     lv_theme_set_current(th);
 
     mainmenu_scr = lv_cont_create(NULL, NULL);
@@ -203,6 +203,9 @@ void update_rep_panel_conn_status() {
             break;
         case REPPANEL_WIFI_CONNECTED:     // connected wifi
             lv_label_set_text_fmt(label_connection_status, REP_PANEL_DARK_ACCENT_STR" "LV_SYMBOL_WIFI);
+            break;
+        case REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED:
+            lv_label_set_text_fmt(label_connection_status, "#ff8921 "LV_SYMBOL_WIFI);
             break;
         case REPPANEL_WIFI_DISCONNECTED:     // disconnected wifi
             lv_label_set_text_fmt(label_connection_status, "#e84e43 "LV_SYMBOL_WIFI);

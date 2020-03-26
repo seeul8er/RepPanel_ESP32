@@ -15,6 +15,7 @@ file_tree_elem_t reprap_macros[MAX_NUM_JOBS];
 lv_obj_t *macro_container;
 lv_obj_t *macro_list;
 lv_obj_t *msg_box3;
+lv_obj_t *preloader;
 reprap_macro_t *edit_macro;
 
 static void exe_macro_file_handler(lv_obj_t * obj, lv_event_t event) {
@@ -53,7 +54,10 @@ static void _macro_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
 }
 
 void update_macro_list_ui() {
+    lv_obj_del(preloader);
     lv_obj_t *list_btn;
+    macro_list = lv_list_create(macro_container, NULL);
+    lv_obj_set_size(macro_list, LV_HOR_RES - 10, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
     for (int i = 0; reprap_macros[i].element != NULL; i++) {
         if (reprap_macros[i].type == TREE_FOLDER_ELEM)
             list_btn = lv_list_add_btn(macro_list, LV_SYMBOL_DIRECTORY,
@@ -66,12 +70,11 @@ void update_macro_list_ui() {
 
 void draw_macro(lv_obj_t *parent_screen) {
     macro_container = lv_cont_create(parent_screen, NULL);
-    lv_cont_set_layout(macro_container, LV_LAYOUT_ROW_T);
-    lv_cont_set_fit2(macro_container, LV_FIT_FILL, LV_FIT_FILL);
+    lv_cont_set_layout(macro_container, LV_LAYOUT_CENTER);
+    lv_cont_set_fit2(macro_container, LV_FIT_FILL, LV_FIT_TIGHT);
 
-    macro_list = lv_list_create(macro_container, NULL);
-    lv_obj_set_size(macro_list, LV_HOR_RES - 10, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
-    lv_obj_align(macro_list, NULL, LV_ALIGN_IN_TOP_MID, 0, 50);
+    preloader = lv_preload_create(macro_container, NULL);
+    lv_obj_set_size(preloader, 75, 75);
 
     request_macros_async();
 }

@@ -7,6 +7,7 @@
 #include <freertos/event_groups.h>
 #include <esp_log.h>
 #include <string.h>
+#include "main.h"
 #include <lvgl/src/lv_font/lv_symbol_def.h>
 
 #include "esp32_settings.h"
@@ -26,7 +27,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         if (s_retry_num < MAXIMUM_RETRY_WIFI) {
-            reppanel_conn_status = 3;
+            reppanel_conn_status = REPPANEL_WIFI_RECONNECTING;
             esp_wifi_connect();
             s_retry_num++;
             ESP_LOGI(TAG, "Retry to connect to the AP");
@@ -40,10 +41,13 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         ESP_LOGI(TAG, "Got ip:"
         IPSTR, IP2STR(&event->ip_info.ip));
         s_retry_num = 0;
-        reppanel_conn_status = REPPANEL_WIFI_CONNECTED;
+        reppanel_conn_status = REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED;
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     }
-    update_rep_panel_conn_status();
+    if (xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
+        update_rep_panel_conn_status();
+        xSemaphoreGive(xGuiSemaphore);
+    }
 }
 
 void wifi_init_sta() {
@@ -67,6 +71,9 @@ void wifi_init_sta() {
     ESP_LOGI(TAG, "wifi_init_sta finished.");
 }
 
+/**
+ * Call only when GUI semaphore is taken
+ */
 void reconnect_wifi() {
     reppanel_conn_status = REPPANEL_WIFI_RECONNECTING;
     update_rep_panel_conn_status();
@@ -85,7 +92,12 @@ void get_connection_info(char txt_buffer[200]) {
         default:
         case REPPANEL_WIFI_DISCONNECTED:
         case REPPANEL_NO_CONNECTION:
-            strcpy(txt_buffer, "Not connected");
+            strcpy(txt_buffer, "Not connected to network or UART");
+            break;
+        case REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED:
+            memset(&ap_info, 0, sizeof(ap_info));
+            ESP_ERROR_CHECK(esp_wifi_sta_get_ap_info(&ap_info));
+            sprintf(txt_buffer, "Connected to %s\nSignal: %ddBm\nNo response from printer!", ap_info.ssid, ap_info.rssi);
             break;
         case REPPANEL_WIFI_CONNECTED:
             memset(&ap_info, 0, sizeof(ap_info));
@@ -107,8 +119,6 @@ void get_avail_wifi_networks(char *aps) {
     uint16_t ap_count = 0;
     memset(ap_info, 0, sizeof(ap_info));
 
-    // ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    // ESP_ERROR_CHECK(esp_wifi_start());
     wifi_scan_config_t scan_config;
     memset(&scan_config, 0, sizeof(scan_config));
     scan_config.channel = 0;
@@ -128,8 +138,5 @@ void get_avail_wifi_networks(char *aps) {
         char tmp[50];
         sprintf(tmp, "\n%s", ap_info[i].ssid);
         strcat(aps, tmp);
-        //ESP_LOGI(TAG, "SSID \t\t%s", ap_info[i].ssid);
-        //ESP_LOGI(TAG, "RSSI \t\t%d", ap_info[i].rssi);
-        //ESP_LOGI(TAG, "Channel \t\t%d\n", ap_info[i].primary);
     }
 }

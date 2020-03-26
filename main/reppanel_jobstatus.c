@@ -267,6 +267,5 @@ void draw_jobstatus(lv_obj_t *parent_screen) {
     lv_obj_align(label_percent, cont_percent, LV_ALIGN_IN_BOTTOM_RIGHT, 0, 0);
     lv_obj_align(label_job_progress_percent, cont_percent, LV_ALIGN_CENTER, -85, 0);
 
-    // request_fileinfo(NULL);
     update_print_job_status_ui();
 }

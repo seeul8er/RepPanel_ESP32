@@ -26,7 +26,7 @@ static char json_buffer[JSON_BUFF_SIZE];
 static bool got_filaments = false;
 static bool got_status_two = false;
 static bool got_duet_settings = false;
-
+static int status_request_err_cnt = 0;      // request errors in a row
 
 const char *_decode_reprap_status(const char *valuestring) {
     switch (*valuestring) {
@@ -487,7 +487,7 @@ esp_err_t _http_event_handle(esp_http_client_event_t *evt) {
     }
     switch (evt->event_id) {
         case HTTP_EVENT_ERROR:
-            ESP_LOGI(TAG, "HTTP_EVENT_ERROR");
+            ESP_LOGI(TAG, "Event handler detected http error");
             break;
         case HTTP_EVENT_ON_CONNECTED:
             // ESP_LOGI(TAG, "HTTP_EVENT_ON_CONNECTED");
@@ -561,9 +561,12 @@ void wifi_duet_get_status(int type) {
 
         switch (esp_http_client_get_status_code(client)) {
             case 200:
+                status_request_err_cnt = 0;
+                reppanel_conn_status = REPPANEL_WIFI_CONNECTED;
                 // Wait for time slot to update GUI
                 if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
                     _process_reprap_status(type);
+                    update_rep_panel_conn_status();
                     xSemaphoreGive(xGuiSemaphore);
                 }
                 break;
@@ -576,6 +579,14 @@ void wifi_duet_get_status(int type) {
         }
     } else {
         ESP_LOGW(TAG, "Error requesting RepRap status: %s", esp_err_to_name(err));
+        status_request_err_cnt++;
+        if (status_request_err_cnt > 0) {
+            reppanel_conn_status = REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED;
+            if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
+                update_rep_panel_conn_status();
+                xSemaphoreGive(xGuiSemaphore);
+            }
+        }
     }
     esp_http_client_cleanup(client);
 }
@@ -677,10 +688,6 @@ void reprap_wifi_get_filelist_task(void *params) {
 
         switch (esp_http_client_get_status_code(client)) {
             case 200:
-//                if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
-//                    _process_reprap_filelist();
-//                    xSemaphoreGive(xGuiSemaphore);
-//                }
                 _process_reprap_filelist();
                 break;
             case 401:
@@ -823,6 +830,9 @@ void request_filaments() {
     }
 }
 
+/**
+ * Launches a new thread that requests macros. Updates Macros list in GUI on success. Non blocking call.
+ */
 void request_macros_async() {
     if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
         ESP_LOGI(TAG, "Requesting macros");

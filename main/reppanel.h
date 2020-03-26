@@ -24,9 +24,10 @@ extern "C" {
 
 #define REPPANEL_NO_CONNECTION      0
 #define REPPANEL_WIFI_CONNECTED     1
-#define REPPANEL_WIFI_DISCONNECTED  2
-#define REPPANEL_WIFI_RECONNECTING  3
-#define REPPANEL_UART_CONNECTED     4
+#define REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED     2
+#define REPPANEL_WIFI_DISCONNECTED  3
+#define REPPANEL_WIFI_RECONNECTING  4
+#define REPPANEL_UART_CONNECTED     5
 
 #define VERSION_STR             "v0.1.0"
 
@@ -42,8 +43,7 @@ extern "C" {
 #define TREE_FOLDER_ELEM    0
 #define TREE_FILE_ELEM      1
 
-extern uint8_t reppanel_conn_status;     // 0=no connection, 1=connected wifi, 2=disconnected wifi, 3=reconnecting wifi,
-                                         // 4=working UART
+extern uint8_t reppanel_conn_status;    // See REPPANEL_NO_CONNECTION, REPPANEL_WIFI_CONNECTED, etc.
 
 extern lv_obj_t *process_scr;               // screen for the process settings
 extern lv_obj_t *mainmenu_scr;              // screen for the main_menue

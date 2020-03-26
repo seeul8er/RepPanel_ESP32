@@ -23,14 +23,21 @@ lv_obj_t *jobs_list;
 lv_obj_t *msg_box1;
 lv_obj_t *msg_box2;
 lv_obj_t *msg_box3;
+lv_obj_t *preloader;
 
 reprap_job_t *edit_file;
+
+void send_print_command() {
+    ESP_LOGI(TAG, "Printing %s", edit_file->name);
+    char tmp_txt[strlen(edit_file->dir) + strlen(edit_file->name) + 10];
+    sprintf(tmp_txt, "M32 \"%s/%s\"", edit_file->dir, edit_file->name);
+    reprap_send_gcode(tmp_txt);
+}
 
 static void print_file_handler(lv_obj_t * obj, lv_event_t event) {
     if(event == LV_EVENT_RELEASED) {
         if (strcmp(lv_mbox_get_active_btn_text(msg_box3), "Yes") == 0) {
-            ESP_LOGI(TAG, "Printing %s", edit_file->name);
-            // TODO: Print file
+            send_print_command();
             lv_obj_del_async(msg_box3);
             display_jobstatus();
         } else {
@@ -43,7 +50,9 @@ static void delete_file_handler(lv_obj_t * obj, lv_event_t event) {
     if(event == LV_EVENT_RELEASED) {
         if (strcmp(lv_mbox_get_active_btn_text(msg_box2), "Yes") == 0) {
             ESP_LOGI(TAG, "Deleting %s", edit_file->name);
-            // TODO: Delete file
+            char tmp_txt[strlen(edit_file->dir) + strlen(edit_file->name) + 10];
+            sprintf(tmp_txt, "M30 \"%s/%s\"", edit_file->dir, edit_file->name);
+            reprap_send_gcode(tmp_txt);
             lv_obj_del_async(msg_box2);
             lv_obj_del_async(msg_box1);
         } else {
@@ -66,8 +75,7 @@ static void job_action_handler(lv_obj_t *obj, lv_event_t event) {
             lv_obj_set_width(msg_box2, lv_disp_get_hor_res(NULL) - 20);
             lv_obj_align(msg_box2, lv_layer_top(), LV_ALIGN_CENTER, 0, 0);
         } else if (strcmp(lv_mbox_get_active_btn_text(msg_box1), PRINT_BTN_TXT) == 0) {
-            ESP_LOGI(TAG, "Print %s", edit_file->name);
-            // TODO: Print file
+            send_print_command();
             lv_obj_del_async(msg_box1);
             display_jobstatus();
         } else if (strcmp(lv_mbox_get_active_btn_text(msg_box1), SIM_BTN_TXT) == 0) {
@@ -113,6 +121,13 @@ static void _job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
 }
 
 void update_job_list_ui(){
+    lv_obj_del(preloader);
+    lv_obj_t *label_info = lv_label_create(jobs_container, NULL);
+    lv_label_set_text(label_info, "Select print job");
+
+    jobs_list = lv_list_create(jobs_container, NULL);
+    lv_obj_set_size(jobs_list, LV_HOR_RES-10, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 50));
+
     for (int i = 0; reprap_jobs[i].element != NULL; i++) {
         lv_obj_t *list_btn;
         if (reprap_jobs[i].type == TREE_FOLDER_ELEM) {
@@ -130,10 +145,8 @@ void draw_jobselect(lv_obj_t *parent_screen) {
     lv_cont_set_layout(jobs_container, LV_LAYOUT_COL_M);
     lv_cont_set_fit(jobs_container, LV_FIT_FILL);
 
-    lv_obj_t *label_info = lv_label_create(jobs_container, NULL);
-    lv_label_set_text(label_info, "Select print job");
+    preloader = lv_preload_create(jobs_container, NULL);
+    lv_obj_set_size(preloader, 75, 75);
 
-    jobs_list = lv_list_create(jobs_container, NULL);
-    lv_obj_set_size(jobs_list, LV_HOR_RES-10, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 50));
     request_jobs_async();
 }

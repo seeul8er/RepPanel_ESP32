@@ -5,20 +5,30 @@
 #include <stdio.h>
 #include <lvgl/src/lv_objx/lv_cont.h>
 #include <lvgl/lvgl.h>
-#include <lvgl/src/lv_core/lv_style.h>
 #include <custom_themes/lv_theme_rep_panel_dark.h>
 #include "reppanel_console.h"
 #include "reppanel.h"
+#include "reppanel_request.h"
 
 
-lv_obj_t *console_container;
 lv_obj_t *ta_command;
 lv_obj_t *user_comm_cont;
-lv_obj_t *console_cont;
+lv_obj_t *comm_page;
 lv_obj_t *console_page;
 lv_obj_t *kb;
 
 console_entry_t console_enties[MAX_CONSOLE_ENTRY_COUNT];
+static int num_console_entries = 0;
+static int pos_newest_entry = -1;
+
+void _send_user_command() {
+    if (strlen(lv_ta_get_text(ta_command)) > 0) {
+        char txt[strlen(lv_ta_get_text(ta_command))];
+        strcpy(txt, lv_ta_get_text(ta_command));
+        printf("Sending command %s\n", txt);
+        reprap_send_gcode(txt);
+    }
+}
 
 static void kb_event_cb(lv_obj_t * event_kb, lv_event_t event)
 {
@@ -28,8 +38,7 @@ static void kb_event_cb(lv_obj_t * event_kb, lv_event_t event)
         lv_obj_del(kb);
         kb = NULL;
     } else if (event == LV_EVENT_APPLY) {
-        printf("Sending command %s\n", lv_ta_get_text(ta_command));
-        // TODO: Send GCode
+        _send_user_command();
     }
 }
 
@@ -44,8 +53,14 @@ static void ta_event_handler(lv_obj_t * obj, lv_event_t event) {
     }
 }
 
-void add_entry(char *command, char *response, int type) {
-    lv_obj_t *c1 = lv_cont_create(console_page, NULL);
+static void _send_gcode_event_handler(lv_obj_t * obj, lv_event_t event) {
+    if(event == LV_EVENT_RELEASED) {
+        _send_user_command();
+    }
+}
+
+void _add_entry_to_ui(char *command, char *response, int type) {
+    lv_obj_t *c1 = lv_cont_create(comm_page, NULL);
 
     static lv_style_t entry_style_info;
     lv_style_copy(&entry_style_info, lv_cont_get_style(c1, LV_CONT_STYLE_MAIN));
@@ -85,7 +100,7 @@ void add_entry(char *command, char *response, int type) {
         lv_obj_t *l11 = lv_label_create(c1, NULL);
         static lv_style_t l11_style;
         lv_style_copy(&l11_style, lv_label_get_style(l11, LV_LABEL_STYLE_MAIN));
-        l11_style.text.font = &lv_font_roboto_12;
+        l11_style.text.font = &lv_font_roboto_16;
         l11_style.text.color = REP_PANEL_DARK;
         lv_label_set_style(l11, LV_LABEL_STYLE_MAIN, &l11_style);
 
@@ -93,40 +108,84 @@ void add_entry(char *command, char *response, int type) {
     }
 }
 
-void update_entries(console_entry_t enties[MAX_CONSOLE_ENTRY_COUNT]) {
-    console_entry_t* entry = enties;
-    for (int i=0; i < MAX_CONSOLE_ENTRY_COUNT; i++, entry++) {
-        if (entry->command != NULL)
-            add_entry(entry->command, entry->response, entry->type);
+/**
+ * Refresh console history. Must run on UI thread.
+ * @param enties
+ */
+void update_entries_ui(console_entry_t enties[MAX_CONSOLE_ENTRY_COUNT]) {
+    lv_page_clean(comm_page);
+    // get newest entry in buffer
+    console_entry_t *entry;
+    int indx = pos_newest_entry;
+    entry = &enties[indx];
+    for (int i = 0; i < num_console_entries; i++) {
+        if (entry->command != NULL) {
+            _add_entry_to_ui(entry->command, entry->response, entry->type);
+            entry--;
+            indx--;
+            if (indx < 0) {
+                indx = MAX_CONSOLE_ENTRY_COUNT - 1;
+                entry = &enties[indx];
+            }
+        }
+
     }
+}
+
+/**
+ * Add a new console history command. Update UI via update_entries_ui()
+ * @param command
+ * @param response
+ * @param type For example CONSOLE_TYPE_WARN | CONSOLE_TYPE_REPPANEL
+ */
+void add_console_hist_entry(char *command, char *response, int type) {
+    if ((MAX_CONSOLE_ENTRY_COUNT - 1) > pos_newest_entry) {
+        pos_newest_entry++;
+        num_console_entries++;
+    } else
+        pos_newest_entry = 0;
+    console_entry_t e = {.command = command, .response = response, .type = type};
+    memcpy(&console_enties[pos_newest_entry], &e, sizeof(console_entry_t));
 }
 
 void draw_console(lv_obj_t *parent_screen) {
     console_page = lv_page_create(parent_screen, NULL);
     lv_obj_set_size(console_page, lv_disp_get_hor_res(NULL), lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
     lv_obj_align(console_page, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
-    lv_page_set_scrl_layout(console_page, LV_LAYOUT_COL_M);
+    lv_page_set_scrl_layout(console_page, LV_LAYOUT_COL_L);
 
     user_comm_cont = lv_cont_create(console_page, NULL);
-    lv_cont_set_fit2(user_comm_cont, LV_FIT_FILL, LV_FIT_TIGHT);
+    lv_cont_set_fit(user_comm_cont, LV_FIT_TIGHT);
     lv_cont_set_layout(user_comm_cont, LV_LAYOUT_COL_M);
 
-    ta_command = lv_ta_create(user_comm_cont, NULL);
-    lv_ta_set_cursor_type(ta_command, LV_CURSOR_BLOCK);
+    lv_obj_t *user_comm_enter_cont = lv_cont_create(user_comm_cont, NULL);
+    lv_cont_set_fit(user_comm_enter_cont, LV_FIT_TIGHT);
+    lv_cont_set_layout(user_comm_enter_cont, LV_LAYOUT_ROW_M);
+
+    ta_command = lv_ta_create(user_comm_enter_cont, NULL);
+    lv_ta_set_cursor_type(ta_command, LV_CURSOR_LINE);
     lv_ta_set_one_line(ta_command, true);
-    lv_obj_set_size(ta_command, lv_disp_get_hor_res(NULL) - 50, 30);
     lv_obj_set_event_cb(ta_command, ta_event_handler);
     lv_ta_set_text(ta_command, "G28");
 
-    console_cont = lv_cont_create(console_page, NULL);
-    lv_cont_set_fit2(console_cont, LV_FIT_FILL, LV_FIT_TIGHT);
-    // lv_cont_set_layout(console_cont, LV_LAYOUT_COL_L);
+    static lv_obj_t *btn_send_gcode;
+    create_button(user_comm_enter_cont, btn_send_gcode, LV_SYMBOL_UPLOAD" Send", _send_gcode_event_handler);
 
-    console_entry_t e = {.command = "M21", .response = NULL, .type = CONSOLE_TYPE_INFO};
-    memcpy(&console_enties[0], &e, sizeof(console_entry_t));
-    console_entry_t ee = {.command = "M28 X", .response = "Wifi SSID", .type = CONSOLE_TYPE_REPPANEL};
-    memcpy(&console_enties[1], &ee, sizeof(console_entry_t));
-    console_entry_t eee = {.command = "G01 X0.45 Y452.1", .response = "Moved gantry", .type = CONSOLE_TYPE_WARN};
-    memcpy(&console_enties[2], &eee, sizeof(console_entry_t));
-    update_entries(console_enties);
+    lv_obj_set_size(ta_command, lv_disp_get_hor_res(NULL) - 180, 30);
+
+    comm_page = lv_page_create(console_page, NULL);
+    lv_obj_set_size(comm_page, lv_disp_get_hor_res(NULL) - 30, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 80));
+    lv_page_set_scrl_layout(comm_page, LV_LAYOUT_COL_L);
+
+//    lv_obj_align(ta_command, user_comm_enter_cont, LV_ALIGN_IN_TOP_LEFT, 0, 0);
+//    lv_obj_align(btn_send_gcode, user_comm_enter_cont, LV_ALIGN_IN_RIGHT_MID, 0, 0);
+
+//    add_console_hist_entry("M21", NULL, CONSOLE_TYPE_INFO);
+//    add_console_hist_entry("M28 X", "Wifi SSID", CONSOLE_TYPE_REPPANEL);
+//    add_console_hist_entry("G01 X0.45 Y452.1", "Moved gantry", CONSOLE_TYPE_WARN);
+//    add_console_hist_entry("M21", "3", CONSOLE_TYPE_REPPANEL);
+//    add_console_hist_entry("Msdf", "2", CONSOLE_TYPE_REPPANEL);
+//    add_console_hist_entry("G61d8f dfgs645", "1", CONSOLE_TYPE_WARN);
+
+    update_entries_ui(console_enties);
 }
