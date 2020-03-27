@@ -8,8 +8,11 @@
 #include <esp_log.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <lvgl/src/lv_objx/lv_mbox.h>
+#include <lvgl/src/lv_core/lv_disp.h>
 #include "esp32_settings.h"
 #include "reppanel.h"
+#include "reppanel_console.h"
 
 char html5[256] = {0};
 bool encoding_inited = false;
@@ -61,6 +64,9 @@ void init_reprap_buffers() {
         reprap_tool_poss_temps.temps_active[i] = -1;
         reprap_tool_poss_temps.temps_standby[i] = -1;
     }
+    for (int i = 0; i < MAX_CONSOLE_ENTRY_COUNT; i++) {
+        console_enties[i] = (console_entry_t) {NULL, NULL, CONSOLE_TYPE_EMPTY};
+    }
 }
 
 void create_button(lv_obj_t *parent, lv_obj_t *button_pnt, char *text, void *event_handler) {
@@ -71,6 +77,22 @@ void create_button(lv_obj_t *parent, lv_obj_t *button_pnt, char *text, void *eve
     lv_obj_align(button_pnt, parent, LV_ALIGN_CENTER, 0, 0);
     label = lv_label_create(button_pnt, NULL);
     lv_label_set_text(label, text);
+}
+
+static void _close_msg_event_handler(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
+        lv_obj_del_async(lv_obj_get_parent(obj));
+    }
+}
+
+void reppanel_disp_msg(char *msg_txt) {
+    static const char *btns[] = {"Close", ""};
+    lv_obj_t *mbox_msg = lv_mbox_create(lv_layer_top(), NULL);
+    lv_mbox_set_text(mbox_msg, msg_txt);
+    lv_mbox_add_btns(mbox_msg, btns);
+    lv_obj_set_width(mbox_msg, 300);
+    lv_obj_set_event_cb(mbox_msg, _close_msg_event_handler);
+    lv_obj_align(mbox_msg, NULL, LV_ALIGN_CENTER, 0, 0); /*Align to the corner*/
 }
 
 void RepPanelLogE(char *tag, char *msg) {

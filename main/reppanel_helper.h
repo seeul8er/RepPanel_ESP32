@@ -14,6 +14,7 @@ LV_FONT_DECLARE(reppanel_font_roboto_regular_22)
 char *url_encode(unsigned char *s, char *enc);
 void init_reprap_buffers();
 void create_button(lv_obj_t *parent, lv_obj_t *button_pnt, char *text, void *event_handler);
+void reppanel_disp_msg(char *msg_txt);
 
 void RepPanelLogE(char *tag, char *msg);
 void RepPanelLogW(char *tag, char *msg);

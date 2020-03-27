@@ -26,6 +26,9 @@
     "top": 0
   },
   "currentTool": -1,
+  "output": {
+    "message": "Hello World!"
+  },
   "params": {
     "atxPower": -1,
     "fanPercent": [

@@ -59,7 +59,7 @@ static void _send_gcode_event_handler(lv_obj_t * obj, lv_event_t event) {
     }
 }
 
-void _add_entry_to_ui(char *command, char *response, int type) {
+void _add_entry_to_ui(char *command, char *response, enum console_msg_type type) {
     lv_obj_t *c1 = lv_cont_create(comm_page, NULL);
 
     static lv_style_t entry_style_info;
@@ -96,7 +96,7 @@ void _add_entry_to_ui(char *command, char *response, int type) {
     l1_style.text.color = REP_PANEL_DARK;
     lv_label_set_style(l1, LV_LABEL_STYLE_MAIN, &l1_style);
     lv_label_set_text(l1, command);
-    if (response != NULL) {
+    if (response != NULL && strlen(response) > 0) {
         lv_obj_t *l11 = lv_label_create(c1, NULL);
         static lv_style_t l11_style;
         lv_style_copy(&l11_style, lv_label_get_style(l11, LV_LABEL_STYLE_MAIN));
@@ -112,23 +112,25 @@ void _add_entry_to_ui(char *command, char *response, int type) {
  * Refresh console history. Must run on UI thread.
  * @param enties
  */
-void update_entries_ui(console_entry_t enties[MAX_CONSOLE_ENTRY_COUNT]) {
-    lv_page_clean(comm_page);
-    // get newest entry in buffer
-    console_entry_t *entry;
-    int indx = pos_newest_entry;
-    entry = &enties[indx];
-    for (int i = 0; i < num_console_entries; i++) {
-        if (entry->command != NULL) {
-            _add_entry_to_ui(entry->command, entry->response, entry->type);
-            entry--;
-            indx--;
-            if (indx < 0) {
-                indx = MAX_CONSOLE_ENTRY_COUNT - 1;
-                entry = &enties[indx];
+void update_entries_ui() {
+    if (comm_page) {
+        lv_page_clean(comm_page);
+        // get newest entry in buffer
+        console_entry_t *entry;
+        int indx = pos_newest_entry;
+        entry = &console_enties[indx];
+        for (int i = 0; i < num_console_entries; i++) {
+            if (strlen(entry->command) > 0) {
+                _add_entry_to_ui(entry->command, entry->response, entry->type);
+                entry--;
+                indx--;
+                if (indx < 0) {
+                    indx = MAX_CONSOLE_ENTRY_COUNT - 1;
+                    entry = &console_enties[indx];
+                }
             }
-        }
 
+        }
     }
 }
 
@@ -138,14 +140,18 @@ void update_entries_ui(console_entry_t enties[MAX_CONSOLE_ENTRY_COUNT]) {
  * @param response
  * @param type For example CONSOLE_TYPE_WARN | CONSOLE_TYPE_REPPANEL
  */
-void add_console_hist_entry(char *command, char *response, int type) {
+void add_console_hist_entry(char *command, char *response, enum console_msg_type type) {
     if ((MAX_CONSOLE_ENTRY_COUNT - 1) > pos_newest_entry) {
         pos_newest_entry++;
         num_console_entries++;
     } else
         pos_newest_entry = 0;
-    console_entry_t e = {.command = command, .response = response, .type = type};
-    memcpy(&console_enties[pos_newest_entry], &e, sizeof(console_entry_t));
+    console_entry_t e = {.command = "", .response = "", .type = type};
+    strcpy(e.command, command);
+    if (response != NULL) {
+        strcpy(e.response, response);
+    }
+    console_enties[pos_newest_entry] = e;
 }
 
 void draw_console(lv_obj_t *parent_screen) {
@@ -177,15 +183,5 @@ void draw_console(lv_obj_t *parent_screen) {
     lv_obj_set_size(comm_page, lv_disp_get_hor_res(NULL) - 30, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 80));
     lv_page_set_scrl_layout(comm_page, LV_LAYOUT_COL_L);
 
-//    lv_obj_align(ta_command, user_comm_enter_cont, LV_ALIGN_IN_TOP_LEFT, 0, 0);
-//    lv_obj_align(btn_send_gcode, user_comm_enter_cont, LV_ALIGN_IN_RIGHT_MID, 0, 0);
-
-//    add_console_hist_entry("M21", NULL, CONSOLE_TYPE_INFO);
-//    add_console_hist_entry("M28 X", "Wifi SSID", CONSOLE_TYPE_REPPANEL);
-//    add_console_hist_entry("G01 X0.45 Y452.1", "Moved gantry", CONSOLE_TYPE_WARN);
-//    add_console_hist_entry("M21", "3", CONSOLE_TYPE_REPPANEL);
-//    add_console_hist_entry("Msdf", "2", CONSOLE_TYPE_REPPANEL);
-//    add_console_hist_entry("G61d8f dfgs645", "1", CONSOLE_TYPE_WARN);
-
-    update_entries_ui(console_enties);
+    update_entries_ui();
 }

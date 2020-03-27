@@ -17,12 +17,15 @@
 #include "main.h"
 #include "reppanel_macros.h"
 #include "reppanel_jobselect.h"
+#include "reppanel_console.h"
 
 #define TAG                 "RequestTask"
-#define JSON_BUFF_SIZE      10240
 #define REQUEST_TIMEOUT_MS  150
 
-static char json_buffer[JSON_BUFF_SIZE];
+static response_buff_t resp_buff_status_update_task;
+static response_buff_t resp_buff_filelist_task;
+static response_buff_t resp_buff_gui_task;
+
 static bool got_filaments = false;
 static bool got_status_two = false;
 static bool got_duet_settings = false;
@@ -69,8 +72,8 @@ const char *_decode_reprap_status(const char *valuestring) {
     return "UnknownStatus";
 }
 
-void _process_reprap_status(int type) {
-    cJSON *root = cJSON_Parse(json_buffer);
+void _process_reprap_status(char *buff, int type) {
+    cJSON *root = cJSON_Parse(buff);
     if (root == NULL) {
         const char *error_ptr = cJSON_GetErrorPtr();
         if (error_ptr != NULL) {
@@ -117,7 +120,17 @@ void _process_reprap_status(int type) {
     if (duet_temps_bed_state && cJSON_IsNumber(duet_temps_bed_state)) {
         _heater_states[0] = duet_temps_bed_state->valueint;
     }
-    update_bed_temps_ui();  // update UI with new values
+
+    bool disp_msg = false;
+    char *msg_txt;
+    cJSON *duet_output = cJSON_GetObjectItem(root, "output");
+    if (duet_output) {
+        cJSON *duet_output_msg = cJSON_GetObjectItem(root, "message");
+        if (duet_output_msg && cJSON_IsString(duet_output_msg)) {
+            disp_msg = true;
+            msg_txt = duet_output_msg->valuestring;
+        }
+    }
 
     // Get tool heater state
     cJSON *duet_temps_state = cJSON_GetObjectItem(duet_temps, DUET_TEMPS_BED_STATE);        // all other heater states
@@ -133,7 +146,6 @@ void _process_reprap_status(int type) {
     }
     num_heaters = pos;
     num_tools = pos - 1;
-    update_heater_status(_heater_states, num_heaters);  // update UI with new values
 
     if (type == 2) {
         got_status_two = true;
@@ -203,7 +215,6 @@ void _process_reprap_status(int type) {
                                                               0)->valuedouble;
         }
     }
-    update_current_tool_temps_ui();     // update UI with new values
 
     if (type == 3) {
         // print job status
@@ -221,17 +232,21 @@ void _process_reprap_status(int type) {
         if (job_curr_layer && cJSON_IsNumber(job_curr_layer)) {
             reprap_job_curr_layer = job_curr_layer->valueint;
         }
-
-        update_print_job_status_ui();
     }
+
+    update_bed_temps_ui();  // update UI with new values
+    update_heater_status_ui(_heater_states, num_heaters);  // update UI with new values
+    update_current_tool_temps_ui();     // update UI with new values
+    if (type == 3) update_print_job_status_ui();
+    if (disp_msg) reppanel_disp_msg(msg_txt);
 
     cJSON_Delete(root);
 }
 
-void _process_duet_settings() {
+void _process_duet_settings(char *buff) {
     ESP_LOGI(TAG, "Processing D2WC status json");
     got_duet_settings = true;
-    cJSON *root = cJSON_Parse(json_buffer);
+    cJSON *root = cJSON_Parse(buff);
     if (root == NULL) {
         const char *error_ptr = cJSON_GetErrorPtr();
         if (error_ptr != NULL) {
@@ -306,8 +321,8 @@ void _process_duet_settings() {
     cJSON_Delete(root);
 }
 
-void _process_reprap_filelist() {
-    cJSON *root = cJSON_Parse(json_buffer);
+void _process_reprap_filelist(char *buffer) {
+    cJSON *root = cJSON_Parse(buffer);
     if (root == NULL) {
         const char *error_ptr = cJSON_GetErrorPtr();
         if (error_ptr != NULL) {
@@ -434,8 +449,8 @@ void _process_reprap_filelist() {
     cJSON_Delete(root);
 }
 
-void _process_reprap_fileinfo() {
-    cJSON *root = cJSON_Parse(json_buffer);
+void _process_reprap_fileinfo(char *data_buff) {
+    cJSON *root = cJSON_Parse(data_buff);
     if (root == NULL) {
         const char *error_ptr = cJSON_GetErrorPtr();
         if (error_ptr != NULL) {
@@ -444,7 +459,7 @@ void _process_reprap_fileinfo() {
         return;
     }
     cJSON *err_resp = cJSON_GetObjectItem(root, DUET_ERR);
-    if (err_resp->valueint != 0) {     // maybe no active print
+    if (err_resp && err_resp->valueint != 0) {     // maybe no active print
         cJSON_Delete(root);
         return;
     }
@@ -480,11 +495,11 @@ void _process_reprap_fileinfo() {
 }
 
 esp_err_t _http_event_handle(esp_http_client_event_t *evt) {
-    static int json_buffer_pos = 0;
     if (esp_http_client_get_status_code(evt->client) == 401) {
         ESP_LOGW(TAG, "Need to authorise first. Ignoring data.");
         return ESP_OK;
     }
+    response_buff_t *resp_buff = (response_buff_t*) evt->user_data;
     switch (evt->event_id) {
         case HTTP_EVENT_ERROR:
             ESP_LOGI(TAG, "Event handler detected http error");
@@ -502,13 +517,13 @@ esp_err_t _http_event_handle(esp_http_client_event_t *evt) {
         case HTTP_EVENT_ON_DATA:
             // ESP_LOGI(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
             if (!esp_http_client_is_chunked_response(evt->client)) {
-                if ((json_buffer_pos + evt->data_len) < JSON_BUFF_SIZE) {
-                    strncpy(&json_buffer[json_buffer_pos], (char *) evt->data, evt->data_len);
-                    json_buffer_pos += evt->data_len;
+                if ((resp_buff->buf_pos + evt->data_len) < JSON_BUFF_SIZE) {
+                    strncpy(&resp_buff->buffer[resp_buff->buf_pos], (char *) evt->data, evt->data_len);
+                    resp_buff->buf_pos += evt->data_len;
                 } else {
                     ESP_LOGE(TAG, "Status-JSON buffer overflow (%i >= %i). Resetting!",
-                             (evt->data_len + json_buffer_pos), JSON_BUFF_SIZE);
-                    json_buffer_pos = 0;
+                             (evt->data_len + resp_buff->buf_pos), JSON_BUFF_SIZE);
+                    resp_buff->buf_pos = 0;
                 }
             }
             break;
@@ -517,19 +532,20 @@ esp_err_t _http_event_handle(esp_http_client_event_t *evt) {
             break;
         case HTTP_EVENT_DISCONNECTED:
             // ESP_LOGI(TAG, "HTTP_EVENT_DISCONNECTED");
-            json_buffer_pos = 0;
+            resp_buff->buf_pos = 0;
             break;
     }
     return ESP_OK;
 }
 
-void wifi_duet_authorise(bool get_d2wc_config) {
+void wifi_duet_authorise(response_buff_t *buffer, bool get_d2wc_config) {
     char printer_url[MAX_REQ_ADDR_LENGTH];
     sprintf(printer_url, "%s/rr_connect?password=%s", rep_addr, rep_pass);
     esp_http_client_config_t config = {
             .url = printer_url,
             .timeout_ms = REQUEST_TIMEOUT_MS,
             .event_handler = _http_event_handle,
+            .user_data = buffer
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
@@ -543,36 +559,33 @@ void wifi_duet_authorise(bool get_d2wc_config) {
     // if (get_d2wc_config) reprap_wifi_download("0%3A%2Fsys%2Fdwc2settings.json");
 }
 
-void wifi_duet_get_status(int type) {
+void wifi_duet_get_status(response_buff_t *resp_buff, int type) {
     char request_addr[MAX_REQ_ADDR_LENGTH];
     sprintf(request_addr, "%s/rr_status?type=%i", rep_addr, type);
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
             .event_handler = _http_event_handle,
+            .user_data = resp_buff,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
-//        ESP_LOGI(TAG, "Status = %d, content_length = %d",
-//                 esp_http_client_get_status_code(client),
-//                 esp_http_client_get_content_length(client));
-
         switch (esp_http_client_get_status_code(client)) {
             case 200:
                 status_request_err_cnt = 0;
                 reppanel_conn_status = REPPANEL_WIFI_CONNECTED;
                 // Wait for time slot to update GUI
                 if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
-                    _process_reprap_status(type);
+                    _process_reprap_status(resp_buff->buffer, type);
                     update_rep_panel_conn_status();
                     xSemaphoreGive(xGuiSemaphore);
                 }
                 break;
             case 401:
                 ESP_LOGI(TAG, "Authorising with Duet");
-                wifi_duet_authorise(true);
+                wifi_duet_authorise(resp_buff, true);
                 break;
             default:
                 break;
@@ -591,7 +604,8 @@ void wifi_duet_get_status(int type) {
     esp_http_client_cleanup(client);
 }
 
-void reprap_wifi_send_gcode(char *gcode) {
+bool reprap_wifi_send_gcode(char *gcode) {
+    bool success = false;
     char request_addr[MAX_REQ_ADDR_LENGTH];
     char encoded_gcode[strlen(gcode) * 3];
     url_encode((unsigned char *) gcode, encoded_gcode);
@@ -601,6 +615,7 @@ void reprap_wifi_send_gcode(char *gcode) {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
             .event_handler = _http_event_handle,
+            .user_data = &resp_buff_gui_task
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
@@ -611,22 +626,25 @@ void reprap_wifi_send_gcode(char *gcode) {
                  esp_http_client_get_content_length(client));
         switch (esp_http_client_get_status_code(client)) {
             case 200:
-                // TODO process_reprap_gcode();
+                // TODO check for rreply();
+                success = true;
                 break;
             case 401:
                 ESP_LOGI(TAG, "Authorising with Duet");
-                wifi_duet_authorise(false);
+                wifi_duet_authorise(&resp_buff_gui_task, false);
                 break;
             default:
                 break;
         }
     } else {
         ESP_LOGW(TAG, "Error sending GCode via WiFi: %s", esp_err_to_name(err));
+        success = false;
     }
     esp_http_client_cleanup(client);
+    return success;
 }
 
-void reprap_wifi_get_filelist(char *directory) {
+void reprap_wifi_get_filelist(response_buff_t *resp_buffer, char *directory) {
     char request_addr[MAX_REQ_ADDR_LENGTH];
     char encoded_dir[strlen(directory) * 3];
     url_encode((unsigned char *) directory, encoded_dir);
@@ -636,6 +654,7 @@ void reprap_wifi_get_filelist(char *directory) {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
             .event_handler = _http_event_handle,
+            .user_data = resp_buffer,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
@@ -647,11 +666,11 @@ void reprap_wifi_get_filelist(char *directory) {
 
         switch (esp_http_client_get_status_code(client)) {
             case 200:
-                _process_reprap_filelist();
+                _process_reprap_filelist(resp_buffer->buffer);
                 break;
             case 401:
                 ESP_LOGI(TAG, "Authorising with Duet");
-                wifi_duet_authorise(false);
+                wifi_duet_authorise(resp_buffer, false);
                 break;
             default:
                 break;
@@ -663,7 +682,7 @@ void reprap_wifi_get_filelist(char *directory) {
 }
 
 /**
- *
+ * Task that gets files list
  * @param params Char array describing path to directory on pritner
  */
 void reprap_wifi_get_filelist_task(void *params) {
@@ -672,11 +691,13 @@ void reprap_wifi_get_filelist_task(void *params) {
     char encoded_dir[strlen(directory) * 3];
     url_encode((unsigned char *) directory, encoded_dir);
     sprintf(request_addr, "%s/rr_filelist?dir=%s", rep_addr, encoded_dir);
-    ESP_LOGI("FileListTask", "%s", request_addr);
+    ESP_LOGI("FileListTask", "Unformatted: %s", directory);
+    ESP_LOGI("FileListTask", "Request: %s", request_addr);
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
             .event_handler = _http_event_handle,
+            .user_data = &resp_buff_filelist_task,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
@@ -688,11 +709,11 @@ void reprap_wifi_get_filelist_task(void *params) {
 
         switch (esp_http_client_get_status_code(client)) {
             case 200:
-                _process_reprap_filelist();
+                _process_reprap_filelist(resp_buff_filelist_task.buffer);
                 break;
             case 401:
                 ESP_LOGI(TAG, "Authorising with Duet");
-                wifi_duet_authorise(false);
+                wifi_duet_authorise(&resp_buff_filelist_task, false);
                 break;
             default:
                 break;
@@ -704,7 +725,7 @@ void reprap_wifi_get_filelist_task(void *params) {
     vTaskDelete(NULL);
 }
 
-void reprap_wifi_get_fileinfo(char *filename) {
+void reprap_wifi_get_fileinfo(response_buff_t *resp_data, char *filename) {
     char request_addr[MAX_REQ_ADDR_LENGTH];
     if (filename != NULL) {
         char encoded_filename[strlen(filename) * 3];
@@ -717,6 +738,7 @@ void reprap_wifi_get_fileinfo(char *filename) {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
             .event_handler = _http_event_handle,
+            .user_data = resp_data,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
@@ -728,11 +750,11 @@ void reprap_wifi_get_fileinfo(char *filename) {
 
         switch (esp_http_client_get_status_code(client)) {
             case 200:
-                _process_reprap_fileinfo();
+                _process_reprap_fileinfo(resp_data->buffer);
                 break;
             case 401:
                 ESP_LOGI(TAG, "Authorising with Duet");
-                wifi_duet_authorise(false);
+                wifi_duet_authorise(resp_data, false);
                 break;
             default:
                 break;
@@ -750,6 +772,7 @@ void reprap_wifi_get_config() {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
             .event_handler = _http_event_handle,
+            .user_data = &resp_buff_gui_task,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
@@ -765,7 +788,7 @@ void reprap_wifi_get_config() {
             break;
         case 401:
             ESP_LOGI(TAG, "Authorising with Duet");
-            wifi_duet_authorise(false);
+            wifi_duet_authorise(&resp_buff_gui_task, false);
             break;
         default:
             break;
@@ -773,13 +796,14 @@ void reprap_wifi_get_config() {
     esp_http_client_cleanup(client);
 }
 
-void reprap_wifi_download(char *file) {
+void reprap_wifi_download(response_buff_t *response_buffer, char *file) {
     char request_addr[MAX_REQ_ADDR_LENGTH];
     sprintf(request_addr, "%s/rr_download?name=%s", rep_addr, file);
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
             .event_handler = _http_event_handle,
+            .user_data = response_buffer,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
@@ -792,13 +816,13 @@ void reprap_wifi_download(char *file) {
         switch (esp_http_client_get_status_code(client)) {
             case 200:
                 if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
-                    _process_duet_settings();
+                    _process_duet_settings(response_buffer->buffer);
                     xSemaphoreGive(xGuiSemaphore);
                 }
                 break;
             case 401:
                 ESP_LOGI(TAG, "Authorising with Duet");
-                wifi_duet_authorise(false);
+                wifi_duet_authorise(response_buffer, false);
                 break;
             default:
                 break;
@@ -810,12 +834,15 @@ void reprap_wifi_download(char *file) {
 }
 
 /**
- * Send GCode to the printer. Blocking call
+ * Send GCode to the printer. Blocking call. Call from UI thread!
  * @param gcode_command
  */
 void reprap_send_gcode(char *gcode_command) {
     if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
-        reprap_wifi_send_gcode(gcode_command);
+        if (reprap_wifi_send_gcode(gcode_command)) {
+            add_console_hist_entry(gcode_command, "", CONSOLE_TYPE_REPPANEL);
+            update_entries_ui();
+        }
     } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
         ESP_LOGW(TAG, "Writing to UART not supported for now");
     }
@@ -824,7 +851,7 @@ void reprap_send_gcode(char *gcode_command) {
 void request_filaments() {
     if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
         ESP_LOGI(TAG, "Requesting filaments");
-        reprap_wifi_get_filelist("0:/filaments&first=0");
+        reprap_wifi_get_filelist(&resp_buff_gui_task, "0:/filaments&first=0");
     } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
         ESP_LOGW(TAG, "Using UART not supported for now");
     }
@@ -832,12 +859,13 @@ void request_filaments() {
 
 /**
  * Launches a new thread that requests macros. Updates Macros list in GUI on success. Non blocking call.
+ * @param folder_path Can be empty in case root macro folder content is requested
  */
-void request_macros_async() {
+void request_macros_async(char *folder_path) {
     if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
         ESP_LOGI(TAG, "Requesting macros");
         TaskHandle_t get_filelist_async_task_handle = NULL;
-        xTaskCreate(reprap_wifi_get_filelist_task, "macros request task", 1024*3, "0:/macros&first=0",
+        xTaskCreate(reprap_wifi_get_filelist_task, "macros request task", 1024 * 3, folder_path,
                     tskIDLE_PRIORITY, &get_filelist_async_task_handle);
         configASSERT(get_filelist_async_task_handle);
     } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
@@ -848,7 +876,7 @@ void request_macros_async() {
 void request_macros() {
     if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
         ESP_LOGI(TAG, "Requesting macros");
-        reprap_wifi_get_filelist("0:/macros&first=0");
+        reprap_wifi_get_filelist(&resp_buff_gui_task, "0:/macros&first=0");
     } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
         ESP_LOGW(TAG, "Using UART not supported for now");
     }
@@ -861,7 +889,7 @@ void request_macros() {
 void request_fileinfo(char *file_name) {
     if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
         ESP_LOGI(TAG, "Requesting file info");
-        reprap_wifi_get_fileinfo(file_name);
+        reprap_wifi_get_fileinfo(&resp_buff_gui_task, file_name);
     } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
         ESP_LOGW(TAG, "Using UART not supported for now");
     }
@@ -874,7 +902,7 @@ void request_jobs_async() {
     if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
         ESP_LOGI(TAG, "Requesting jobs");
         TaskHandle_t get_filelist_async_task_handle = NULL;
-        xTaskCreate(reprap_wifi_get_filelist_task, "jobs request task", 1024*3, "0:/gcodes&first=0",
+        xTaskCreate(reprap_wifi_get_filelist_task, "jobs request task", 1024 * 3, "0:/gcodes&first=0",
                     tskIDLE_PRIORITY, &get_filelist_async_task_handle);
         configASSERT(get_filelist_async_task_handle);
     } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
@@ -885,7 +913,7 @@ void request_jobs_async() {
 void request_jobs() {
     if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
         ESP_LOGI(TAG, "Requesting jobs");
-        reprap_wifi_get_filelist("0:/gcodes&first=0");
+        reprap_wifi_get_filelist(&resp_buff_gui_task, "0:/gcodes&first=0");
     } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
         ESP_LOGW(TAG, "Using UART not supported for now");
     }
@@ -896,27 +924,27 @@ void request_jobs() {
  * @param task
  */
 void request_reprap_status_updates(void *params) {
-    UBaseType_t uxHighWaterMark;
     TickType_t xLastWakeTime;
     const TickType_t xFrequency = (750 / portTICK_PERIOD_MS);
     xLastWakeTime = xTaskGetTickCount();
     int i = 6;
-    uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
+    UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
     while (1) {
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
-        if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
-            if (!got_duet_settings) reprap_wifi_download("0%3A%2Fsys%2Fdwc2settings.json");
+        if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED ||
+            reppanel_conn_status == REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED) {
+            if (!got_duet_settings) reprap_wifi_download(&resp_buff_status_update_task, "0%3A%2Fsys%2Fdwc2settings.json");
             if (!got_filaments) request_filaments();
-            if (!got_status_two) wifi_duet_get_status(2);
+            if (!got_status_two) wifi_duet_get_status(&resp_buff_status_update_task, 2);
             bool old_job_status = job_running;
             if (!job_running)
-                wifi_duet_get_status(1);
+                wifi_duet_get_status(&resp_buff_status_update_task, 1);
             else
-                wifi_duet_get_status(3);
+                wifi_duet_get_status(&resp_buff_status_update_task, 3);
 //            if (old_job_status != job_running)
 //                request_fileinfo(NULL); // Someone started a print job (ext. application). Get the info.
-            if (i%6 == 0) {
-                wifi_duet_get_status(2);
+            if (i % 6 == 0) {
+                wifi_duet_get_status(&resp_buff_status_update_task, 2);
                 request_fileinfo(NULL);
                 i = 0;
             } else {
@@ -925,8 +953,8 @@ void request_reprap_status_updates(void *params) {
         } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
             ESP_LOGW(TAG, "Using UART not supported for now");
         }
-        uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
-        ESP_LOGI(TAG, "%i free bytes" , uxHighWaterMark*4);
+        uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+        ESP_LOGI(TAG, "%i free bytes", uxHighWaterMark * 4);
     }
     vTaskDelete(NULL);
 }

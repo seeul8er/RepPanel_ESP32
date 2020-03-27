@@ -77,7 +77,7 @@ void apply_heater_style(int state, lv_obj_t *btn_active, lv_obj_t *bnt_standby) 
 /**
  * Update UI based on RepRap response
  */
-void update_heater_status(const int states[MAX_NUM_TOOLS], int _num_heaters) {
+void update_heater_status_ui(const int *states, int _num_heaters) {
     for (int i = 0; i < _num_heaters; i++) {
         if (i == 0 && btn_bed_temp_active != NULL && btn_bed_temp_standby != NULL) {
             apply_heater_style(states[i], btn_bed_temp_active, btn_bed_temp_standby);
