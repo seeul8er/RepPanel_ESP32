@@ -94,11 +94,11 @@ case you use different hardware or want a different pin connection layout**
 
 ### Wiring ER-TFTM035-6 to the ESP32 DevKit with 38GPIOs
 
-![ESP32 Devkit wire connections](wiki/Wiring_ESP32_DevKit_38GPIOs.jpg | width=480)
-![ER-TFTM035-6 wiring](wiki/Wiring_ERTFT.jpg | width=480)
+![ESP32 Devkit wire connections](wiki/Wiring_ESP32_DevKit_38GPIOs.jpg)
+![ER-TFTM035-6 wiring](wiki/Wiring_ERTFT.jpg)
 
 ## Screenshots
-![ESP32 Devkit wire connections](wiki/RepPanel_Working.jpg | width=480)
+![ESP32 Devkit wire connections](wiki/RepPanel_Working.jpg)
 ![RepPanel print job status](wiki/RepPanel_JobStatus.png)
 ![RepPanel process menu](wiki/RepPanel_Process.png)
 ![RepPanel console](wiki/RepPanel_Console.png)
