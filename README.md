@@ -39,6 +39,8 @@ browser.
  - Automatic reconnection
  - Low latency
 
+[![First test of RepPanel](https://img.youtube.com/vi/39FKTUVjrxc/0.jpg)](https://www.youtube.com/watch?v=39FKTUVjrxc)
+
 
 ## What this project is not
 A full replacement for the DuetWebControl interface.
