@@ -32,12 +32,11 @@ extern "C" {
 #define VERSION_STR             "v0.1.0"
 
 #define NUM_TEMPS_BUFF      15
-#define MAX_FILA_NAME_LEN   100
-#define MAX_TOOL_NAME_LEN   100
-#define MAX_LEN_STR_FILAMENT_LIST   1024*2
-#define MAX_NUM_MACROS      256
+#define MAX_FILA_NAME_LEN   64
+#define MAX_TOOL_NAME_LEN   32
+#define MAX_LEN_STR_FILAMENT_LIST   512*3
+#define MAX_NUM_MACROS      32
 #define MAX_NUM_JOBS        MAX_NUM_MACROS
-#define MAX_LEN_MACRO_STR   256
 
 #define TREE_EMPTY_ELEM     -1
 #define TREE_FOLDER_ELEM    0

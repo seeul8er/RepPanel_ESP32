@@ -8,8 +8,8 @@
 #include <lvgl/src/lv_core/lv_obj.h>
 
 #define MAX_CONSOLE_ENTRY_COUNT   20
-#define MAX_LEN_COMMAND             32
-#define MAX_LEN_RESPONSE            256
+#define MAX_LEN_COMMAND             128
+#define MAX_LEN_RESPONSE            128
 
 enum console_msg_type {CONSOLE_TYPE_EMPTY, CONSOLE_TYPE_INFO, CONSOLE_TYPE_WARN, CONSOLE_TYPE_REPPANEL};
 

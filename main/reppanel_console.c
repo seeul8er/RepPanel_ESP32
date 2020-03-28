@@ -147,9 +147,9 @@ void add_console_hist_entry(char *command, char *response, enum console_msg_type
     } else
         pos_newest_entry = 0;
     console_entry_t e = {.command = "", .response = "", .type = type};
-    strcpy(e.command, command);
+    strncpy(e.command, command, MAX_LEN_COMMAND);
     if (response != NULL) {
-        strcpy(e.response, response);
+        strncpy(e.response, response, MAX_LEN_RESPONSE);
     }
     console_enties[pos_newest_entry] = e;
 }

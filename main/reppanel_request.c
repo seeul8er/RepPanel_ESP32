@@ -7,7 +7,6 @@
 #include <lwip/ip4_addr.h>
 #include <esp_http_client.h>
 #include <cJSON.h>
-#include <mdns.h>
 #include <lvgl/lvgl.h>
 #include "duet_status_json.h"
 #include "reppanel.h"
@@ -125,7 +124,7 @@ void _process_reprap_status(char *buff, int type) {
     char *msg_txt;
     cJSON *duet_output = cJSON_GetObjectItem(root, "output");
     if (duet_output) {
-        cJSON *duet_output_msg = cJSON_GetObjectItem(root, "message");
+        cJSON *duet_output_msg = cJSON_GetObjectItem(duet_output, "message");
         if (duet_output_msg && cJSON_IsString(duet_output_msg)) {
             disp_msg = true;
             msg_txt = duet_output_msg->valuestring;
@@ -178,11 +177,14 @@ void _process_reprap_status(char *buff, int type) {
 
         // Get firmware information
         cJSON *mcutemp = cJSON_GetObjectItem(root, DUET_MCU_TEMP);
-        reprap_mcu_temp = cJSON_GetObjectItem(mcutemp, "cur")->valuedouble;
+        if (mcutemp)
+            reprap_mcu_temp = cJSON_GetObjectItem(mcutemp, "cur")->valuedouble;
         cJSON *firmware_name = cJSON_GetObjectItem(root, DUET_FIRM_NAME);
-        strncpy(reprap_firmware_name, firmware_name->valuestring, sizeof(reprap_firmware_name));
+        if (firmware_name)
+            strncpy(reprap_firmware_name, firmware_name->valuestring, sizeof(reprap_firmware_name));
         cJSON *firmware_version = cJSON_GetObjectItem(root, DUET_FIRM_VER);
-        strncpy(reprap_firmware_version, firmware_version->valuestring, sizeof(reprap_firmware_version));
+        if (firmware_version)
+            strncpy(reprap_firmware_version, firmware_version->valuestring, sizeof(reprap_firmware_version));
     }
 
     // Get current tool temperatures
@@ -898,11 +900,11 @@ void request_fileinfo(char *file_name) {
 /**
  * Launches a new thread that requests job list. Updates Job list in GUI on success. Non blocking call.
  */
-void request_jobs_async() {
+void request_jobs_async(char *folder_path) {
     if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
         ESP_LOGI(TAG, "Requesting jobs");
         TaskHandle_t get_filelist_async_task_handle = NULL;
-        xTaskCreate(reprap_wifi_get_filelist_task, "jobs request task", 1024 * 3, "0:/gcodes&first=0",
+        xTaskCreate(reprap_wifi_get_filelist_task, "jobs request task", 1024 * 3, folder_path,
                     tskIDLE_PRIORITY, &get_filelist_async_task_handle);
         configASSERT(get_filelist_async_task_handle);
     } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
@@ -927,8 +929,8 @@ void request_reprap_status_updates(void *params) {
     TickType_t xLastWakeTime;
     const TickType_t xFrequency = (750 / portTICK_PERIOD_MS);
     xLastWakeTime = xTaskGetTickCount();
-    int i = 6;
-    UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+    int i = 8;
+    UBaseType_t uxHighWaterMark;
     while (1) {
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
         if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED ||
@@ -936,14 +938,11 @@ void request_reprap_status_updates(void *params) {
             if (!got_duet_settings) reprap_wifi_download(&resp_buff_status_update_task, "0%3A%2Fsys%2Fdwc2settings.json");
             if (!got_filaments) request_filaments();
             if (!got_status_two) wifi_duet_get_status(&resp_buff_status_update_task, 2);
-            bool old_job_status = job_running;
             if (!job_running)
                 wifi_duet_get_status(&resp_buff_status_update_task, 1);
             else
                 wifi_duet_get_status(&resp_buff_status_update_task, 3);
-//            if (old_job_status != job_running)
-//                request_fileinfo(NULL); // Someone started a print job (ext. application). Get the info.
-            if (i % 6 == 0) {
+            if (i % 8 == 0) {
                 wifi_duet_get_status(&resp_buff_status_update_task, 2);
                 request_fileinfo(NULL);
                 i = 0;

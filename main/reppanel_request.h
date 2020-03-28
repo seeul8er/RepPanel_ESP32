@@ -5,8 +5,8 @@
 #ifndef REPPANEL_ESP32_REPPANEL_REQUEST_H
 #define REPPANEL_ESP32_REPPANEL_REQUEST_H
 
-#define MAX_REQ_ADDR_LENGTH     512
-#define JSON_BUFF_SIZE          1024*4
+#define MAX_REQ_ADDR_LENGTH     256 + 128
+#define JSON_BUFF_SIZE          2816      // d2wc settings is max ~2600 bytes
 
 typedef struct {
     char buffer[JSON_BUFF_SIZE];
@@ -23,7 +23,7 @@ void request_filaments();
 void request_macros();
 void request_macros_async(char *folder_path);
 void request_jobs();
-void request_jobs_async();
+void request_jobs_async(char *folder_path);
 void request_fileinfo(char *file_name);
 void reprap_send_gcode(char *gcode_command);
 

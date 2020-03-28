@@ -350,7 +350,7 @@ static void _set_bed_temp_status_event_handler(lv_obj_t *obj, lv_event_t event) 
                 break;
         }
         for (int i = 0; i < NUM_TEMPS_BUFF + 1; i++) {
-            if (i != 0 && i % 6 == 0) {
+            if (i != 0 && i % 4 == 0) {
                 temp_map_tmp[map_indx] = "\n";
                 map_indx++;
             }

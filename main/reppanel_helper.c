@@ -65,7 +65,7 @@ void init_reprap_buffers() {
         reprap_tool_poss_temps.temps_standby[i] = -1;
     }
     for (int i = 0; i < MAX_CONSOLE_ENTRY_COUNT; i++) {
-        console_enties[i] = (console_entry_t) {NULL, NULL, CONSOLE_TYPE_EMPTY};
+        console_enties[i] = (console_entry_t) {"", "", CONSOLE_TYPE_EMPTY};
     }
 }
 
