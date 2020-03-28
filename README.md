@@ -1,7 +1,7 @@
 # RepPanel
 
 A simple user interface for Duet/RepRap based 3D printers. Optimized for 3.5" touch
-panels controlled via SPI & I²C using a ESP32.
+panels controlled via SPI & I²C using an ESP32.
 
 Supports wireless connection or wired via UART/PanelDue port (future release).
 
