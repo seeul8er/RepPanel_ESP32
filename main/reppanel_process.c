@@ -127,21 +127,21 @@ void _update_next_tool_button_visibility() {
 }
 
 static void _choose_prev_tool_event_handler(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_RELEASED) {
+    if (event == LV_EVENT_CLICKED) {
         if (current_visible_tool_indx > 0) current_visible_tool_indx--;
         _update_next_tool_button_visibility();
     }
 }
 
 static void _choose_next_tool_event_handler(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_RELEASED) {
+    if (event == LV_EVENT_CLICKED) {
         if (current_visible_tool_indx < (num_tools - 1)) current_visible_tool_indx++;
         _update_next_tool_button_visibility();
     }
 }
 
 static void _redraw_process_event_handler(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_RELEASED) {
+    if (event == LV_EVENT_CLICKED) {
         lv_obj_del_async(cont_fila_overlay);
     }
 }
@@ -215,7 +215,7 @@ static void _change_heater_status(lv_obj_t *obj, bool force_temp_update) {
             reprap_send_gcode(gcode_buff);
         }
     } else if (button_type == BTN_TOOL_TMP_ACTIVE) {
-        if (heater_states[(current_visible_tool_indx+1)] == 2 && !force_temp_update) {
+        if (heater_states[(current_visible_tool_indx + 1)] == 2 && !force_temp_update) {
             _send_deactivate_tool_heater();
         } else {
             ESP_LOGI(TAG, "\tActivating tool with indx %i active temp", current_visible_tool_indx);
@@ -230,7 +230,7 @@ static void _change_heater_status(lv_obj_t *obj, bool force_temp_update) {
             sprintf(gcode_buff, "T%i", reprap_tools[current_visible_tool_indx].number);
             reprap_send_gcode(gcode_buff);
         }
-    } else if (heater_states[(current_visible_tool_indx+1)] == 2 && !force_temp_update) {
+    } else if (heater_states[(current_visible_tool_indx + 1)] == 2 && !force_temp_update) {
         _send_deactivate_tool_heater();
     } else {
         ESP_LOGI(TAG, "\tActivating tool with indx %i standby temp", current_visible_tool_indx);
@@ -248,7 +248,7 @@ static void _change_heater_status(lv_obj_t *obj, bool force_temp_update) {
 }
 
 static void _change_tmp_event_handler(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_RELEASED) {
+    if (event == LV_EVENT_CLICKED) {
         char gcode_buff[64];
         char char_temp_only[6];
         const char *val_txt_buff = lv_btnm_get_active_btn_text(obj);
@@ -292,7 +292,7 @@ static void _change_tmp_event_handler(lv_obj_t *obj, lv_event_t event) {
 }
 
 static void _close_popup_page(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_RELEASED) {
+    if (event == LV_EVENT_CLICKED) {
         lv_obj_del_async(popup_page);
     }
 }

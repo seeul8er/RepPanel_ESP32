@@ -71,7 +71,7 @@ static void ta_event_cb(lv_obj_t *ta, lv_event_t event) {
 }
 
 static void set_ssid_event(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_RELEASED) {
+    if (event == LV_EVENT_CLICKED) {
         char buf[33];
         lv_ddlist_get_selected_str(ddl_ssid, buf, sizeof(buf));
         lv_ta_set_text(ta_ssid, buf);
@@ -80,13 +80,13 @@ static void set_ssid_event(lv_obj_t *obj, lv_event_t event) {
 }
 
 static void cancel_ssid_event(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_RELEASED) {
+    if (event == LV_EVENT_CLICKED) {
         lv_obj_del(cont_overlay);
     }
 }
 
 static void scan_wifi_event(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_RELEASED) {
+    if (event == LV_EVENT_CLICKED) {
         char ssids[200];
         get_avail_wifi_networks(ssids);
 
@@ -110,7 +110,7 @@ static void scan_wifi_event(lv_obj_t *obj, lv_event_t event) {
         lv_label_set_text(l, "Select SSID");
         ddl_ssid = lv_ddlist_create(cont_overlay, NULL);
         lv_ddlist_set_sb_mode(ddl_ssid, LV_SB_MODE_AUTO);
-        lv_ddlist_set_fix_height(ddl_ssid, LV_HOR_RES-350);
+        lv_ddlist_set_fix_height(ddl_ssid, LV_HOR_RES - 350);
         lv_ddlist_set_align(ddl_ssid, LV_LABEL_ALIGN_LEFT);
         lv_ddlist_set_options(ddl_ssid, ssids);
         static lv_obj_t *ok_buttn;
@@ -124,7 +124,8 @@ void draw_info(lv_obj_t *parent_screen) {
     read_settings_nvs();
 
     info_page = lv_page_create(parent_screen, NULL);
-    lv_obj_set_size(info_page, lv_disp_get_hor_res(NULL), lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
+    lv_obj_set_size(info_page, lv_disp_get_hor_res(NULL),
+                    lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
     lv_page_set_scrl_fit2(info_page, LV_FIT_TIGHT, LV_FIT_FILL);
     lv_page_set_scrl_layout(info_page, LV_LAYOUT_COL_L);
 

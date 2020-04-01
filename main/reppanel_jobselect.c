@@ -40,8 +40,8 @@ void send_print_command() {
     reprap_send_gcode(tmp_txt);
 }
 
-static void print_file_handler(lv_obj_t * obj, lv_event_t event) {
-    if(event == LV_EVENT_RELEASED) {
+static void print_file_handler(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
         if (strcmp(lv_mbox_get_active_btn_text(msg_box3), "Yes") == 0) {
             send_print_command();
             lv_obj_del_async(msg_box3);
@@ -52,8 +52,8 @@ static void print_file_handler(lv_obj_t * obj, lv_event_t event) {
     }
 }
 
-static void delete_file_handler(lv_obj_t * obj, lv_event_t event) {
-    if(event == LV_EVENT_RELEASED) {
+static void delete_file_handler(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
         if (strcmp(lv_mbox_get_active_btn_text(msg_box2), "Yes") == 0) {
             ESP_LOGI(TAG, "Deleting %s", edit_job->name);
             char tmp_txt[strlen(edit_job->dir) + strlen(edit_job->name) + 10];
@@ -68,12 +68,12 @@ static void delete_file_handler(lv_obj_t * obj, lv_event_t event) {
 }
 
 static void job_action_handler(lv_obj_t *obj, lv_event_t event) {
-    if(event == LV_EVENT_CLICKED) {
+    if (event == LV_EVENT_CLICKED) {
         if (strcmp(lv_mbox_get_active_btn_text(msg_box1), CANCEL_BTN_TXT) == 0) {
             ESP_LOGI(TAG, "Close window. No action");
             lv_obj_del_async(msg_box1);
         } else if (strcmp(lv_mbox_get_active_btn_text(msg_box1), DELETE_BTN_TXT) == 0) {
-            static const char * btns[] ={"Yes", "No", ""};
+            static const char *btns[] = {"Yes", "No", ""};
             msg_box2 = lv_mbox_create(lv_layer_top(), NULL);
             lv_mbox_set_text(msg_box2, "Do you really want to delete this file?");
             lv_mbox_add_btns(msg_box2, btns);
@@ -98,7 +98,7 @@ static void job_action_handler(lv_obj_t *obj, lv_event_t event) {
 static void _job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
     int selected_indx = lv_list_get_btn_index(jobs_list, obj);
     // check if back button exists
-    if (strcmp(((reprap_job_t*) reprap_jobs[selected_indx].element)->dir, JOBS_ROOT_DIR) != 0) {
+    if (strcmp(((reprap_job_t *) reprap_jobs[selected_indx].element)->dir, JOBS_ROOT_DIR) != 0) {
         if (selected_indx == 0 && event == LV_EVENT_SHORT_CLICKED) {
             // back button was pressed
             ESP_LOGI(TAG, "Going back to parent %s", parent_dir);
@@ -114,10 +114,10 @@ static void _job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
             selected_indx--;
         }
     }
-    edit_job = ((reprap_job_t*) reprap_jobs[selected_indx].element);
-    if(event == LV_EVENT_SHORT_CLICKED) {
+    edit_job = ((reprap_job_t *) reprap_jobs[selected_indx].element);
+    if (event == LV_EVENT_SHORT_CLICKED) {
         if (reprap_jobs[selected_indx].type == TREE_FILE_ELEM) {
-            static const char * btns[] ={"Yes", "No", ""};
+            static const char *btns[] = {"Yes", "No", ""};
             msg_box3 = lv_mbox_create(lv_layer_top(), NULL);
             char msg[strlen(edit_job->name) + 23];
             sprintf(msg, "Do you want to print %s?", edit_job->name);
@@ -137,7 +137,7 @@ static void _job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
             request_jobs_async(tmp_txt_job_path);
         }
     } else if (event == LV_EVENT_LONG_PRESSED && reprap_jobs[selected_indx].type == TREE_FILE_ELEM) {
-        static const char * btns[] ={SIM_BTN_TXT, PRINT_BTN_TXT, DELETE_BTN_TXT, CANCEL_BTN_TXT, ""};
+        static const char *btns[] = {SIM_BTN_TXT, PRINT_BTN_TXT, DELETE_BTN_TXT, CANCEL_BTN_TXT, ""};
         msg_box1 = lv_mbox_create(lv_layer_top(), NULL);
         lv_mbox_set_text(msg_box1, "Select action");
         lv_mbox_add_btns(msg_box1, btns);
@@ -148,7 +148,7 @@ static void _job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
-void update_job_list_ui(){
+void update_job_list_ui() {
     lv_obj_del(preloader);
     if (jobs_list) {
         lv_list_clean(jobs_list);
@@ -189,7 +189,7 @@ void draw_jobselect(lv_obj_t *parent_screen) {
     lv_obj_set_size(preloader, 75, 75);
 
     jobs_list = lv_list_create(jobs_container, NULL);
-    lv_obj_set_size(jobs_list, LV_HOR_RES-10, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
+    lv_obj_set_size(jobs_list, LV_HOR_RES - 10, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
 
     request_jobs_async("0:/gcodes&first=0");
 }

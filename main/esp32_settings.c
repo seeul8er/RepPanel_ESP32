@@ -20,7 +20,7 @@ int temp_unit = 0;   // 0=Celsius, 1=Fahrenheit
 
 char filament_names[MAX_LEN_STR_FILAMENT_LIST] = {"Not set\nNot set"};
 
-char get_temp_unit(){
+char get_temp_unit() {
     if (temp_unit == 0) {
         return 'C';
     } else {

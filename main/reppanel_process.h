@@ -8,8 +8,11 @@
 #include "esp32_settings.h"
 
 void draw_process(lv_obj_t *parent_screen);
+
 void update_heater_status_ui(const int *states, int _num_heaters);
+
 void update_bed_temps_ui();
+
 void update_current_tool_temps_ui();
 
 extern lv_obj_t *label_bed_temp_active;

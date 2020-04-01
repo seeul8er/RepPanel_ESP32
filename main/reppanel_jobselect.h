@@ -8,6 +8,7 @@
 #include <lvgl/src/lv_core/lv_obj.h>
 
 void draw_jobselect(lv_obj_t *parent_screen);
+
 void update_job_list_ui();
 
 #endif //LVGL_REPPANEL_JOBSELECT_H

@@ -16,6 +16,7 @@
 
 char html5[256] = {0};
 bool encoding_inited = false;
+lv_obj_t *mbox_msg;
 
 void url_encoder_rfc_tables_init() {
     int i;
@@ -81,13 +82,13 @@ void create_button(lv_obj_t *parent, lv_obj_t *button_pnt, char *text, void *eve
 
 static void _close_msg_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
-        lv_obj_del_async(lv_obj_get_parent(obj));
+        lv_obj_del_async(mbox_msg);
     }
 }
 
 void reppanel_disp_msg(char *msg_txt) {
     static const char *btns[] = {"Close", ""};
-    lv_obj_t *mbox_msg = lv_mbox_create(lv_layer_top(), NULL);
+    mbox_msg = lv_mbox_create(lv_layer_top(), NULL);
     lv_mbox_set_text(mbox_msg, msg_txt);
     lv_mbox_add_btns(mbox_msg, btns);
     lv_obj_set_width(mbox_msg, 300);

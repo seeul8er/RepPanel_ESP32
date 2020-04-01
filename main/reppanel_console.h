@@ -11,10 +11,14 @@
 #define MAX_LEN_COMMAND             128
 #define MAX_LEN_RESPONSE            128
 
-enum console_msg_type {CONSOLE_TYPE_EMPTY, CONSOLE_TYPE_INFO, CONSOLE_TYPE_WARN, CONSOLE_TYPE_REPPANEL};
+enum console_msg_type {
+    CONSOLE_TYPE_EMPTY, CONSOLE_TYPE_INFO, CONSOLE_TYPE_WARN, CONSOLE_TYPE_REPPANEL
+};
 
 void add_console_hist_entry(char *command, char *response, enum console_msg_type type);
+
 void draw_console(lv_obj_t *parent_screen);
+
 void update_entries_ui();
 
 typedef struct {

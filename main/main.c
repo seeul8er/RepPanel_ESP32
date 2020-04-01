@@ -52,10 +52,10 @@ void guiTask();
 void app_main() {
     //If you want to use a task to create the graphic, you NEED to create a Pinned task
     //Otherwise there can be problem such as memory corruption and so on
-    xTaskCreatePinnedToCore(guiTask, "gui", 512*16, NULL, ( 0 | portPRIVILEGE_BIT ), NULL, 1);
+    xTaskCreatePinnedToCore(guiTask, "gui", 512 * 10, NULL, 0, NULL, 1);
 
     TaskHandle_t printer_status_task_handle = NULL;
-    xTaskCreate(request_reprap_status_updates, "Printer Status Update Task", 1024*3, NULL,
+    xTaskCreate(request_reprap_status_updates, "Printer Status Update Task", 1024 * 4, NULL,
                 tskIDLE_PRIORITY, &printer_status_task_handle);
     configASSERT(printer_status_task_handle);
 }
@@ -66,9 +66,8 @@ static void IRAM_ATTR lv_tick_task(void *arg) {
 }
 
 void guiTask() {
-    UBaseType_t uxHighWaterMark;
     /* Inspect our own high water mark on entering the task. */
-    uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
+//    UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
 
     xGuiSemaphore = xSemaphoreCreateMutex();
     lv_init();
@@ -117,7 +116,7 @@ void guiTask() {
 
     wifi_init_sta();
 
-
+//    int c = 0;
     while (1) {
         vTaskDelay(1);
         //Try to lock the semaphore, if success, call lvgl stuff
@@ -125,11 +124,12 @@ void guiTask() {
             lv_task_handler();
             xSemaphoreGive(xGuiSemaphore);
         }
-        uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
-        // ESP_LOGI(TAG, "%i free bytes" , uxHighWaterMark*4);
+//        uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
+//        if (c%50000 == 0) {
+//            c = 0;
+//            ESP_LOGI(TAG, "%i free bytes" , uxHighWaterMark*4);
+//        } else c++;
     }
     //A task should NEVER return
-//    vTaskDelete(printer_ext_status_task_handle);
-//    vTaskDelete(printer_status_task_handle);
     vTaskDelete(NULL);
 }

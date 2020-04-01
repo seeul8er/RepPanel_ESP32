@@ -14,6 +14,7 @@ extern lv_obj_t *label_job_layer_status;
 extern lv_obj_t *label_job_filename;
 
 void draw_jobstatus(lv_obj_t *parent_screen);
+
 void update_print_job_status_ui();
 
 #endif //REPPANEL_ESP32_REPPANEL_JOBSTATUS_H

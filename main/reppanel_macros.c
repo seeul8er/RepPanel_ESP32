@@ -24,8 +24,8 @@ lv_obj_t *preloader;
 reprap_macro_t *edit_macro;
 char parent_dir[MAX_LEN_DIR];
 
-static void _exe_macro_file_handler(lv_obj_t * obj, lv_event_t event) {
-    if(event == LV_EVENT_CLICKED) {
+static void _exe_macro_file_handler(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
         if (strcmp(lv_mbox_get_active_btn_text(msg_box3), "Yes") == 0) {
             ESP_LOGI(TAG, "Running file %s", lv_list_get_btn_text(obj));
             char tmp_txt[strlen(edit_macro->dir) + strlen(edit_macro->name) + 10];
@@ -42,7 +42,7 @@ static void _macro_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         int selected_indx = lv_list_get_btn_index(macro_list, obj);
         // check if back button exists
-        if (strcmp(((reprap_macro_t*) reprap_macros[selected_indx].element)->dir, MACRO_ROOT_DIR) != 0) {
+        if (strcmp(((reprap_macro_t *) reprap_macros[selected_indx].element)->dir, MACRO_ROOT_DIR) != 0) {
             if (selected_indx == 0) {
                 // back button was pressed
                 ESP_LOGI(TAG, "Going back to parent %s", parent_dir);
@@ -58,11 +58,11 @@ static void _macro_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
                 selected_indx--;
             }
         }
-        edit_macro = (reprap_macro_t*) reprap_macros[selected_indx].element;
+        edit_macro = (reprap_macro_t *) reprap_macros[selected_indx].element;
         if (edit_macro == NULL)
             return;
         if (reprap_macros[selected_indx].type == TREE_FILE_ELEM) {
-            static const char * btns[] ={"Yes", "No", ""};
+            static const char *btns[] = {"Yes", "No", ""};
             msg_box3 = lv_mbox_create(lv_layer_top(), NULL);
             char msg[100];
             sprintf(msg, "Do you want to execute %s?", edit_macro->name);
@@ -108,7 +108,8 @@ void update_macro_list_ui() {
     for (int i = 0; reprap_macros[i].element != NULL; i++) {
         lv_obj_t *list_btn;
         if (reprap_macros[i].type == TREE_FOLDER_ELEM)
-            list_btn = lv_list_add_btn(macro_list, LV_SYMBOL_DIRECTORY, ((reprap_macro_t *) reprap_macros[i].element)->name);
+            list_btn = lv_list_add_btn(macro_list, LV_SYMBOL_DIRECTORY,
+                                       ((reprap_macro_t *) reprap_macros[i].element)->name);
         else
             list_btn = lv_list_add_btn(macro_list, LV_SYMBOL_FILE, ((reprap_macro_t *) reprap_macros[i].element)->name);
         lv_obj_set_event_cb(list_btn, _macro_clicked_event_handler);
@@ -125,7 +126,7 @@ void draw_macro(lv_obj_t *parent_screen) {
     lv_obj_set_size(preloader, 75, 75);
 
     macro_list = lv_list_create(macro_container, NULL);
-    lv_obj_set_size(macro_list, LV_HOR_RES-10, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
+    lv_obj_set_size(macro_list, LV_HOR_RES - 10, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
 
     request_macros_async("0:/macros&first=0");
 }

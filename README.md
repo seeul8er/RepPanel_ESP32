@@ -105,7 +105,6 @@ case you use different hardware or want a different pin connection layout**
 ![RepPanel start print dialog](wiki/RepPanel_Job.png)
 
 ## Known Bugs
-- Random crashes when monitoring print (may due to low memory)
 - Multiple tools supported but not tested
 - Can not list all files within a directory in case DuetWebControl API requires multiple requests per listing
   - Workaround: Delete files to reduce file count to make all files fit within one response

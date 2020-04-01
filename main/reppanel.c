@@ -196,31 +196,33 @@ void draw_header(lv_obj_t *parent_screen) {
 }
 
 void update_rep_panel_conn_status() {
-    switch (reppanel_conn_status) {
-        default:
-        case REPPANEL_NO_CONNECTION:     // no connection
-            lv_label_set_text_fmt(label_connection_status, "#e84e43 "LV_SYMBOL_WARNING"#");
-            break;
-        case REPPANEL_WIFI_CONNECTED:     // connected wifi
-            lv_label_set_text_fmt(label_connection_status, REP_PANEL_DARK_ACCENT_STR" "LV_SYMBOL_WIFI);
-            break;
-        case REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED:
-            lv_label_set_text_fmt(label_connection_status, "#ff8921 "LV_SYMBOL_WIFI);
-            break;
-        case REPPANEL_WIFI_DISCONNECTED:     // disconnected wifi
-            lv_label_set_text_fmt(label_connection_status, "#e84e43 "LV_SYMBOL_WIFI);
-            break;
-        case REPPANEL_WIFI_RECONNECTING:     // reconnecting wifi
-            lv_label_set_text_fmt(label_connection_status, "#e89e43 "LV_SYMBOL_REFRESH);
-            break;
-        case REPPANEL_UART_CONNECTED:     // working UART
-            lv_label_set_text_fmt(label_connection_status, REP_PANEL_DARK_ACCENT_STR" "LV_SYMBOL_USB);
-            break;
+    if (label_connection_status) {
+        switch (reppanel_conn_status) {
+            default:
+            case REPPANEL_NO_CONNECTION:     // no connection
+                lv_label_set_text_fmt(label_connection_status, "#e84e43 "LV_SYMBOL_WARNING"#");
+                break;
+            case REPPANEL_WIFI_CONNECTED:     // connected wifi
+                lv_label_set_text_fmt(label_connection_status, REP_PANEL_DARK_ACCENT_STR" "LV_SYMBOL_WIFI);
+                break;
+            case REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED:
+                lv_label_set_text_fmt(label_connection_status, "#ff8921 "LV_SYMBOL_WIFI);
+                break;
+            case REPPANEL_WIFI_DISCONNECTED:     // disconnected wifi
+                lv_label_set_text_fmt(label_connection_status, "#e84e43 "LV_SYMBOL_WIFI);
+                break;
+            case REPPANEL_WIFI_RECONNECTING:     // reconnecting wifi
+                lv_label_set_text_fmt(label_connection_status, "#e89e43 "LV_SYMBOL_REFRESH);
+                break;
+            case REPPANEL_UART_CONNECTED:     // working UART
+                lv_label_set_text_fmt(label_connection_status, REP_PANEL_DARK_ACCENT_STR" "LV_SYMBOL_USB);
+                break;
+        }
     }
 }
 
-static void _show_process_screen(lv_obj_t * obj, lv_event_t event) {
-    if (event == LV_EVENT_RELEASED) {
+static void _show_process_screen(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
         update_rep_panel_conn_status();
         if (process_scr) lv_obj_del(process_scr);
         process_scr = lv_cont_create(NULL, NULL);
@@ -231,8 +233,8 @@ static void _show_process_screen(lv_obj_t * obj, lv_event_t event) {
     }
 }
 
-static void _show_job_screen(lv_obj_t * obj, lv_event_t event) {
-    if (event == LV_EVENT_RELEASED) {
+static void _show_job_screen(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
         update_rep_panel_conn_status();
         if (job_running) {
             display_jobstatus();
@@ -247,8 +249,8 @@ static void _show_job_screen(lv_obj_t * obj, lv_event_t event) {
     }
 }
 
-static void _show_machine_screen(lv_obj_t * obj, lv_event_t event) {
-    if (event == LV_EVENT_RELEASED) {
+static void _show_machine_screen(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
         update_rep_panel_conn_status();
         if (machine_scr) lv_obj_del(machine_scr);
         machine_scr = lv_cont_create(NULL, NULL);
@@ -259,8 +261,8 @@ static void _show_machine_screen(lv_obj_t * obj, lv_event_t event) {
     }
 }
 
-static void _show_macros_screen(lv_obj_t * obj, lv_event_t event) {
-    if (event == LV_EVENT_RELEASED) {
+static void _show_macros_screen(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
         update_rep_panel_conn_status();
         if (info_scr) lv_obj_del(info_scr);
         macro_scr = lv_cont_create(NULL, NULL);
@@ -271,8 +273,8 @@ static void _show_macros_screen(lv_obj_t * obj, lv_event_t event) {
     }
 }
 
-static void _show_info_screen(lv_obj_t * obj, lv_event_t event) {
-    if (event == LV_EVENT_RELEASED) {
+static void _show_info_screen(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
         update_rep_panel_conn_status();
         if (info_scr) lv_obj_del(info_scr);
         info_scr = lv_cont_create(NULL, NULL);

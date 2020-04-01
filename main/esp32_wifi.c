@@ -39,7 +39,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *) event_data;
         ESP_LOGI(TAG, "Got ip:"
-        IPSTR, IP2STR(&event->ip_info.ip));
+                IPSTR, IP2STR(&event->ip_info.ip));
         s_retry_num = 0;
         reppanel_conn_status = REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED;
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
@@ -97,7 +97,8 @@ void get_connection_info(char txt_buffer[200]) {
         case REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED:
             memset(&ap_info, 0, sizeof(ap_info));
             ESP_ERROR_CHECK(esp_wifi_sta_get_ap_info(&ap_info));
-            sprintf(txt_buffer, "Connected to %s\nSignal: %ddBm\nNo response from printer!", ap_info.ssid, ap_info.rssi);
+            sprintf(txt_buffer, "Connected to %s\nSignal: %ddBm\nNo response from printer!", ap_info.ssid,
+                    ap_info.rssi);
             break;
         case REPPANEL_WIFI_CONNECTED:
             memset(&ap_info, 0, sizeof(ap_info));

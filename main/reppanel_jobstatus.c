@@ -38,7 +38,7 @@ lv_obj_t *button_job_resume;
 lv_obj_t *button_job_stop;
 
 void update_print_job_status_ui() {
-    if (label_job_progress_percent) {
+    if (label_job_progress_percent && cont_percent) {
         lv_label_set_text_fmt(label_job_progress_percent, "%.0f", reprap_job_percent);
         if (reprap_job_percent < 10) {
             lv_obj_align(label_job_progress_percent, cont_percent, LV_ALIGN_CENTER, 15, 0);
@@ -47,8 +47,10 @@ void update_print_job_status_ui() {
         }
     }
 
-    if (reprap_job_first_layer_height > 0 && reprap_job_layer_height > 0 && reprap_job_height > 0 && label_job_layer_status) {
-        int total_layer_cnt = (int) (((reprap_job_height - reprap_job_first_layer_height) / reprap_job_layer_height)+1);
+    if (reprap_job_first_layer_height > 0 && reprap_job_layer_height > 0 && reprap_job_height > 0 &&
+        label_job_layer_status) {
+        int total_layer_cnt = (int) (((reprap_job_height - reprap_job_first_layer_height) / reprap_job_layer_height) +
+                                     1);
         lv_label_set_text_fmt(label_job_layer_status, "%i/%i", reprap_job_curr_layer, total_layer_cnt);
     } else if (label_job_layer_status) {
         lv_label_set_text(label_job_layer_status, "");
@@ -88,8 +90,8 @@ void update_print_job_status_ui() {
     if (label_job_filename) lv_label_set_text(label_job_filename, current_job_name);
 }
 
-void _resume_job_event(lv_obj_t * obj, lv_event_t event) {
-    if(event == LV_EVENT_RELEASED) {
+void _resume_job_event(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
         ESP_LOGI(TAG, "Resuming print job");
         reprap_send_gcode("M24");
         lv_obj_set_hidden(button_job_pause, false);
@@ -98,8 +100,8 @@ void _resume_job_event(lv_obj_t * obj, lv_event_t event) {
     }
 }
 
-void _stop_job_event(lv_obj_t * obj, lv_event_t event) {
-    if(event == LV_EVENT_RELEASED) {
+void _stop_job_event(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
         ESP_LOGI(TAG, "Stopping print job");
         reprap_send_gcode("M0 H1");
         lv_obj_set_hidden(button_job_pause, true);
@@ -108,8 +110,8 @@ void _stop_job_event(lv_obj_t * obj, lv_event_t event) {
     }
 }
 
-void _pause_job_event(lv_obj_t * obj, lv_event_t event) {
-    if(event == LV_EVENT_RELEASED) {
+void _pause_job_event(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
         ESP_LOGI(TAG, "Pausing print job");
         reprap_send_gcode("M25");
         lv_obj_set_hidden(button_job_pause, true);
@@ -156,7 +158,8 @@ void _pause_job_event(lv_obj_t * obj, lv_event_t event) {
 
 void draw_jobstatus(lv_obj_t *parent_screen) {
     jobstatus_page = lv_page_create(parent_screen, NULL);
-    lv_obj_set_size(jobstatus_page, lv_disp_get_hor_res(NULL), lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
+    lv_obj_set_size(jobstatus_page, lv_disp_get_hor_res(NULL),
+                    lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
     lv_page_set_scrl_fit(jobstatus_page, LV_FIT_FLOOD);
     lv_page_set_scrl_layout(jobstatus_page, LV_LAYOUT_OFF);
     static lv_style_t style_jobstatus_page;
@@ -267,5 +270,6 @@ void draw_jobstatus(lv_obj_t *parent_screen) {
     lv_obj_align(label_percent, cont_percent, LV_ALIGN_IN_BOTTOM_RIGHT, 0, 0);
     lv_obj_align(label_job_progress_percent, cont_percent, LV_ALIGN_CENTER, -85, 0);
 
+    request_fileinfo(NULL);
     update_print_job_status_ui();
 }

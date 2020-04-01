@@ -30,8 +30,7 @@ void _send_user_command() {
     }
 }
 
-static void kb_event_cb(lv_obj_t * event_kb, lv_event_t event)
-{
+static void kb_event_cb(lv_obj_t *event_kb, lv_event_t event) {
     /* Just call the regular event handler */
     lv_kb_def_event_cb(event_kb, event);
     if (event == LV_EVENT_CANCEL) {
@@ -42,19 +41,20 @@ static void kb_event_cb(lv_obj_t * event_kb, lv_event_t event)
     }
 }
 
-static void ta_event_handler(lv_obj_t * obj, lv_event_t event) {
-    if(event == LV_EVENT_CLICKED) {
-        if(kb != NULL)  lv_obj_del(kb);
+static void ta_event_handler(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
+        if (kb != NULL) lv_obj_del(kb);
         kb = lv_kb_create(user_comm_cont, NULL);
         lv_obj_set_pos(kb, 5, 90);
-        lv_obj_set_event_cb(kb, kb_event_cb); /* Setting a custom event handler stops the keyboard from closing automatically */
-        lv_obj_set_size(kb,  LV_HOR_RES - 35, 140);
+        lv_obj_set_event_cb(kb,
+                            kb_event_cb); /* Setting a custom event handler stops the keyboard from closing automatically */
+        lv_obj_set_size(kb, LV_HOR_RES - 35, 140);
         lv_kb_set_ta(kb, ta_command);
     }
 }
 
-static void _send_gcode_event_handler(lv_obj_t * obj, lv_event_t event) {
-    if(event == LV_EVENT_RELEASED) {
+static void _send_gcode_event_handler(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
         _send_user_command();
     }
 }
@@ -156,7 +156,8 @@ void add_console_hist_entry(char *command, char *response, enum console_msg_type
 
 void draw_console(lv_obj_t *parent_screen) {
     console_page = lv_page_create(parent_screen, NULL);
-    lv_obj_set_size(console_page, lv_disp_get_hor_res(NULL), lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
+    lv_obj_set_size(console_page, lv_disp_get_hor_res(NULL),
+                    lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
     lv_obj_align(console_page, NULL, LV_ALIGN_IN_TOP_MID, 0, 0);
     lv_page_set_scrl_layout(console_page, LV_LAYOUT_COL_L);
 
@@ -180,7 +181,8 @@ void draw_console(lv_obj_t *parent_screen) {
     lv_obj_set_size(ta_command, lv_disp_get_hor_res(NULL) - 180, 30);
 
     comm_page = lv_page_create(console_page, NULL);
-    lv_obj_set_size(comm_page, lv_disp_get_hor_res(NULL) - 30, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 80));
+    lv_obj_set_size(comm_page, lv_disp_get_hor_res(NULL) - 30,
+                    lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 80));
     lv_page_set_scrl_layout(comm_page, LV_LAYOUT_COL_L);
 
     update_entries_ui();

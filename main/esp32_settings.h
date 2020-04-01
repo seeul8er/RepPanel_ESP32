@@ -26,7 +26,9 @@ extern char rep_pass[MAX_REP_PASS_LEN];
 extern int temp_unit;   // 0=Celsius, 1=Fahrenheit
 
 void write_settings_to_nvs();
+
 void read_settings_nvs();
+
 char get_temp_unit();
 
 #endif //LVGL_REPPANEL_SETTINGS_H

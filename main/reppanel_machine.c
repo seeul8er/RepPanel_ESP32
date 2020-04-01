@@ -19,31 +19,31 @@ lv_obj_t *machine_page;
 lv_obj_t *ddlist_cali_options;
 
 static void _home_all_event(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_RELEASED) {
+    if (event == LV_EVENT_CLICKED) {
         reprap_send_gcode("G28");
     }
 }
 
 static void _home_x_event(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_RELEASED) {
+    if (event == LV_EVENT_CLICKED) {
         reprap_send_gcode("G28 X");
     }
 }
 
 static void _home_y_event(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_RELEASED) {
+    if (event == LV_EVENT_CLICKED) {
         reprap_send_gcode("G28 Y");
     }
 }
 
 static void _home_z_event(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_RELEASED) {
+    if (event == LV_EVENT_CLICKED) {
         reprap_send_gcode("G28 Z");
     }
 }
 
 static void _start_cali_event(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_RELEASED) {
+    if (event == LV_EVENT_CLICKED) {
         char val_txt_buff[50];
         lv_ddlist_get_selected_str(obj, val_txt_buff, 50);
         if (strcmp(val_txt_buff, cali_opt_map[0]) == 0) {
@@ -58,7 +58,8 @@ static void _start_cali_event(lv_obj_t *obj, lv_event_t event) {
 
 void draw_machine(lv_obj_t *parent_screen) {
     machine_page = lv_page_create(parent_screen, NULL);
-    lv_obj_set_size(machine_page, lv_disp_get_hor_res(NULL), lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
+    lv_obj_set_size(machine_page, lv_disp_get_hor_res(NULL),
+                    lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
     lv_page_set_scrl_fit2(machine_page, LV_FIT_FILL, LV_FIT_FILL);
     lv_page_set_scrl_layout(machine_page, LV_LAYOUT_COL_M);
 

@@ -84,7 +84,6 @@ void _process_reprap_status(char *buff, int type) {
     cJSON *name = cJSON_GetObjectItem(root, DUET_STATUS);
     if (cJSON_IsString(name) && (name->valuestring != NULL)) {
         strlcpy(reppanel_status, _decode_reprap_status(name->valuestring), MAX_REPRAP_STATUS_LEN);
-        if (label_status != NULL) lv_label_set_text(label_status, reppanel_status);
     }
 
     cJSON *duet_temps = cJSON_GetObjectItem(root, DUET_TEMPS);
@@ -121,7 +120,7 @@ void _process_reprap_status(char *buff, int type) {
     }
 
     bool disp_msg = false;
-    char *msg_txt;
+    char *msg_txt = "";
     cJSON *duet_output = cJSON_GetObjectItem(root, "output");
     if (duet_output) {
         cJSON *duet_output_msg = cJSON_GetObjectItem(duet_output, "message");
@@ -170,8 +169,6 @@ void _process_reprap_status(char *buff, int type) {
                     pos++;
                 }
             }
-            if (label_extruder_name != NULL)
-                lv_label_set_text(label_extruder_name, reprap_tools[current_visible_tool_indx].name);
         }
         num_tools = pos;
 
@@ -236,11 +233,19 @@ void _process_reprap_status(char *buff, int type) {
         }
     }
 
-    update_bed_temps_ui();  // update UI with new values
-    update_heater_status_ui(_heater_states, num_heaters);  // update UI with new values
-    update_current_tool_temps_ui();     // update UI with new values
-    if (type == 3) update_print_job_status_ui();
-    if (disp_msg) reppanel_disp_msg(msg_txt);
+    if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
+        if (label_status != NULL) lv_label_set_text(label_status, reppanel_status);
+        update_bed_temps_ui();  // update UI with new values
+        update_heater_status_ui(_heater_states, num_heaters);  // update UI with new values
+        update_current_tool_temps_ui();     // update UI with new values
+        if (type == 2 && label_extruder_name != NULL) {
+            lv_label_set_text(label_extruder_name, reprap_tools[current_visible_tool_indx].name);
+        }
+        if (type == 3) update_print_job_status_ui();
+        if (disp_msg) reppanel_disp_msg(msg_txt);
+        update_rep_panel_conn_status();
+        xSemaphoreGive(xGuiSemaphore);
+    }
 
     cJSON_Delete(root);
 }
@@ -330,6 +335,7 @@ void _process_reprap_filelist(char *buffer) {
         if (error_ptr != NULL) {
             ESP_LOGE(TAG, "Error before: %s\n", error_ptr);
         }
+        cJSON_Delete(root);
         return;
     }
     cJSON *err_resp = cJSON_GetObjectItem(root, "err");
@@ -458,6 +464,7 @@ void _process_reprap_fileinfo(char *data_buff) {
         if (error_ptr != NULL) {
             ESP_LOGE(TAG, "Error before: %s\n", error_ptr);
         }
+        cJSON_Delete(root);
         return;
     }
     cJSON *err_resp = cJSON_GetObjectItem(root, DUET_ERR);
@@ -494,6 +501,7 @@ void _process_reprap_fileinfo(char *data_buff) {
     if (job_layer_height && cJSON_IsNumber(job_layer_height)) {
         reprap_job_layer_height = job_layer_height->valuedouble;
     }
+    cJSON_Delete(root);
 }
 
 esp_err_t _http_event_handle(esp_http_client_event_t *evt) {
@@ -501,7 +509,7 @@ esp_err_t _http_event_handle(esp_http_client_event_t *evt) {
         ESP_LOGW(TAG, "Need to authorise first. Ignoring data.");
         return ESP_OK;
     }
-    response_buff_t *resp_buff = (response_buff_t*) evt->user_data;
+    response_buff_t *resp_buff = (response_buff_t *) evt->user_data;
     switch (evt->event_id) {
         case HTTP_EVENT_ERROR:
             ESP_LOGI(TAG, "Event handler detected http error");
@@ -562,6 +570,7 @@ void wifi_duet_authorise(response_buff_t *buffer, bool get_d2wc_config) {
 }
 
 void wifi_duet_get_status(response_buff_t *resp_buff, int type) {
+    ESP_LOGI(TAG, "Getting status %i", type);
     char request_addr[MAX_REQ_ADDR_LENGTH];
     sprintf(request_addr, "%s/rr_status?type=%i", rep_addr, type);
     esp_http_client_config_t config = {
@@ -578,12 +587,7 @@ void wifi_duet_get_status(response_buff_t *resp_buff, int type) {
             case 200:
                 status_request_err_cnt = 0;
                 reppanel_conn_status = REPPANEL_WIFI_CONNECTED;
-                // Wait for time slot to update GUI
-                if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
-                    _process_reprap_status(resp_buff->buffer, type);
-                    update_rep_panel_conn_status();
-                    xSemaphoreGive(xGuiSemaphore);
-                }
+                _process_reprap_status(resp_buff->buffer, type);
                 break;
             case 401:
                 ESP_LOGI(TAG, "Authorising with Duet");
@@ -736,6 +740,7 @@ void reprap_wifi_get_fileinfo(response_buff_t *resp_data, char *filename) {
     } else {
         sprintf(request_addr, "%s/rr_fileinfo", rep_addr);
     }
+    ESP_LOGI(TAG, "Getting file info %s", request_addr);
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
@@ -746,9 +751,9 @@ void reprap_wifi_get_fileinfo(response_buff_t *resp_data, char *filename) {
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
-        ESP_LOGI(TAG, "Status = %d, content_length = %d",
-                 esp_http_client_get_status_code(client),
-                 esp_http_client_get_content_length(client));
+//        ESP_LOGI(TAG, "Status = %d, content_length = %d",
+//                 esp_http_client_get_status_code(client),
+//                 esp_http_client_get_content_length(client));
 
         switch (esp_http_client_get_status_code(client)) {
             case 200:
@@ -799,6 +804,7 @@ void reprap_wifi_get_config() {
 }
 
 void reprap_wifi_download(response_buff_t *response_buffer, char *file) {
+    ESP_LOGI(TAG, "Downloading %s", file);
     char request_addr[MAX_REQ_ADDR_LENGTH];
     sprintf(request_addr, "%s/rr_download?name=%s", rep_addr, file);
     esp_http_client_config_t config = {
@@ -927,7 +933,7 @@ void request_jobs() {
  */
 void request_reprap_status_updates(void *params) {
     TickType_t xLastWakeTime;
-    const TickType_t xFrequency = (750 / portTICK_PERIOD_MS);
+    const TickType_t xFrequency = (500 / portTICK_PERIOD_MS);
     xLastWakeTime = xTaskGetTickCount();
     int i = 8;
     UBaseType_t uxHighWaterMark;
@@ -935,16 +941,16 @@ void request_reprap_status_updates(void *params) {
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
         if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED ||
             reppanel_conn_status == REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED) {
-            if (!got_duet_settings) reprap_wifi_download(&resp_buff_status_update_task, "0%3A%2Fsys%2Fdwc2settings.json");
+            if (!got_duet_settings)
+                reprap_wifi_download(&resp_buff_status_update_task, "0%3A%2Fsys%2Fdwc2settings.json");
             if (!got_filaments) request_filaments();
             if (!got_status_two) wifi_duet_get_status(&resp_buff_status_update_task, 2);
             if (!job_running)
                 wifi_duet_get_status(&resp_buff_status_update_task, 1);
             else
                 wifi_duet_get_status(&resp_buff_status_update_task, 3);
-            if (i % 8 == 0) {
+            if (i % 20 == 0) {
                 wifi_duet_get_status(&resp_buff_status_update_task, 2);
-                request_fileinfo(NULL);
                 i = 0;
             } else {
                 i++;
