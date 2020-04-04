@@ -87,16 +87,30 @@ void update_print_job_status_ui() {
             lv_label_set_text_fmt(label_job_remaining_time, "%.0fs", file_time_left);
         }
     }
-    if (label_job_filename) lv_label_set_text(label_job_filename, current_job_name);
+    if (label_job_filename) {
+        // only update when changed. Otherwise label will not scroll
+        if (strcmp(lv_label_get_text(label_job_filename), current_job_name) != 0) {
+            lv_label_set_text(label_job_filename, current_job_name);
+        }
+    }
+
+    if (button_job_pause) {
+        if (job_paused) {
+            lv_obj_set_hidden(button_job_pause, true);
+            lv_obj_set_hidden(button_job_resume, false);
+            lv_obj_set_hidden(button_job_stop, false);
+        } else {
+            lv_obj_set_hidden(button_job_pause, false);
+            lv_obj_set_hidden(button_job_resume, true);
+            lv_obj_set_hidden(button_job_stop, true);
+        }
+    }
 }
 
 void _resume_job_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         ESP_LOGI(TAG, "Resuming print job");
         reprap_send_gcode("M24");
-        lv_obj_set_hidden(button_job_pause, false);
-        lv_obj_set_hidden(button_job_resume, true);
-        lv_obj_set_hidden(button_job_stop, true);
     }
 }
 
@@ -104,9 +118,6 @@ void _stop_job_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         ESP_LOGI(TAG, "Stopping print job");
         reprap_send_gcode("M0 H1");
-        lv_obj_set_hidden(button_job_pause, true);
-        lv_obj_set_hidden(button_job_resume, true);
-        lv_obj_set_hidden(button_job_stop, true);
     }
 }
 
@@ -114,44 +125,6 @@ void _pause_job_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         ESP_LOGI(TAG, "Pausing print job");
         reprap_send_gcode("M25");
-        lv_obj_set_hidden(button_job_pause, true);
-
-        static lv_style_t style_button_job_resume;
-        lv_style_copy(&style_button_job_resume, &lv_style_plain);
-        style_button_job_resume.image.color = REP_PANEL_DARK_GREEN;
-        style_button_job_resume.image.intense = LV_OPA_100;
-
-        LV_IMG_DECLARE(play);
-        button_job_resume = lv_imgbtn_create(jobstatus_page, NULL);
-        lv_imgbtn_set_src(button_job_resume, LV_BTN_STATE_REL, &play);
-        lv_imgbtn_set_src(button_job_resume, LV_BTN_STATE_PR, &play);
-        lv_imgbtn_set_src(button_job_resume, LV_BTN_STATE_TGL_REL, &play);
-        lv_imgbtn_set_src(button_job_resume, LV_BTN_STATE_TGL_PR, &play);
-        lv_imgbtn_set_style(button_job_resume, LV_BTN_STATE_REL, &style_button_job_resume);
-        lv_imgbtn_set_style(button_job_resume, LV_BTN_STATE_PR, &style_button_job_pause);
-        lv_imgbtn_set_style(button_job_resume, LV_BTN_STATE_TGL_PR, &style_button_job_pause);
-        lv_imgbtn_set_toggle(button_job_resume, true);
-        lv_obj_set_event_cb(button_job_resume, _resume_job_event);
-
-        static lv_style_t style_button_job_stop;
-        lv_style_copy(&style_button_job_stop, &lv_style_plain);
-        style_button_job_stop.image.color = REP_PANEL_DARK_RED;
-        style_button_job_stop.image.intense = LV_OPA_100;
-
-        LV_IMG_DECLARE(stop);
-        button_job_stop = lv_imgbtn_create(jobstatus_page, NULL);
-        lv_imgbtn_set_src(button_job_stop, LV_BTN_STATE_REL, &stop);
-        lv_imgbtn_set_src(button_job_stop, LV_BTN_STATE_PR, &stop);
-        lv_imgbtn_set_src(button_job_stop, LV_BTN_STATE_TGL_REL, &stop);
-        lv_imgbtn_set_src(button_job_stop, LV_BTN_STATE_TGL_PR, &stop);
-        lv_imgbtn_set_style(button_job_stop, LV_BTN_STATE_REL, &style_button_job_stop);
-        lv_imgbtn_set_style(button_job_stop, LV_BTN_STATE_PR, &style_button_job_pause);
-        lv_imgbtn_set_style(button_job_stop, LV_BTN_STATE_TGL_PR, &style_button_job_pause);
-        lv_imgbtn_set_toggle(button_job_stop, true);
-        lv_obj_set_event_cb(button_job_stop, _stop_job_event);
-
-        lv_obj_align(button_job_resume, jobstatus_page, LV_ALIGN_IN_BOTTOM_RIGHT, -32, -30);
-        lv_obj_align(button_job_stop, jobstatus_page, LV_ALIGN_IN_BOTTOM_RIGHT, -84, -30);
     }
 }
 
@@ -245,7 +218,7 @@ void draw_jobstatus(lv_obj_t *parent_screen) {
     style_label_job_filename.text.color = REP_PANEL_DARK_TEXT;
     style_label_job_filename.text.font = &reppanel_font_roboto_light_26;
     lv_obj_set_style(label_job_filename, &style_label_job_filename);
-    lv_label_set_long_mode(label_job_filename, LV_LABEL_LONG_SROLL_CIRC);     /*Circular scroll*/
+    lv_label_set_long_mode(label_job_filename, LV_LABEL_LONG_CROP);     // circ scroll makes it run out of heap?!
     lv_obj_set_width(label_job_filename, lv_disp_get_hor_res(NULL) - 150);
 
     LV_IMG_DECLARE(pause);
@@ -269,6 +242,47 @@ void draw_jobstatus(lv_obj_t *parent_screen) {
     lv_obj_align_origo(cont_main, jobstatus_page, LV_ALIGN_CENTER, -40, -50);
     lv_obj_align(label_percent, cont_percent, LV_ALIGN_IN_BOTTOM_RIGHT, 0, 0);
     lv_obj_align(label_job_progress_percent, cont_percent, LV_ALIGN_CENTER, -85, 0);
+
+    // hidden from the start
+    static lv_style_t style_button_job_resume;
+    lv_style_copy(&style_button_job_resume, &lv_style_plain);
+    style_button_job_resume.image.color = REP_PANEL_DARK_GREEN;
+    style_button_job_resume.image.intense = LV_OPA_100;
+
+    // hidden from the start
+    LV_IMG_DECLARE(play);
+    button_job_resume = lv_imgbtn_create(jobstatus_page, NULL);
+    lv_imgbtn_set_src(button_job_resume, LV_BTN_STATE_REL, &play);
+    lv_imgbtn_set_src(button_job_resume, LV_BTN_STATE_PR, &play);
+    lv_imgbtn_set_src(button_job_resume, LV_BTN_STATE_TGL_REL, &play);
+    lv_imgbtn_set_src(button_job_resume, LV_BTN_STATE_TGL_PR, &play);
+    lv_imgbtn_set_style(button_job_resume, LV_BTN_STATE_REL, &style_button_job_resume);
+    lv_imgbtn_set_style(button_job_resume, LV_BTN_STATE_PR, &style_button_job_pause);
+    lv_imgbtn_set_style(button_job_resume, LV_BTN_STATE_TGL_PR, &style_button_job_pause);
+    lv_imgbtn_set_toggle(button_job_resume, true);
+    lv_obj_set_event_cb(button_job_resume, _resume_job_event);
+
+    static lv_style_t style_button_job_stop;
+    lv_style_copy(&style_button_job_stop, &lv_style_plain);
+    style_button_job_stop.image.color = REP_PANEL_DARK_RED;
+    style_button_job_stop.image.intense = LV_OPA_100;
+
+    // hidden from the start
+    LV_IMG_DECLARE(stop);
+    button_job_stop = lv_imgbtn_create(jobstatus_page, NULL);
+    lv_imgbtn_set_src(button_job_stop, LV_BTN_STATE_REL, &stop);
+    lv_imgbtn_set_src(button_job_stop, LV_BTN_STATE_PR, &stop);
+    lv_imgbtn_set_src(button_job_stop, LV_BTN_STATE_TGL_REL, &stop);
+    lv_imgbtn_set_src(button_job_stop, LV_BTN_STATE_TGL_PR, &stop);
+    lv_imgbtn_set_style(button_job_stop, LV_BTN_STATE_REL, &style_button_job_stop);
+    lv_imgbtn_set_style(button_job_stop, LV_BTN_STATE_PR, &style_button_job_pause);
+    lv_imgbtn_set_style(button_job_stop, LV_BTN_STATE_TGL_PR, &style_button_job_pause);
+    lv_imgbtn_set_toggle(button_job_stop, true);
+    lv_obj_set_event_cb(button_job_stop, _stop_job_event);
+
+    // hidden from the start
+    lv_obj_align(button_job_resume, jobstatus_page, LV_ALIGN_IN_BOTTOM_RIGHT, -32, -30);
+    lv_obj_align(button_job_stop, jobstatus_page, LV_ALIGN_IN_BOTTOM_RIGHT, -84, -30);
 
     request_fileinfo(NULL);
     update_print_job_status_ui();

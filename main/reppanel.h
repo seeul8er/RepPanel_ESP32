@@ -87,6 +87,14 @@ extern char current_job_name[MAX_FILA_NAME_LEN];
 extern char reprap_firmware_name[100];
 extern char reprap_firmware_version[5];
 
+typedef struct {
+    double x;
+    double y;
+    double z;
+    bool x_homed;
+    bool y_homed;
+    bool z_homed;
+} reprap_axes_t;
 
 typedef struct {
     int number;
@@ -151,6 +159,7 @@ extern int num_heaters;     // max is MAX_NUM_TOOLS
 extern int num_tools;     // max is MAX_NUM_TOOLS
 extern int current_visible_tool_indx;   // current indx of tool where temp data is displayed on process screen
 
+extern reprap_axes_t reprap_axes;
 extern reprap_tool_t reprap_tools[MAX_NUM_TOOLS];
 extern reprap_bed_t reprap_bed;
 extern reprap_tool_poss_temps_t reprap_tool_poss_temps;
@@ -158,6 +167,7 @@ extern reprap_bed_poss_temps_t reprap_bed_poss_temps;
 
 extern char filament_names[MAX_LEN_STR_FILAMENT_LIST];
 
+extern bool job_paused;
 extern bool job_running;
 
 void rep_panel_ui_create();

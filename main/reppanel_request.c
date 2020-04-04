@@ -17,6 +17,7 @@
 #include "reppanel_macros.h"
 #include "reppanel_jobselect.h"
 #include "reppanel_console.h"
+#include "reppanel_machine.h"
 
 #define TAG                 "RequestTask"
 #define REQUEST_TIMEOUT_MS  150
@@ -29,8 +30,10 @@ static bool got_filaments = false;
 static bool got_status_two = false;
 static bool got_duet_settings = false;
 static int status_request_err_cnt = 0;      // request errors in a row
+bool job_paused = false;
 
 const char *_decode_reprap_status(const char *valuestring) {
+    job_paused = false;
     switch (*valuestring) {
         case REPRAP_STATUS_PROCESS_CONFIG:
             job_running = false;
@@ -48,8 +51,9 @@ const char *_decode_reprap_status(const char *valuestring) {
             job_running = false;
             return "Decelerating";
         case REPRAP_STATUS_STOPPED:
-            job_running = false;
-            return "Stopped";
+            job_running = true;
+            job_paused = true;
+            return "Paused";
         case REPRAP_STATUS_RESUMING:
             job_running = true;
             return "Resuming";
@@ -86,37 +90,55 @@ void _process_reprap_status(char *buff, int type) {
         strlcpy(reppanel_status, _decode_reprap_status(name->valuestring), MAX_REPRAP_STATUS_LEN);
     }
 
-    cJSON *duet_temps = cJSON_GetObjectItem(root, DUET_TEMPS);
-    cJSON *duet_temps_bed = cJSON_GetObjectItem(duet_temps, DUET_TEMPS_BED);
-    if (duet_temps_bed) {
-        if (reprap_bed.temp_hist_curr_pos < (NUM_TEMPS_BUFF - 1)) {
-            reprap_bed.temp_hist_curr_pos++;
-        } else {
-            reprap_bed.temp_hist_curr_pos = 0;
+    cJSON *coords = cJSON_GetObjectItem(root, "coords");
+    if (coords) {
+        cJSON *axesHomed = cJSON_GetObjectItem(coords, "axesHomed");
+        if (axesHomed && cJSON_IsArray(axesHomed)) {
+            reprap_axes.x_homed = cJSON_GetArrayItem(axesHomed, 0)->valueint == 1;
+            reprap_axes.y_homed = cJSON_GetArrayItem(axesHomed, 1)->valueint == 1;
+            reprap_axes.z_homed = cJSON_GetArrayItem(axesHomed, 2)->valueint == 1;
         }
-        reprap_bed.temp_buff[reprap_bed.temp_hist_curr_pos] = cJSON_GetObjectItem(duet_temps_bed,
-                                                                                  DUET_TEMPS_BED_CURRENT)->valuedouble;
+        cJSON *xyz = cJSON_GetObjectItem(coords, "xyz");
+        if (xyz && cJSON_IsArray(xyz)) {
+            reprap_axes.x = cJSON_GetArrayItem(xyz, 0)->valuedouble;
+            reprap_axes.y = cJSON_GetArrayItem(xyz, 1)->valuedouble;
+            reprap_axes.z = cJSON_GetArrayItem(xyz, 2)->valuedouble;
+        }
     }
-    // Get bed heater index
-    cJSON *duet_temps_bed_heater = cJSON_GetObjectItem(duet_temps_bed, DUET_TEMPS_BED_HEATER);    // bed heater state
-    if (duet_temps_bed_heater && cJSON_IsNumber(duet_temps_bed_heater)) {
-        reprap_bed.heater_indx = duet_temps_bed_heater->valueint;
-    }
-    // Get bed active temp
-    cJSON *duet_temps_bed_active = cJSON_GetObjectItem(duet_temps_bed, DUET_TEMPS_ACTIVE);    // bed active temp
-    if (duet_temps_bed_active && cJSON_IsNumber(duet_temps_bed_active)) {
-        reprap_bed.active_temp = duet_temps_bed_active->valuedouble;
-    }
-    // Get bed standby temp
-    cJSON *duet_temps_bed_standby = cJSON_GetObjectItem(duet_temps_bed, DUET_TEMPS_STANDBY);    // bed active temp
-    if (duet_temps_bed_standby && cJSON_IsNumber(duet_temps_bed_standby)) {
-        reprap_bed.standby_temp = duet_temps_bed_standby->valuedouble;
-    }
-    // Get bed heater state
+
     int _heater_states[MAX_NUM_TOOLS];  // bed heater state must be on pos 0
-    cJSON *duet_temps_bed_state = cJSON_GetObjectItem(duet_temps_bed, DUET_TEMPS_BED_STATE);    // bed heater state
-    if (duet_temps_bed_state && cJSON_IsNumber(duet_temps_bed_state)) {
-        _heater_states[0] = duet_temps_bed_state->valueint;
+    cJSON *duet_temps = cJSON_GetObjectItem(root, DUET_TEMPS);
+    if (duet_temps) {
+        cJSON *duet_temps_bed = cJSON_GetObjectItem(duet_temps, DUET_TEMPS_BED);
+        if (duet_temps_bed) {
+            if (reprap_bed.temp_hist_curr_pos < (NUM_TEMPS_BUFF - 1)) {
+                reprap_bed.temp_hist_curr_pos++;
+            } else {
+                reprap_bed.temp_hist_curr_pos = 0;
+            }
+            reprap_bed.temp_buff[reprap_bed.temp_hist_curr_pos] = cJSON_GetObjectItem(duet_temps_bed,
+                                                                                      DUET_TEMPS_BED_CURRENT)->valuedouble;
+        }
+        // Get bed heater index
+        cJSON *duet_temps_bed_heater = cJSON_GetObjectItem(duet_temps_bed, DUET_TEMPS_BED_HEATER);    // bed heater state
+        if (duet_temps_bed_heater && cJSON_IsNumber(duet_temps_bed_heater)) {
+            reprap_bed.heater_indx = duet_temps_bed_heater->valueint;
+        }
+        // Get bed active temp
+        cJSON *duet_temps_bed_active = cJSON_GetObjectItem(duet_temps_bed, DUET_TEMPS_ACTIVE);    // bed active temp
+        if (duet_temps_bed_active && cJSON_IsNumber(duet_temps_bed_active)) {
+            reprap_bed.active_temp = duet_temps_bed_active->valuedouble;
+        }
+        // Get bed standby temp
+        cJSON *duet_temps_bed_standby = cJSON_GetObjectItem(duet_temps_bed, DUET_TEMPS_STANDBY);    // bed active temp
+        if (duet_temps_bed_standby && cJSON_IsNumber(duet_temps_bed_standby)) {
+            reprap_bed.standby_temp = duet_temps_bed_standby->valuedouble;
+        }
+        // Get bed heater state
+        cJSON *duet_temps_bed_state = cJSON_GetObjectItem(duet_temps_bed, DUET_TEMPS_BED_STATE);    // bed heater state
+        if (duet_temps_bed_state && cJSON_IsNumber(duet_temps_bed_state)) {
+            _heater_states[0] = duet_temps_bed_state->valueint;
+        }
     }
 
     bool disp_msg = false;
@@ -235,6 +257,7 @@ void _process_reprap_status(char *buff, int type) {
 
     if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
         if (label_status != NULL) lv_label_set_text(label_status, reppanel_status);
+        update_ui_machine();
         update_bed_temps_ui();  // update UI with new values
         update_heater_status_ui(_heater_states, num_heaters);  // update UI with new values
         update_current_tool_temps_ui();     // update UI with new values

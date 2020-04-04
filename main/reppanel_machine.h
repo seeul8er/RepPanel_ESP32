@@ -7,6 +7,7 @@
 #ifndef LVGL_REPPANEL_MACHINE_H
 #define LVGL_REPPANEL_MACHINE_H
 
+void update_ui_machine();
 void draw_machine(lv_obj_t *parent_screen);
 
 #endif //LVGL_REPPANEL_MACHINE_H
