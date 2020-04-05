@@ -1,0 +1,92 @@
+{
+  "status": "B",
+  "coords": {
+    "axesHomed": [
+      1,
+      1,
+      1
+    ],
+    "wpl": 1,
+    "xyz": [
+      163,
+      286,
+      5.7
+    ],
+    "machine": [
+      163,
+      286,
+      5.7
+    ],
+    "extr": [
+      0
+    ]
+  },
+  "speeds": {
+    "requested": 0,
+    "top": 0
+  },
+  "currentTool": -1,
+  "output": {
+    "msgBox": {
+      "msg": "Adjust height until the nozzle just touches the bed, then press OK",
+      "title": "Manual bed probing",
+      "mode": 2,
+      "seq": 1,
+      "timeout": 0,
+      "controls": 4
+    }
+  },
+  "params": {
+    "atxPower": -1,
+    "fanPercent": [
+      0,
+      30,
+      0
+    ],
+    "speedFactor": 100,
+    "extrFactors": [
+      100
+    ],
+    "babystep": 0
+  },
+  "seq": 0,
+  "sensors": {
+    "probeValue": 1000,
+    "fanRPM": [
+      -1,
+      -1,
+      -1
+    ]
+  },
+  "temps": {
+    "bed": {
+      "current": 20.6,
+      "active": 0,
+      "standby": 0,
+      "state": 0,
+      "heater": 0
+    },
+    "current": [
+      20.6,
+      20.7
+    ],
+    "state": [
+      0,
+      0
+    ],
+    "tools": {
+      "active": [
+        [
+          0
+        ]
+      ],
+      "standby": [
+        [
+          0
+        ]
+      ]
+    },
+    "extra": []
+  },
+  "time": 235
+}

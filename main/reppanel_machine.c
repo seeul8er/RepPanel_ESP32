@@ -11,6 +11,7 @@
 #include "reppanel_helper.h"
 #include "reppanel_request.h"
 #include "reppanel.h"
+#include "duet_status_json.h"
 
 #define TAG     "Machine"
 
@@ -56,7 +57,8 @@ static void _home_z_event(lv_obj_t *obj, lv_event_t event) {
 
 static void _next_height_adjust_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
-        lv_obj_del_async(cont_heigh_adj_diag);
+        if (reprap_send_gcode("M292"))
+            seq_num_msgbox = -1;    // reset so we know msg GUI is not showing anymore - little dirty I know...
     }
 }
 
@@ -70,8 +72,8 @@ static void _height_adjust_event(lv_obj_t *obj, lv_event_t event) {
             dir = "";
         }
         ESP_LOGI(TAG, "Moving %s%s", dir, amount);
-        char command[12];
-        sprintf(command, "G1 Z%s%s", dir, amount);
+        char command[64];
+        sprintf(command, "M120%%0AG91%%0AG1%%20Z%s%s%%20F6000%%0AG90%%0AM121", dir, amount);
         reprap_send_gcode(command);
     }
 }
@@ -161,11 +163,10 @@ void show_height_adjust_dialog() {
 static void _start_cali_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         char val_txt_buff[50];
-        lv_ddlist_get_selected_str(obj, val_txt_buff, 50);
+        lv_ddlist_get_selected_str(ddlist_cali_options, val_txt_buff, 50);
         if (strcmp(val_txt_buff, cali_opt_map[0]) == 0) {
             ESP_LOGI(TAG, "True Bed Leveling");
             reprap_send_gcode("G32");
-            show_height_adjust_dialog();
         } else if (strcmp(val_txt_buff, cali_opt_map[1]) == 0) {
             ESP_LOGI(TAG, "Mesh Bed Leveling");
             reprap_send_gcode("G29");

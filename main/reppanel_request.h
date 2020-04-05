@@ -37,6 +37,6 @@ void request_jobs_async(char *folder_path);
 
 void request_fileinfo(char *file_name);
 
-void reprap_send_gcode(char *gcode_command);
+bool reprap_send_gcode(char *gcode_command);
 
 #endif //REPPANEL_ESP32_REPPANEL_REQUEST_H

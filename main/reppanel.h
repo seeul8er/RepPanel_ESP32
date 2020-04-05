@@ -167,8 +167,10 @@ extern reprap_bed_poss_temps_t reprap_bed_poss_temps;
 
 extern char filament_names[MAX_LEN_STR_FILAMENT_LIST];
 
+extern char reprap_status;
 extern bool job_paused;
 extern bool job_running;
+extern int seq_num_msgbox;
 
 void rep_panel_ui_create();
 

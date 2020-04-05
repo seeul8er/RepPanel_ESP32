@@ -13,6 +13,7 @@
 #include "esp32_settings.h"
 #include "reppanel.h"
 #include "reppanel_console.h"
+#include "reppanel_request.h"
 
 char html5[256] = {0};
 bool encoding_inited = false;
@@ -83,6 +84,7 @@ lv_obj_t *create_button(lv_obj_t *parent, lv_obj_t *button_pnt, char *text, void
 
 static void _close_msg_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
+        reprap_send_gcode("M292");
         lv_obj_del_async(mbox_msg);
     }
 }

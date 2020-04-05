@@ -31,9 +31,11 @@ static bool got_status_two = false;
 static bool got_duet_settings = false;
 static int status_request_err_cnt = 0;      // request errors in a row
 bool job_paused = false;
+int seq_num_msgbox = -1;
 
 const char *_decode_reprap_status(const char *valuestring) {
     job_paused = false;
+    reprap_status = *valuestring;
     switch (*valuestring) {
         case REPRAP_STATUS_PROCESS_CONFIG:
             job_running = false;
@@ -142,6 +144,7 @@ void _process_reprap_status(char *buff, int type) {
     }
 
     bool disp_msg = false;
+    bool disp_msgbox = false;
     char *msg_txt = "";
     cJSON *duet_output = cJSON_GetObjectItem(root, "output");
     if (duet_output) {
@@ -149,6 +152,16 @@ void _process_reprap_status(char *buff, int type) {
         if (duet_output_msg && cJSON_IsString(duet_output_msg)) {
             disp_msg = true;
             msg_txt = duet_output_msg->valuestring;
+        }
+        // Right now we only have a msg box for manual bed calibration
+        cJSON *duet_output_msgbox = cJSON_GetObjectItem(duet_output, "msgBox");
+        if (duet_output_msgbox) {
+            cJSON *seq = cJSON_GetObjectItem(duet_output_msgbox, "seq");
+            // Beware. This is dirty. Check if we want to show this msg box. We might already display it
+            if (seq->valueint != seq_num_msgbox) {
+                seq_num_msgbox = seq->valueint;
+                disp_msgbox = true;
+            }
         }
     }
 
@@ -266,6 +279,7 @@ void _process_reprap_status(char *buff, int type) {
         }
         if (type == 3) update_print_job_status_ui();
         if (disp_msg) reppanel_disp_msg(msg_txt);
+        if (disp_msgbox) show_height_adjust_dialog();
         update_rep_panel_conn_status();
         xSemaphoreGive(xGuiSemaphore);
     }
@@ -868,11 +882,12 @@ void reprap_wifi_download(response_buff_t *response_buffer, char *file) {
  * Send GCode to the printer. Blocking call. Call from UI thread!
  * @param gcode_command
  */
-void reprap_send_gcode(char *gcode_command) {
+bool reprap_send_gcode(char *gcode_command) {
     if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
         if (reprap_wifi_send_gcode(gcode_command)) {
             add_console_hist_entry(gcode_command, "", CONSOLE_TYPE_REPPANEL);
             update_entries_ui();
+            return true;
         }
     } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
         ESP_LOGW(TAG, "Writing to UART not supported for now");
