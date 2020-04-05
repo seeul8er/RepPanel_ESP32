@@ -106,6 +106,9 @@ case you use different hardware or want a different pin connection layout**
 ![RepPanel console](wiki/RepPanel_Console.png)
 ![RepPanel start print dialog](wiki/RepPanel_Job.png)
 
+## For Developers
+[Check out the simulator project.](https://github.com/seeul8er/RepPanel_sim) Simulates the RepPanel GUI on Desktop computers for more efficient testing and implementation.
+
 ## Known Bugs
 - Multiple tools supported but not tested
 - Can not list all files within a directory in case DuetWebControl API requires multiple requests per listing
