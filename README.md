@@ -35,12 +35,11 @@ browser.
    - Elapsed time (based of simulation, otherwise from file)
    - Job name
    - Current layer
- - Run manual and automated bed leveling (future release)
+ - Run manual and automated bed leveling
  - Automatic reconnection
  - Low latency
 
 [![First test of RepPanel](https://img.youtube.com/vi/39FKTUVjrxc/0.jpg)](https://www.youtube.com/watch?v=39FKTUVjrxc)
-
 
 ## What this project is not
 A full replacement for the DuetWebControl interface.
@@ -94,10 +93,25 @@ idf.py -p (YOUR PORT) flash
 **Ready made images are only available for selected hardware combinations! Please compile the project by yourself in
 case you use different hardware or want a different pin connection layout**
 
-### Wiring ER-TFTM035-6 to the ESP32 DevKit with 38GPIOs
+Check out [releases](https://github.com/seeul8er/RepPanel_ESP32/releases) for compiled binaries.
 
+### Wiring ER-TFTM035-6 to the ESP32 DevKit with 36GPIOs
+
+**Beware: The available development boards have different pin configurations. Some have GND & 3.3V at the bottom. Others at the top.**
 ![ESP32 Devkit wire connections](wiki/Wiring_ESP32_DevKit_38GPIOs.jpg)
 ![ER-TFTM035-6 wiring](wiki/Wiring_ERTFT.jpg)
+
+Pin configuration of ready made images:
+| **Pin Number** 	| **Function** 	|      **Description**      	|
+|:--------------:	|:------------:	|:-------------------------:	|
+|     GPIO 13    	|     MOSI     	|      Data line to TFT     	|
+|     GPIO 14    	|      SCL     	|      SPI CLK for TFT      	|
+|     GPIO 15    	| Slave Select 	|            SPI            	|
+|     GPIO 22    	|      SCL     	|        I²C - touch        	|
+|     GPIO 21    	|      SDA     	|        I²C - touch        	|
+|     GPIO 4     	|     Reset    	|        TFT related        	|
+|     GPIO 2     	|     Data     	|        TFT related        	|
+|     GPIO 27    	|   Backlight  	| Turn on/off TFT backlight 	|
 
 ## Screenshots
 ![ESP32 Devkit wire connections](wiki/RepPanel_Working.jpg)
