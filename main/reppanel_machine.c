@@ -2,6 +2,8 @@
 // Copyright (c) 2020 Wolfgang Christl
 // Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
+#include "freertos/FreeRTOS.h"
+#include <freertos/task.h>
 #include <lvgl/src/lv_objx/lv_page.h>
 #include <lvgl/src/lv_objx/lv_ddlist.h>
 #include <esp_log.h>
@@ -57,8 +59,12 @@ static void _home_z_event(lv_obj_t *obj, lv_event_t event) {
 
 static void _next_height_adjust_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
-        if (reprap_send_gcode("M292"))
-            seq_num_msgbox = -1;    // reset so we know msg GUI is not showing anymore - little dirty I know...
+        if (reprap_send_gcode("M292")) {
+            lv_obj_del(label_z_pos_cali);
+            label_z_pos_cali = 0;               // otherwise crash in update_ui
+            lv_obj_del(cont_heigh_adj_diag);
+            seq_num_msgbox = 0;    // reset so we know msg GUI is not showing anymore - little dirty I know...
+        }
     }
 }
 
@@ -73,7 +79,7 @@ static void _height_adjust_event(lv_obj_t *obj, lv_event_t event) {
         }
         ESP_LOGI(TAG, "Moving %s%s", dir, amount);
         char command[64];
-        sprintf(command, "M120%%0AG91%%0AG1%%20Z%s%s%%20F6000%%0AG90%%0AM121", dir, amount);
+        sprintf(command, "M120\nG91\nG1 Z%s%s F6000\nG90\nM121", dir, amount);
         reprap_send_gcode(command);
     }
 }
@@ -175,8 +181,10 @@ static void _start_cali_event(lv_obj_t *obj, lv_event_t event) {
 }
 
 void update_ui_machine() {
-    if (label_z_pos_cali)
-        lv_label_set_text_fmt(label_z_pos_cali, "%.02f mm", reprap_axes.z);
+    portMUX_TYPE mutex = portMUX_INITIALIZER_UNLOCKED;
+    portENTER_CRITICAL(&mutex); // not sure this really helps?!
+    if (label_z_pos_cali) lv_label_set_text_fmt(label_z_pos_cali, "%.02f mm", reprap_axes.z);
+    portEXIT_CRITICAL(&mutex);
     if (btn_home_x) {
         static lv_style_t homed_style;
         lv_style_copy(&homed_style, lv_btn_get_style(btn_home_x, LV_BTN_STYLE_REL));

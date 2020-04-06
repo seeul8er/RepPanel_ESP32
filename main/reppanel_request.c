@@ -31,7 +31,7 @@ static bool got_status_two = false;
 static bool got_duet_settings = false;
 static int status_request_err_cnt = 0;      // request errors in a row
 bool job_paused = false;
-int seq_num_msgbox = -1;
+int seq_num_msgbox = 0;
 
 const char *_decode_reprap_status(const char *valuestring) {
     job_paused = false;
@@ -164,6 +164,7 @@ void _process_reprap_status(char *buff, int type) {
             }
         }
     }
+
 
     // Get tool heater state
     cJSON *duet_temps_state = cJSON_GetObjectItem(duet_temps, DUET_TEMPS_BED_STATE);        // all other heater states
@@ -891,7 +892,9 @@ bool reprap_send_gcode(char *gcode_command) {
         }
     } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
         ESP_LOGW(TAG, "Writing to UART not supported for now");
+        return false;
     }
+    return false;
 }
 
 void request_filaments() {
