@@ -19,6 +19,7 @@
 #include "esp32_wifi.h"
 #include "reppanel_request.h"
 #include "lvgl_driver.h"
+#include "esp32_uart.h"
 
 #define TAG "Main"
 
@@ -115,6 +116,7 @@ void guiTask() {
     rep_panel_ui_create();
 
     wifi_init_sta();
+    init_uart();
 
 //    int c = 0;
     while (1) {

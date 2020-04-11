@@ -11,27 +11,30 @@
 typedef struct {
     char buffer[JSON_BUFF_SIZE];
     int buf_pos;
-} response_buff_t;
+} wifi_response_buff_t;
+
+typedef struct {
+    uint8_t buffer[JSON_BUFF_SIZE];
+    int buf_pos;
+} uart_response_buff_t;
 
 void request_reprap_status_updates(void *pvParameters);
 
-void reprap_wifi_download(response_buff_t *response_buffer, char *file);
+void reprap_wifi_download(wifi_response_buff_t *response_buffer, char *file);
 
 void reprap_wifi_get_config();
 
-void reprap_wifi_get_fileinfo(response_buff_t *resp_data, char *filename);
+void reprap_wifi_get_fileinfo(wifi_response_buff_t *resp_data, char *filename);
 
-void reprap_wifi_get_filelist(response_buff_t *resp_buffer, char *directory);
+void reprap_wifi_get_filelist(wifi_response_buff_t *resp_buffer, char *directory);
 
 bool reprap_wifi_send_gcode(char *gcode);
 
-void request_filaments();
-
-void request_macros();
+void request_macros(char *folder_path);
 
 void request_macros_async(char *folder_path);
 
-void request_jobs();
+void request_jobs(char *folder_path);
 
 void request_jobs_async(char *folder_path);
 
