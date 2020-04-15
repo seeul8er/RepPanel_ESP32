@@ -19,6 +19,8 @@ lv_obj_t *create_button(lv_obj_t *parent, lv_obj_t *button_pnt, char *text, void
 
 void reppanel_disp_msg(char *msg_txt);
 
+void _duet_show_dialog(char *title, char *msg);
+
 void RepPanelLogE(char *tag, char *msg);
 
 void RepPanelLogW(char *tag, char *msg);

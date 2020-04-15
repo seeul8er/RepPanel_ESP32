@@ -5,8 +5,9 @@
 #ifndef REPPANEL_ESP32_REPPANEL_REQUEST_H
 #define REPPANEL_ESP32_REPPANEL_REQUEST_H
 
-#define MAX_REQ_ADDR_LENGTH     256 + 128
-#define JSON_BUFF_SIZE          2816        // d2wc settings is max ~2600 bytes
+#define MAX_REQ_ADDR_LENGTH     256 + 512
+#define JSON_BUFF_SIZE          2688        // d2wc settings is max ~2600 bytes
+#define UART_RESP_BUFF_SIZE     JSON_BUFF_SIZE
 
 typedef struct {
     char buffer[JSON_BUFF_SIZE];
@@ -14,7 +15,7 @@ typedef struct {
 } wifi_response_buff_t;
 
 typedef struct {
-    uint8_t buffer[JSON_BUFF_SIZE];
+    uint8_t buffer[UART_RESP_BUFF_SIZE];
     int buf_pos;
 } uart_response_buff_t;
 

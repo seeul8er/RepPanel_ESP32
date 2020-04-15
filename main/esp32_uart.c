@@ -38,6 +38,7 @@ bool reppanel_is_uart_connected() {
         ESP_LOGW(TAG, "Ping - Could not push all bytes to write buffer!");
     int length = 0;
     ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t *) &length));
+    uart_flush(uart_num);
     return (length > 0);
 }
 
@@ -46,9 +47,29 @@ void reppanel_write_uart(char *buffer, int buffer_len) {
         ESP_LOGW(TAG, "Could not push all bytes to write buffer!");
 }
 
-int reppanel_read_uart(uint8_t *data_buff) {
+int reppanel_read_uart(uart_response_buff_t *receive_buff) {
     int length = 0;
     ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t *) &length));
-    length = uart_read_bytes(uart_num, data_buff, length, 25);
+    if (length <= UART_RESP_BUFF_SIZE)
+        length = uart_read_bytes(uart_num, &receive_buff->buffer[receive_buff->buf_pos], length, 25);
+    else {
+        ESP_LOGE(TAG, "UART response too big for buffer!");
+        length = uart_read_bytes(uart_num, &receive_buff->buffer[receive_buff->buf_pos], UART_RESP_BUFF_SIZE, 25);
+    }
+    receive_buff->buf_pos += length;
     return length;
+}
+
+void reppanel_read_response(uart_response_buff_t *receive_buff) {
+    receive_buff->buf_pos = 0;
+    int length = reppanel_read_uart(receive_buff);
+    // get complete response
+    while (length > 0 && receive_buff->buffer[receive_buff->buf_pos - 1] != '\n' &&
+           receive_buff->buf_pos < UART_RESP_BUFF_SIZE) {
+        length = reppanel_read_uart(receive_buff);
+    }
+}
+
+void reppanel_request_response(uart_response_buff_t *receive_buff, int seq_num) {
+
 }

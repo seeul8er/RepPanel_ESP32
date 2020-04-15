@@ -10,6 +10,7 @@
 #include <ctype.h>
 #include <lvgl/src/lv_objx/lv_mbox.h>
 #include <lvgl/src/lv_core/lv_disp.h>
+#include <custom_themes/lv_theme_rep_panel_dark.h>
 #include "esp32_settings.h"
 #include "reppanel.h"
 #include "reppanel_console.h"
@@ -17,7 +18,7 @@
 
 char html5[256] = {0};
 bool encoding_inited = false;
-lv_obj_t *mbox_msg;
+lv_obj_t *mbox_msg, *cont_msg;
 
 void url_encoder_rfc_tables_init() {
     int i;
@@ -97,6 +98,52 @@ void reppanel_disp_msg(char *msg_txt) {
     lv_obj_set_width(mbox_msg, 300);
     lv_obj_set_event_cb(mbox_msg, _close_msg_event_handler);
     lv_obj_align(mbox_msg, NULL, LV_ALIGN_CENTER, 0, 0); /*Align to the corner*/
+}
+
+static void _close_msg_box_event(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
+        reprap_send_gcode("M292");
+        lv_obj_del_async(cont_msg);
+    }
+}
+
+void _duet_show_dialog(char *title, char *msg) {
+    cont_msg = lv_cont_create(lv_layer_top(), NULL);
+    static lv_style_t somestyle;
+    lv_style_copy(&somestyle, lv_cont_get_style(cont_msg, LV_CONT_STYLE_MAIN));
+    somestyle.body.border.width = 1;
+    somestyle.body.border.color = REP_PANEL_DARK_ACCENT_ALT2;
+    somestyle.body.padding.left = LV_DPI / 6;
+    somestyle.body.padding.right = LV_DPI / 6;
+    somestyle.body.padding.top = LV_DPI / 12;
+    somestyle.body.padding.bottom = LV_DPI / 12;
+    somestyle.body.padding.inner = LV_DPI / 9;
+    lv_cont_set_style(cont_msg, LV_CONT_STYLE_MAIN, &somestyle);
+    lv_cont_set_fit2(cont_msg, LV_FIT_TIGHT, LV_FIT_TIGHT);
+    lv_cont_set_layout(cont_msg, LV_LAYOUT_COL_M);
+
+    static lv_style_t title_style;
+    lv_style_copy(&title_style, lv_label_get_style(cont_msg, LV_LABEL_STYLE_MAIN));
+    title_style.text.font = &reppanel_font_roboto_bold_22;
+    title_style.text.color = REP_PANEL_DARK_ACCENT;
+    lv_obj_t *title_label = lv_label_create(cont_msg, NULL);
+    lv_label_set_align(title_label, LV_LABEL_ALIGN_CENTER);
+    lv_label_set_text_fmt(title_label, title);
+    lv_label_set_style(title_label, LV_LABEL_STYLE_MAIN, &title_style);
+
+    lv_obj_t *msg_label = lv_label_create(cont_msg, NULL);
+    lv_label_set_align(msg_label, LV_LABEL_ALIGN_CENTER);
+    lv_label_set_long_mode(msg_label, LV_LABEL_LONG_BREAK);
+    lv_obj_set_width(msg_label, 350);
+    lv_label_set_text_fmt(msg_label, msg);
+
+    lv_obj_t *cont_closer_away = lv_cont_create(cont_msg, NULL);
+    lv_cont_set_layout(cont_closer_away, LV_LAYOUT_ROW_M);
+    lv_cont_set_fit(cont_closer_away, LV_FIT_TIGHT);
+
+    static lv_obj_t *btn_close;
+    create_button(cont_closer_away, btn_close, "OK", _close_msg_box_event);
+    lv_obj_align_origo(cont_msg, lv_layer_top(), LV_ALIGN_CENTER, 0, 0);
 }
 
 void RepPanelLogE(char *tag, char *msg) {
