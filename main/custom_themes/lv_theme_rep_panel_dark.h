@@ -37,6 +37,7 @@ extern "C" {
 #define REP_PANEL_DARK_ACCENT_ALT1_STR "#4bb45e"
 #define REP_PANEL_DARK_ACCENT_ALT2_STR   "#274646"
 #define REP_PANEL_DARK_TEXT_STR "#e6e6e6"
+
 /**********************
  *      TYPEDEFS
  **********************/

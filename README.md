@@ -76,6 +76,10 @@ git clone --recurse-submodules https://github.com/seeul8er/RepPanel_ESP32
 ```
 
 **Configure Project**
+
+**Temporary workaround:**  
+Copy file content of `main/lv_conf_back.h` over to `externals/lv_port_esp32/components/lvgl/lv_conf.h`
+
 From its root run:
 ```bash
 idf.py menuconfig
