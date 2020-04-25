@@ -1131,6 +1131,15 @@ void request_reprap_status_updates(void *params) {
             } else {
                 i++;
             }
+        } else if (reppanel_conn_status == REPPANEL_NO_CONNECTION) {
+            if (reppanel_is_uart_connected()) {
+                reppanel_conn_status = REPPANEL_UART_CONNECTED;
+                memset(&resp_buff_status_update_task, 0, JSON_BUFF_SIZE);
+                if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
+                    update_rep_panel_conn_status();
+                    xSemaphoreGive(xGuiSemaphore);
+                }
+            }
         }
         uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
         ESP_LOGI(TAG, "%i free bytes", uxHighWaterMark * 4);
