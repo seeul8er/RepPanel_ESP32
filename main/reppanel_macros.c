@@ -78,7 +78,7 @@ static void _macro_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
             lv_obj_set_size(preloader, 75, 75);
             lv_obj_align_origo(preloader, lv_layer_top(), LV_ALIGN_CENTER, 0, 0);
             static char tmp_txt[128];
-            sprintf(tmp_txt, "%s/%s&first=0", edit_macro->dir, edit_macro->name);
+            sprintf(tmp_txt, "%s/%s", edit_macro->dir, edit_macro->name);
             request_macros_async(tmp_txt);
         }
     }
@@ -128,7 +128,7 @@ void draw_macro(lv_obj_t *parent_screen) {
     macro_list = lv_list_create(macro_container, NULL);
     lv_obj_set_size(macro_list, LV_HOR_RES - 10, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
 
-    request_macros_async("0:/macros&first=0");
+    request_macros_async("0:/macros");
 }
 
 #include "reppanel_macros.h"

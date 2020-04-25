@@ -56,7 +56,7 @@ void app_main() {
     xTaskCreatePinnedToCore(guiTask, "gui", 512 * 11, NULL, 0, NULL, 1);
 
     TaskHandle_t printer_status_task_handle = NULL;
-    xTaskCreate(request_reprap_status_updates, "Printer Status Update Task", 1024 * 7, NULL,
+    xTaskCreate(request_reprap_status_updates, "Printer Status Update Task", 1024 * 11, NULL,
                 tskIDLE_PRIORITY, &printer_status_task_handle);
     configASSERT(printer_status_task_handle);
 }

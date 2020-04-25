@@ -23,8 +23,6 @@
 #define TAG                 "RequestTask"
 #define REQUEST_TIMEOUT_MS  150
 
-static wifi_response_buff_t resp_buff_status_update_task;
-static wifi_response_buff_t resp_buff_filelist_task;
 static wifi_response_buff_t resp_buff_gui_task;
 
 static bool got_filaments = false;
@@ -39,9 +37,9 @@ int seq_num_msgbox = 0;
 int last_status_seq = -1;
 
 static bool uart_request_file_info = false;
-static char _uart_file_path[512];
+static char uart_file_path[512];
 
-const char *_decode_reprap_status(const char *valuestring) {
+const char *decode_reprap_status(const char *valuestring) {
     job_paused = false;
     reprap_status = *valuestring;
     switch (*valuestring) {
@@ -79,13 +77,16 @@ const char *_decode_reprap_status(const char *valuestring) {
         case REPRAP_STATUS_SIMULATING:
             job_running = true;
             return "Simulating";
+        case REPRAP_STATUS_OFF:
+            job_running = false;
+            return "Off";
         default:
             break;
     }
     return "UnknownStatus";
 }
 
-void _process_reprap_status(char *buff, int type) {
+void process_reprap_status(char *buff, int type) {
     cJSON *root = cJSON_Parse(buff);
     if (root == NULL) {
         const char *error_ptr = cJSON_GetErrorPtr();
@@ -97,7 +98,7 @@ void _process_reprap_status(char *buff, int type) {
     }
     cJSON *name = cJSON_GetObjectItem(root, DUET_STATUS);
     if (cJSON_IsString(name) && (name->valuestring != NULL)) {
-        strlcpy(reppanel_status, _decode_reprap_status(name->valuestring), MAX_REPRAP_STATUS_LEN);
+        strlcpy(reppanel_status, decode_reprap_status(name->valuestring), MAX_REPRAP_STATUS_LEN);
     }
 
     cJSON *coords = cJSON_GetObjectItem(root, "coords");
@@ -316,9 +317,8 @@ void _process_reprap_status(char *buff, int type) {
     cJSON_Delete(root);
 }
 
-void _process_reprap_settings(char *buff) {
+void process_reprap_settings(char *buff) {
     ESP_LOGI(TAG, "Processing D2WC status json");
-    got_duet_settings = true;
     cJSON *root = cJSON_Parse(buff);
     if (root == NULL) {
         const char *error_ptr = cJSON_GetErrorPtr();
@@ -390,11 +390,11 @@ void _process_reprap_settings(char *buff) {
             pos++;
         }
     }
-
+    got_duet_settings = true;
     cJSON_Delete(root);
 }
 
-void _process_reprap_filelist(char *buffer) {
+void process_reprap_filelist(char *buffer) {
     cJSON *root = cJSON_Parse(buffer);
     if (root == NULL) {
         const char *error_ptr = cJSON_GetErrorPtr();
@@ -523,7 +523,7 @@ void _process_reprap_filelist(char *buffer) {
     cJSON_Delete(root);
 }
 
-void _process_reprap_fileinfo(char *data_buff) {
+void process_reprap_fileinfo(char *data_buff) {
     cJSON *root = cJSON_Parse(data_buff);
     if (root == NULL) {
         const char *error_ptr = cJSON_GetErrorPtr();
@@ -570,7 +570,7 @@ void _process_reprap_fileinfo(char *data_buff) {
     cJSON_Delete(root);
 }
 
-void _process_reprap_reply(wifi_response_buff_t *response_buffer) {
+void process_reprap_reply(wifi_response_buff_t *response_buffer) {
     duet_request_reply = false;
     if (response_buffer->buf_pos > 1) {
         if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
@@ -590,25 +590,25 @@ void reprap_uart_get_status(uart_response_buff_t *receive_buff, int type) {
     sprintf(buff, "M408 S%i", type);
     reprap_uart_send_gcode(buff);
     reppanel_read_response(receive_buff);
-    _process_reprap_status((char *) receive_buff->buffer, type);    // TODO: check converting unsigned to signed
+    process_reprap_status((char *) receive_buff->buffer, type);    // TODO: check converting unsigned to signed
 }
 
 void reprap_uart_get_file_info(uart_response_buff_t *receive_buff) {
     char buff[524];
-    sprintf(buff, "M36 \"%s\"", _uart_file_path);
+    sprintf(buff, "M36 \"%s\"", uart_file_path);
     reprap_uart_send_gcode(buff);
     reppanel_read_response(receive_buff);
-    _process_reprap_fileinfo((char *) receive_buff->buffer);    // TODO: check converting unsigned to signed
+    process_reprap_fileinfo((char *) receive_buff->buffer);    // TODO: check converting unsigned to signed
 
     uart_request_file_info = false;
 }
 
 void reprap_uart_get_filelist(uart_response_buff_t *receive_buff, char *path) {
     char buff[512];
-    sprintf(buff, "M20 S2 P\"%s\"", path);
+    sprintf(buff, "M20 S3 P\"%s\"", path);
     reprap_uart_send_gcode(buff);
     reppanel_read_response(receive_buff);
-    _process_reprap_filelist((char *) receive_buff->buffer);    // TODO: check converting unsigned to signed
+    process_reprap_filelist((char *) receive_buff->buffer);    // TODO: check converting unsigned to signed
 }
 
 void reprap_uart_download(uart_response_buff_t *receive_buff, char *path) {
@@ -620,10 +620,10 @@ void reprap_uart_download(uart_response_buff_t *receive_buff, char *path) {
     memcpy(reprap_tool_poss_temps.temps_standby, tool_temps_hardcoded, sizeof(tool_temps_hardcoded));
     got_duet_settings = true;
     // TODO: Download UART file ?!
-    //_process_reprap_settings((char *) receive_buff->buffer);      // TODO: check converting unsigned to signed
+    //process_reprap_settings((char *) receive_buff->buffer);      // TODO: check converting unsigned to signed
 }
 
-esp_err_t _http_event_handle(esp_http_client_event_t *evt) {
+esp_err_t http_event_handle(esp_http_client_event_t *evt) {
     if (esp_http_client_get_status_code(evt->client) == 401) {
         ESP_LOGW(TAG, "Need to authorise first. Ignoring data.");
         return ESP_OK;
@@ -665,7 +665,7 @@ void wifi_duet_authorise(wifi_response_buff_t *buffer, bool get_d2wc_config) {
     esp_http_client_config_t config = {
             .url = printer_url,
             .timeout_ms = REQUEST_TIMEOUT_MS,
-            .event_handler = _http_event_handle,
+            .event_handler = http_event_handle,
             .user_data = buffer
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -687,7 +687,7 @@ void reprap_wifi_get_status(wifi_response_buff_t *resp_buff, int type) {
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
-            .event_handler = _http_event_handle,
+            .event_handler = http_event_handle,
             .user_data = resp_buff,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -698,7 +698,7 @@ void reprap_wifi_get_status(wifi_response_buff_t *resp_buff, int type) {
             case 200:
                 status_request_err_cnt = 0;
                 reppanel_conn_status = REPPANEL_WIFI_CONNECTED;
-                _process_reprap_status(resp_buff->buffer, type);
+                process_reprap_status(resp_buff->buffer, type);
                 break;
             case 401:
                 ESP_LOGI(TAG, "Authorising with Duet");
@@ -727,7 +727,7 @@ void reprap_wifi_get_rreply(wifi_response_buff_t *response_buffer) {
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = 1000,
-            .event_handler = _http_event_handle,
+            .event_handler = http_event_handle,
             .user_data = response_buffer
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -737,7 +737,7 @@ void reprap_wifi_get_rreply(wifi_response_buff_t *response_buffer) {
         switch (esp_http_client_get_status_code(client)) {
             case 200:
                 ESP_LOGI(TAG, "Got reply! %i", response_buffer->buf_pos);
-                _process_reprap_reply(response_buffer);
+                process_reprap_reply(response_buffer);
                 break;
             case 401:
                 ESP_LOGI(TAG, "Authorising with Duet");
@@ -762,7 +762,7 @@ bool reprap_wifi_send_gcode(char *gcode) {
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
-            .event_handler = _http_event_handle,
+            .event_handler = http_event_handle,
             .user_data = &resp_buff_gui_task
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -800,7 +800,7 @@ void reprap_wifi_get_filelist(wifi_response_buff_t *resp_buffer, char *directory
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
-            .event_handler = _http_event_handle,
+            .event_handler = http_event_handle,
             .user_data = resp_buffer,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -813,7 +813,7 @@ void reprap_wifi_get_filelist(wifi_response_buff_t *resp_buffer, char *directory
 
         switch (esp_http_client_get_status_code(client)) {
             case 200:
-                _process_reprap_filelist(resp_buffer->buffer);
+                process_reprap_filelist(resp_buffer->buffer);
                 break;
             case 401:
                 ESP_LOGI(TAG, "Authorising with Duet");
@@ -837,13 +837,14 @@ void reprap_wifi_get_filelist_task(void *params) {
     char request_addr[MAX_REQ_ADDR_LENGTH];
     char encoded_dir[strlen(directory) * 3];
     url_encode((unsigned char *) directory, encoded_dir);
-    sprintf(request_addr, "%s/rr_filelist?dir=%s", rep_addr, encoded_dir);
+    sprintf(request_addr, "%s/rr_filelist?dir=%s&first=0", rep_addr, encoded_dir);
     ESP_LOGI("FileListTask", "Unformatted: %s", directory);
     ESP_LOGI("FileListTask", "Request: %s", request_addr);
+    wifi_response_buff_t resp_buff_filelist_task;
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
-            .event_handler = _http_event_handle,
+            .event_handler = http_event_handle,
             .user_data = &resp_buff_filelist_task,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -856,7 +857,7 @@ void reprap_wifi_get_filelist_task(void *params) {
 
         switch (esp_http_client_get_status_code(client)) {
             case 200:
-                _process_reprap_filelist(resp_buff_filelist_task.buffer);
+                process_reprap_filelist(resp_buff_filelist_task.buffer);
                 break;
             case 401:
                 ESP_LOGI(TAG, "Authorising with Duet");
@@ -885,7 +886,7 @@ void reprap_wifi_get_fileinfo(wifi_response_buff_t *resp_data, char *filename) {
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
-            .event_handler = _http_event_handle,
+            .event_handler = http_event_handle,
             .user_data = resp_data,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -898,7 +899,7 @@ void reprap_wifi_get_fileinfo(wifi_response_buff_t *resp_data, char *filename) {
 
         switch (esp_http_client_get_status_code(client)) {
             case 200:
-                _process_reprap_fileinfo(resp_data->buffer);
+                process_reprap_fileinfo(resp_data->buffer);
                 break;
             case 401:
                 ESP_LOGI(TAG, "Authorising with Duet");
@@ -919,7 +920,7 @@ void reprap_wifi_get_config() {
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
-            .event_handler = _http_event_handle,
+            .event_handler = http_event_handle,
             .user_data = &resp_buff_gui_task,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -951,7 +952,7 @@ void reprap_wifi_download(wifi_response_buff_t *response_buffer, char *file) {
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
-            .event_handler = _http_event_handle,
+            .event_handler = http_event_handle,
             .user_data = response_buffer,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -965,7 +966,7 @@ void reprap_wifi_download(wifi_response_buff_t *response_buffer, char *file) {
         switch (esp_http_client_get_status_code(client)) {
             case 200:
                 if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
-                    _process_reprap_settings(response_buffer->buffer);
+                    process_reprap_settings(response_buffer->buffer);
                     xSemaphoreGive(xGuiSemaphore);
                 }
                 break;
@@ -1002,7 +1003,7 @@ bool reprap_send_gcode(char *gcode_command) {
 
 /**
  * Launches a new thread that requests macros. Updates Macros list in GUI on success. Non blocking call.
- * @param folder_path Can be empty in case root macro folder content is requested
+ * @param folder_path e.g.
  */
 void request_macros_async(char *folder_path) {
     if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
@@ -1010,7 +1011,6 @@ void request_macros_async(char *folder_path) {
         TaskHandle_t get_filelist_async_task_handle = NULL;
         xTaskCreate(reprap_wifi_get_filelist_task, "macros request task", 1024 * 3, folder_path,
                     tskIDLE_PRIORITY, &get_filelist_async_task_handle);
-        configASSERT(get_filelist_async_task_handle);
     } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
         request_macros(folder_path);
     }
@@ -1019,9 +1019,9 @@ void request_macros_async(char *folder_path) {
 void request_macros(char *folder_path) {
     if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
         ESP_LOGI(TAG, "Requesting macros");
-        reprap_wifi_get_filelist(&resp_buff_gui_task, "0:/macros&first=0");
+        reprap_wifi_get_filelist(&resp_buff_gui_task, "0:/macros");
     } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
-        strncpy(_uart_file_path, folder_path, sizeof(_uart_file_path));  // buffer path to request
+        strncpy(uart_file_path, folder_path, sizeof(uart_file_path));  // buffer path to request
         duet_request_macros = true;
     }
 }
@@ -1037,9 +1037,9 @@ void request_fileinfo(char *file_name) {
     } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
         uart_request_file_info = true;
         if (file_name != NULL)
-            strncpy(_uart_file_path, file_name, sizeof(_uart_file_path));
+            strncpy(uart_file_path, file_name, sizeof(uart_file_path));
         else
-            strcpy(_uart_file_path, "");
+            strcpy(uart_file_path, "");
     }
 }
 
@@ -1052,7 +1052,6 @@ void request_jobs_async(char *folder_path) {
         TaskHandle_t get_filelist_async_task_handle = NULL;
         xTaskCreate(reprap_wifi_get_filelist_task, "jobs request task", 1024 * 3, folder_path,
                     tskIDLE_PRIORITY, &get_filelist_async_task_handle);
-        configASSERT(get_filelist_async_task_handle);
     } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
         request_jobs(folder_path);
     }
@@ -1061,9 +1060,9 @@ void request_jobs_async(char *folder_path) {
 void request_jobs(char *folder_path) {
     if (reppanel_conn_status == REPPANEL_WIFI_CONNECTED) {
         ESP_LOGI(TAG, "Requesting jobs");
-        reprap_wifi_get_filelist(&resp_buff_gui_task, "0:/gcodes&first=0");
+        reprap_wifi_get_filelist(&resp_buff_gui_task, "0:/gcodes");
     } else if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
-        strncpy(_uart_file_path, folder_path, sizeof(_uart_file_path));  // buffer path to request
+        strncpy(uart_file_path, folder_path, sizeof(uart_file_path));  // buffer path to request
         duet_request_jobs = true;   // set flag so task knows what to do in next iteration
     }
 }
@@ -1079,6 +1078,7 @@ void request_reprap_status_updates(void *params) {
     int i = 8;
     UBaseType_t uxHighWaterMark;
     uart_response_buff_t uart_receive_buff;
+    wifi_response_buff_t resp_buff_status_update_task;
     while (1) {
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
         if (reppanel_conn_status == REPPANEL_UART_CONNECTED) {
@@ -1086,11 +1086,11 @@ void request_reprap_status_updates(void *params) {
             if (!got_filaments) reprap_uart_get_filelist(&uart_receive_buff, "0:/filaments");
             if (uart_request_file_info) reprap_uart_get_file_info(&uart_receive_buff);
             if (duet_request_jobs) {
-                reprap_uart_get_filelist(&uart_receive_buff, _uart_file_path);
+                reprap_uart_get_filelist(&uart_receive_buff, uart_file_path);
                 duet_request_jobs = false;
             }
             if (duet_request_macros) {
-                reprap_uart_get_filelist(&uart_receive_buff, _uart_file_path);
+                reprap_uart_get_filelist(&uart_receive_buff, uart_file_path);
                 duet_request_macros = false;
             }
             if (!got_status_two) reprap_uart_get_status(&uart_receive_buff, 2);

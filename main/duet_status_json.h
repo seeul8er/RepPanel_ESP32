@@ -40,5 +40,6 @@
 #define REPRAP_STATUS_FLASHING          'F'
 #define REPRAP_STATUS_CHANGINGTOOL      'T'
 #define REPRAP_STATUS_SIMULATING        'M'
+#define REPRAP_STATUS_OFF               'O'
 
 #endif //REPPANEL_ESP32_DUET_STATUS_JSON_H

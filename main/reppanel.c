@@ -26,7 +26,7 @@ void draw_main_menu(lv_obj_t *parent_screen);
  *  STATIC VARIABLES
  **********************/
 
-uint8_t reppanel_conn_status = REPPANEL_NO_CONNECTION;
+uint8_t reppanel_conn_status = REPPANEL_CONN_NOT_INITED;
 
 lv_obj_t *process_scr;  // screen for the process settings
 lv_obj_t *machine_scr;

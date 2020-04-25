@@ -41,8 +41,8 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         ESP_LOGI(TAG, "Got ip:"
                 IPSTR, IP2STR(&event->ip_info.ip));
         s_retry_num = 0;
-        reppanel_conn_status = REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED;
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+        reppanel_conn_status = REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED;
     }
     if (xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
         update_rep_panel_conn_status();
@@ -93,6 +93,9 @@ void get_connection_info(char txt_buffer[200]) {
         case REPPANEL_WIFI_DISCONNECTED:
         case REPPANEL_NO_CONNECTION:
             strcpy(txt_buffer, "Not connected to network or UART");
+            break;
+        case REPPANEL_UART_CONNECTED:
+            strcpy(txt_buffer, "Connected via UART");
             break;
         case REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED:
             memset(&ap_info, 0, sizeof(ap_info));

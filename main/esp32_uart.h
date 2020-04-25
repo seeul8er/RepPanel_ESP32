@@ -8,7 +8,7 @@
 
 #include "reppanel_request.h"
 
-#define UART_DATA_BUFF_LEN  1024 * 3
+#define UART_DATA_BUFF_LEN  0
 
 void init_uart();
 void reppanel_write_uart(char *buffer, int buffer_len);

@@ -133,7 +133,7 @@ static void _job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
             lv_obj_set_size(preloader, 75, 75);
             lv_obj_align_origo(preloader, lv_layer_top(), LV_ALIGN_CENTER, 0, 0);
             static char tmp_txt_job_path[128];
-            sprintf(tmp_txt_job_path, "%s/%s&first=0", edit_job->dir, edit_job->name);
+            sprintf(tmp_txt_job_path, "%s/%s", edit_job->dir, edit_job->name);
             request_jobs_async(tmp_txt_job_path);
         }
     } else if (event == LV_EVENT_LONG_PRESSED && reprap_jobs[selected_indx].type == TREE_FILE_ELEM) {
@@ -191,5 +191,5 @@ void draw_jobselect(lv_obj_t *parent_screen) {
     jobs_list = lv_list_create(jobs_container, NULL);
     lv_obj_set_size(jobs_list, LV_HOR_RES - 10, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
 
-    request_jobs_async("0:/gcodes&first=0");
+    request_jobs_async("0:/gcodes");
 }
