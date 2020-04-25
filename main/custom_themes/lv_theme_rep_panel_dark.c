@@ -875,7 +875,7 @@ static void style_mod_edit(lv_group_t *group, lv_style_t *style) {
  * @param font pointer to a font (NULL to use the default)
  * @return pointer to the initialized theme
  */
-lv_theme_t *lv_theme_reppanel_light_init(uint16_t hue, lv_font_t *font) {
+lv_theme_t *lv_theme_reppanel_dark_init(uint16_t hue, lv_font_t *font) {
     if (font == NULL) font = LV_FONT_DEFAULT;
 
     _hue = hue;

@@ -29,6 +29,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         if (s_retry_num < MAXIMUM_RETRY_WIFI) {
             reppanel_conn_status = REPPANEL_WIFI_RECONNECTING;
             esp_wifi_connect();
+            xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
             s_retry_num++;
             ESP_LOGI(TAG, "Retry to connect to the AP");
         } else {
@@ -38,11 +39,10 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         ESP_LOGI(TAG, "Connect to the AP fail");
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *) event_data;
-        ESP_LOGI(TAG, "Got ip:"
-                IPSTR, IP2STR(&event->ip_info.ip));
+        ESP_LOGI(TAG, "got ip:%s", ip4addr_ntoa(&event->ip_info.ip));
         s_retry_num = 0;
-        reppanel_conn_status = REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED;
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+        reppanel_conn_status = REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED;
     }
     if (xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
         update_rep_panel_conn_status();
