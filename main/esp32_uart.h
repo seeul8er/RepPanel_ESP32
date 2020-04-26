@@ -8,13 +8,12 @@
 
 #include "reppanel_request.h"
 
+#define UART_MAX_READ_TIMEOUT_CNT   5
 #define UART_DATA_BUFF_LEN  0
 
 void init_uart();
 void reppanel_write_uart(char *buffer, int buffer_len);
 bool reppanel_is_uart_connected();
-
-void reppanel_read_response(uart_response_buff_t *receive_buff);
-void reppanel_request_response(uart_response_buff_t *receive_buff, int seq_num);
+bool reppanel_read_response(uart_response_buff_t *receive_buff);
 
 #endif //REPPANEL_ESP32_ESP32_UART_H

@@ -85,11 +85,15 @@ lv_obj_t *create_button(lv_obj_t *parent, lv_obj_t *button_pnt, char *text, void
 
 static void _close_msg_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
-        reprap_send_gcode("M292");
+        // reprap_send_gcode("M292");
         lv_obj_del_async(mbox_msg);
     }
 }
 
+/**
+ * Simple msg for user.
+ * @param msg_txt
+ */
 void reppanel_disp_msg(char *msg_txt) {
     static const char *btns[] = {"Close", ""};
     mbox_msg = lv_mbox_create(lv_layer_top(), NULL);
@@ -107,6 +111,11 @@ static void _close_msg_box_event(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
+/**
+ * Message box with title and text. Sends ACK (M292) when user closes it.
+ * @param title
+ * @param msg
+ */
 void _duet_show_dialog(char *title, char *msg) {
     cont_msg = lv_cont_create(lv_layer_top(), NULL);
     static lv_style_t somestyle;

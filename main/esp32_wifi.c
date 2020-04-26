@@ -27,14 +27,16 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
         if (s_retry_num < MAXIMUM_RETRY_WIFI) {
-            reppanel_conn_status = REPPANEL_WIFI_RECONNECTING;
+            if (rp_conn_stat != REPPANEL_UART_CONNECTED)
+                rp_conn_stat = REPPANEL_WIFI_RECONNECTING;
             esp_wifi_connect();
             s_retry_num++;
             ESP_LOGI(TAG, "Retry to connect to the AP");
         } else {
             xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
         }
-        reppanel_conn_status = REPPANEL_WIFI_DISCONNECTED;
+        if (rp_conn_stat != REPPANEL_UART_CONNECTED)
+            rp_conn_stat = REPPANEL_WIFI_DISCONNECTED;
         ESP_LOGI(TAG, "Connect to the AP fail");
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *) event_data;
@@ -42,7 +44,8 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
                 IPSTR, IP2STR(&event->ip_info.ip));
         s_retry_num = 0;
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
-        reppanel_conn_status = REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED;
+        if (rp_conn_stat != REPPANEL_UART_CONNECTED)
+            rp_conn_stat = REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED;
     }
     if (xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
         update_rep_panel_conn_status();
@@ -75,7 +78,7 @@ void wifi_init_sta() {
  * Call only when GUI semaphore is taken
  */
 void reconnect_wifi() {
-    reppanel_conn_status = REPPANEL_WIFI_RECONNECTING;
+    rp_conn_stat = REPPANEL_WIFI_RECONNECTING;
     update_rep_panel_conn_status();
     ESP_LOGI(TAG, "Reconnecting to %s with password %s", wifi_ssid, wifi_pass);
     wifi_config_t wifi_config;
@@ -88,7 +91,7 @@ void reconnect_wifi() {
 
 void get_connection_info(char txt_buffer[200]) {
     wifi_ap_record_t ap_info;
-    switch (reppanel_conn_status) {
+    switch (rp_conn_stat) {
         default:
         case REPPANEL_WIFI_DISCONNECTED:
         case REPPANEL_NO_CONNECTION:

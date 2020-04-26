@@ -22,7 +22,6 @@ extern "C" {
 #define BTN_TOOL_TMP_ACTIVE 2
 #define BTN_TOOL_TMP_STANDBY 3
 
-#define REPPANEL_CONN_NOT_INITED    -1
 #define REPPANEL_NO_CONNECTION      0
 #define REPPANEL_WIFI_CONNECTED     1
 #define REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED     2
@@ -30,7 +29,16 @@ extern "C" {
 #define REPPANEL_WIFI_RECONNECTING  4
 #define REPPANEL_UART_CONNECTED     5
 
-#define VERSION_STR             "v0.1.0"
+    // Masks for rp_conn_stat
+#define REPPANEL_POWERON_MASK           0x01    // Init state (dummy)
+#define REPPANEL_WIFIINITED_MASK        0x02
+#define REPPANEL_UARTINITED_MASK        0x04
+#define REPPANEL_WIFICONNECTED_MASK     0x08    // Connected to Wifi AP
+#define REPPANEL_WIFIDUETCONNECTED_MASK 0x10    // Can communicate with Duet via WiFi
+#define REPPANEL_UARTDUETCONNECTED_MASK 0x20    // Can communicate with Duet via UART
+
+
+#define VERSION_STR             "v0.2.0"
 
 #define NUM_TEMPS_BUFF      15
 #define MAX_FILA_NAME_LEN   64
@@ -43,10 +51,10 @@ extern "C" {
 #define TREE_FOLDER_ELEM    0
 #define TREE_FILE_ELEM      1
 
-extern uint8_t reppanel_conn_status;    // See REPPANEL_NO_CONNECTION, REPPANEL_WIFI_CONNECTED, etc.
+extern int rp_conn_stat;    // REPPANEL_NO_CONNECTION, ... etc.
 
 extern lv_obj_t *process_scr;               // screen for the process settings
-extern lv_obj_t *mainmenu_scr;              // screen for the main_menue
+extern lv_obj_t *mainmenu_scr;              // screen for the main_menu
 extern lv_obj_t *cont_header;
 
 extern lv_obj_t *label_status;

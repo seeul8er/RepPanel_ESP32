@@ -118,7 +118,6 @@ void guiTask() {
     wifi_init_sta();
     init_uart();
 
-//    int c = 0;
     while (1) {
         vTaskDelay(1);
         //Try to lock the semaphore, if success, call lvgl stuff
@@ -126,11 +125,6 @@ void guiTask() {
             lv_task_handler();
             xSemaphoreGive(xGuiSemaphore);
         }
-//        uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
-//        if (c%50000 == 0) {
-//            c = 0;
-//            ESP_LOGI(TAG, "%i free bytes" , uxHighWaterMark*4);
-//        } else c++;
     }
     //A task should NEVER return
     vTaskDelete(NULL);

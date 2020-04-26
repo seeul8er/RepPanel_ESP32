@@ -26,7 +26,7 @@ void draw_main_menu(lv_obj_t *parent_screen);
  *  STATIC VARIABLES
  **********************/
 
-uint8_t reppanel_conn_status = REPPANEL_CONN_NOT_INITED;
+int rp_conn_stat = 0;
 
 lv_obj_t *process_scr;  // screen for the process settings
 lv_obj_t *machine_scr;
@@ -198,7 +198,7 @@ void draw_header(lv_obj_t *parent_screen) {
 
 void update_rep_panel_conn_status() {
     if (label_connection_status) {
-        switch (reppanel_conn_status) {
+        switch (rp_conn_stat) {
             default:
             case REPPANEL_NO_CONNECTION:     // no connection
                 lv_label_set_text_fmt(label_connection_status, "#e84e43 "LV_SYMBOL_WARNING"#");
