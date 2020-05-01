@@ -24,7 +24,7 @@ lv_obj_t *preloader;
 reprap_macro_t *edit_macro;
 char parent_dir[MAX_LEN_DIR];
 
-static void _exe_macro_file_handler(lv_obj_t *obj, lv_event_t event) {
+static void exe_macro_file_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         if (strcmp(lv_mbox_get_active_btn_text(msg_box3), "Yes") == 0) {
             ESP_LOGI(TAG, "Running file %s", lv_list_get_btn_text(obj));
@@ -38,7 +38,7 @@ static void _exe_macro_file_handler(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
-static void _macro_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
+static void macro_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         int selected_indx = lv_list_get_btn_index(macro_list, obj);
         // check if back button exists
@@ -50,7 +50,7 @@ static void _macro_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
                     preloader = lv_preload_create(lv_layer_top(), NULL);
                 lv_obj_set_size(preloader, 75, 75);
                 lv_obj_align_origo(preloader, lv_layer_top(), LV_ALIGN_CENTER, 0, 0);
-                request_macros_async(parent_dir);
+                request_macros(parent_dir);
                 return;
             } else {
                 // no back button pressed
@@ -68,7 +68,7 @@ static void _macro_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
             sprintf(msg, "Do you want to execute %s?", edit_macro->name);
             lv_mbox_set_text(msg_box3, msg);
             lv_mbox_add_btns(msg_box3, btns);
-            lv_obj_set_event_cb(msg_box3, _exe_macro_file_handler);
+            lv_obj_set_event_cb(msg_box3, exe_macro_file_handler);
             lv_obj_set_width(msg_box3, lv_disp_get_hor_res(NULL) - 20);
             lv_obj_align(msg_box3, lv_layer_top(), LV_ALIGN_CENTER, 0, 0);
         } else if (reprap_macros[selected_indx].type == TREE_FOLDER_ELEM) {
@@ -79,7 +79,7 @@ static void _macro_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
             lv_obj_align_origo(preloader, lv_layer_top(), LV_ALIGN_CENTER, 0, 0);
             static char tmp_txt[128];
             sprintf(tmp_txt, "%s/%s", edit_macro->dir, edit_macro->name);
-            request_macros_async(tmp_txt);
+            request_macros(tmp_txt);
         }
     }
 }
@@ -96,7 +96,7 @@ void update_macro_list_ui() {
     if (strcmp(((reprap_macro_t *) reprap_macros[0].element)->dir, MACRO_ROOT_DIR) != 0) {
         lv_obj_t *back_btn;
         back_btn = lv_list_add_btn(macro_list, LV_SYMBOL_LEFT, BACK_TXT);
-        lv_obj_set_event_cb(back_btn, _macro_clicked_event_handler);
+        lv_obj_set_event_cb(back_btn, macro_clicked_event_handler);
         // update parent dir
         strcpy(parent_dir, ((reprap_macro_t *) reprap_macros[0].element)->dir);
         char *pch;
@@ -112,7 +112,7 @@ void update_macro_list_ui() {
                                        ((reprap_macro_t *) reprap_macros[i].element)->name);
         else
             list_btn = lv_list_add_btn(macro_list, LV_SYMBOL_FILE, ((reprap_macro_t *) reprap_macros[i].element)->name);
-        lv_obj_set_event_cb(list_btn, _macro_clicked_event_handler);
+        lv_obj_set_event_cb(list_btn, macro_clicked_event_handler);
     }
 }
 
@@ -128,7 +128,7 @@ void draw_macro(lv_obj_t *parent_screen) {
     macro_list = lv_list_create(macro_container, NULL);
     lv_obj_set_size(macro_list, LV_HOR_RES - 10, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
 
-    request_macros_async("0:/macros");
+    request_macros("0:/macros");
 }
 
 #include "reppanel_macros.h"

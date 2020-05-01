@@ -60,13 +60,6 @@ void init_reprap_buffers() {
         reprap_jobs[i].type = TREE_EMPTY_ELEM;
         reprap_jobs[i].element = NULL;
     }
-    for (int i = 0; i < NUM_TEMPS_BUFF; i++) {
-        reprap_bed_poss_temps.temps_active[i] = -1;
-        reprap_bed_poss_temps.temps_standby[i] = -1;
-
-        reprap_tool_poss_temps.temps_active[i] = -1;
-        reprap_tool_poss_temps.temps_standby[i] = -1;
-    }
     for (int i = 0; i < MAX_CONSOLE_ENTRY_COUNT; i++) {
         console_enties[i] = (console_entry_t) {"", "", CONSOLE_TYPE_EMPTY};
     }

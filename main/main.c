@@ -26,17 +26,10 @@
 double reprap_chamber_temp_buff[NUM_TEMPS_BUFF] = {0};
 int reprap_chamber_temp_curr_pos = 0;
 double reprap_babysteps_amount = 0.05;
-double reprap_extruder_amounts[NUM_TEMPS_BUFF];
-double reprap_extruder_feedrates[NUM_TEMPS_BUFF];
 double reprap_move_feedrate = 6000;
 double reprap_mcu_temp = 0;
 char reprap_firmware_name[100];
 char reprap_firmware_version[5];
-int num_tools = 0;
-reprap_tool_t reprap_tools[MAX_NUM_TOOLS];
-reprap_bed_t reprap_bed;
-reprap_tool_poss_temps_t reprap_tool_poss_temps;
-reprap_bed_poss_temps_t reprap_bed_poss_temps;
 
 //Creates a semaphore to handle concurrent call to lvgl stuff
 //If you wish to call *any* lvgl function from other threads/tasks

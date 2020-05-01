@@ -36,6 +36,14 @@ lv_obj_t *popup_page;
 lv_obj_t *ddlist_selected_filament;
 static lv_obj_t *cont_filament;
 
+int num_tools = 0;
+reprap_tool_t reprap_tools[MAX_NUM_TOOLS];
+reprap_bed_t reprap_bed;
+reprap_tool_poss_temps_t reprap_tool_poss_temps;
+reprap_bed_poss_temps_t reprap_bed_poss_temps;
+double reprap_extruder_amounts[NUM_TEMPS_BUFF];
+double reprap_extruder_feedrates[NUM_TEMPS_BUFF];
+
 int current_visible_tool_indx = 0;     // heater/tool/extruder that is currently visible within the UI
 
 /**
@@ -354,7 +362,7 @@ static void _set_bed_temp_status_event_handler(lv_obj_t *obj, lv_event_t event) 
                 temp_map_tmp[map_indx] = "\n";
                 map_indx++;
             }
-            if (temps[i] > 0) {
+            if (temps[i] >= 0) {
                 sprintf(txt[i], "%.0f°%c", temps[i], get_temp_unit());
                 temp_map_tmp[map_indx] = txt[i];
             } else {
@@ -375,7 +383,7 @@ static void _set_bed_temp_status_event_handler(lv_obj_t *obj, lv_event_t event) 
     }
 }
 
-static void _filament_change_event(lv_obj_t *obj, lv_event_t event) {
+static void filament_change_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         cont_fila_overlay = lv_cont_create(lv_layer_top(), NULL);
         static lv_style_t somestyle;
@@ -530,7 +538,7 @@ void draw_process(lv_obj_t *parent_screen) {
     lv_label_set_text_fmt(label_tool_temp_standby, "%.0f°%c", reprap_tools[current_visible_tool_indx].standby_temp,
                           get_temp_unit());
 
-    create_button(holder3, button_tool_filament, "Filament", _filament_change_event);
+    create_button(holder3, button_tool_filament, "Filament", filament_change_event);
 
     // light big font for current temps
     static lv_style_t style_label;

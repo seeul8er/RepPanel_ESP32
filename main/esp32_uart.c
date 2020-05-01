@@ -98,40 +98,6 @@ int reppanel_read_uart(uart_response_buff_t *receive_buff) {
     }
 }
 
-//int readline(char readch, uart_response_buff_t *receive_buff) {
-//    static int pos = 0;
-//    int rpos;
-//    if (readch > 0) {
-//        switch (readch) {
-//            case '\n': // Return on new-line
-//                rpos = pos;
-//                pos = 0;  // Reset position index ready for next time
-//                receive_buff->buf_pos = rpos;
-//                return rpos;
-//            default:
-//                if (pos < UART_RESP_BUFF_SIZE-1) {
-//                    receive_buff->buffer[pos++] = readch;
-//                    receive_buff->buffer[pos] = 0;
-//                }
-//        }
-//    }
-//    return 0;
-//}
-
-//bool reppanel_read_response(uart_response_buff_t *receive_buff) {
-//    uint8_t data = 0;
-//    while(1) {
-//        int len = uart_read_bytes(uart_num, &data, 1, 20 / portTICK_RATE_MS);
-//        if (len > 0 && readline(data, receive_buff) > 0) {
-//            ESP_LOGI(TAG, "---> Response complete with %i bytes", receive_buff->buf_pos);
-//            receive_buff->buffer[receive_buff->buf_pos] = '\0';   // replace new line with string end char to pars JSON
-//            ESP_LOGI(TAG, "%s", receive_buff->buffer);
-//            timeout_cnt = 0;
-//            return true;
-//        }
-//    }
-//}
-
 void read_timeout() {
     timeout_cnt++;
     ESP_LOGW(TAG, "Read timeout");
@@ -172,6 +138,6 @@ bool reppanel_read_response(uart_response_buff_t *receive_buff) {
     timeout_cnt = 0;
     ESP_LOGI(TAG, "---> Response complete with %i bytes", receive_buff->buf_pos);
     receive_buff->buffer[receive_buff->buf_pos-1] = '\0';   // replace new line with string end char to pars JSON
-    ESP_LOGI(TAG, "%s", receive_buff->buffer);
+    ESP_LOGD(TAG, "%s", receive_buff->buffer);
     return true;
 }

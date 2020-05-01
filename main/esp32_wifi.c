@@ -9,6 +9,7 @@
 #include <string.h>
 #include "main.h"
 #include <lvgl/src/lv_font/lv_symbol_def.h>
+#include <mdns.h>
 
 #include "esp32_settings.h"
 #include "reppanel.h"
@@ -21,6 +22,26 @@
 
 static EventGroupHandle_t s_wifi_event_group;
 static int s_retry_num = 0;
+
+void resolve_mdns_host(const char * host_name)
+{
+    ESP_LOGI(TAG, "Query A: %s.local", host_name);
+
+    struct ip4_addr addr;
+    addr.addr = 0;
+
+    esp_err_t err = mdns_query_a(host_name, 2000,  &addr);
+    if(err){
+        if(err == ESP_ERR_NOT_FOUND){
+            ESP_LOGI(TAG, "Host was not found!");
+            return;
+        }
+        ESP_LOGI(TAG, "Query Failed");
+        return;
+    }
+
+    ESP_LOGI(TAG, IPSTR, IP2STR(&addr));
+}
 
 static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
@@ -46,6 +67,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
         if (rp_conn_stat != REPPANEL_UART_CONNECTED)
             rp_conn_stat = REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED;
+        resolve_mdns_host("cyberprint");
     }
     if (xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
         update_rep_panel_conn_status();
@@ -57,6 +79,7 @@ void wifi_init_sta() {
     s_wifi_event_group = xEventGroupCreate();
     tcpip_adapter_init();
     ESP_ERROR_CHECK(esp_event_loop_create_default());
+
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 

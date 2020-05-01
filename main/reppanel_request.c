@@ -26,7 +26,7 @@
 static wifi_response_buff_t resp_buff_gui_task;
 
 static bool got_filaments = false;
-static bool got_status_two = false;
+static bool got_extended_status = false;
 static bool got_duet_settings = false;
 static bool duet_request_macros = false;
 static bool duet_request_jobs = false;
@@ -37,7 +37,7 @@ int seq_num_msgbox = 0;
 int last_status_seq = -1;
 
 static bool uart_request_file_info = false;
-static char uart_file_path[512];
+static char request_file_path[512];
 
 const char *decode_reprap_status(const char *valuestring) {
     job_paused = false;
@@ -86,7 +86,7 @@ const char *decode_reprap_status(const char *valuestring) {
     return "UnknownStatus";
 }
 
-void process_reprap_status(char *buff, int type) {
+void process_reprap_status(char *buff) {
     cJSON *root = cJSON_Parse(buff);
     if (root == NULL) {
         const char *error_ptr = cJSON_GetErrorPtr();
@@ -216,44 +216,42 @@ void process_reprap_status(char *buff, int type) {
         last_status_seq = duet_seq->valueint;
     }
 
-    if (type == 2) {
-        got_status_two = true;  // TODO: Not the same for WiFi and UART
-        // Get tool information
-        pos = 0;
-        cJSON *tools = cJSON_GetObjectItem(root, DUET_TOOLS);
-        if (tools != NULL) {
-            cJSON_ArrayForEach(iterator, tools) {
-                if (cJSON_IsObject(iterator)) {
-                    if (cJSON_IsNumber(cJSON_GetObjectItem(iterator, "number")))
-                        reprap_tools[pos].number = cJSON_GetObjectItem(iterator, "number")->valueint;
-                    if (cJSON_IsString(cJSON_GetObjectItem(iterator, "name")))
-                        strncpy(reprap_tools[pos].name, cJSON_GetObjectItem(iterator, "name")->valuestring,
-                                MAX_TOOL_NAME_LEN);
-                    if (cJSON_IsString(cJSON_GetObjectItem(iterator, "filament")))
-                        strncpy(reprap_tools[pos].filament, cJSON_GetObjectItem(iterator, "filament")->valuestring,
-                                MAX_FILA_NAME_LEN);
-                    if (cJSON_IsArray(cJSON_GetObjectItem(iterator, "heaters"))) {
-                        // Ignore multiple heaters per tool
-                        cJSON *heaterindx_item = cJSON_GetArrayItem(cJSON_GetObjectItem(iterator, "heaters"), 0);
-                        reprap_tools[pos].heater_indx = heaterindx_item->valueint;
-                    }
-                    pos++;
+    // Get tool information
+    pos = 0;
+    cJSON *tools = cJSON_GetObjectItem(root, DUET_TOOLS);
+    if (tools != NULL) {
+        cJSON_ArrayForEach(iterator, tools) {
+            if (cJSON_IsObject(iterator)) {
+                if (cJSON_IsNumber(cJSON_GetObjectItem(iterator, "number")))
+                    reprap_tools[pos].number = cJSON_GetObjectItem(iterator, "number")->valueint;
+                if (cJSON_IsString(cJSON_GetObjectItem(iterator, "name")))
+                    strncpy(reprap_tools[pos].name, cJSON_GetObjectItem(iterator, "name")->valuestring,
+                            MAX_TOOL_NAME_LEN);
+                if (cJSON_IsString(cJSON_GetObjectItem(iterator, "filament")))
+                    strncpy(reprap_tools[pos].filament, cJSON_GetObjectItem(iterator, "filament")->valuestring,
+                            MAX_FILA_NAME_LEN);
+                if (cJSON_IsArray(cJSON_GetObjectItem(iterator, "heaters"))) {
+                    // Ignore multiple heaters per tool
+                    cJSON *heaterindx_item = cJSON_GetArrayItem(cJSON_GetObjectItem(iterator, "heaters"), 0);
+                    reprap_tools[pos].heater_indx = heaterindx_item->valueint;
                 }
+                pos++;
             }
         }
-        num_tools = pos;
-
-        // Get firmware information
-        cJSON *mcutemp = cJSON_GetObjectItem(root, DUET_MCU_TEMP);
-        if (mcutemp)
-            reprap_mcu_temp = cJSON_GetObjectItem(mcutemp, "cur")->valuedouble;
-        cJSON *firmware_name = cJSON_GetObjectItem(root, DUET_FIRM_NAME);
-        if (firmware_name)
-            strncpy(reprap_firmware_name, firmware_name->valuestring, sizeof(reprap_firmware_name));
-        cJSON *firmware_version = cJSON_GetObjectItem(root, DUET_FIRM_VER);
-        if (firmware_version)
-            strncpy(reprap_firmware_version, firmware_version->valuestring, sizeof(reprap_firmware_version));
+        got_extended_status = true;  // TODO: Not the same for WiFi and UART autoremove
     }
+    num_tools = pos;
+
+    // Get firmware information
+    cJSON *mcutemp = cJSON_GetObjectItem(root, DUET_MCU_TEMP);
+    if (mcutemp)
+        reprap_mcu_temp = cJSON_GetObjectItem(mcutemp, "cur")->valuedouble;
+    cJSON *firmware_name = cJSON_GetObjectItem(root, DUET_FIRM_NAME);
+    if (firmware_name)
+        strncpy(reprap_firmware_name, firmware_name->valuestring, sizeof(reprap_firmware_name));
+    cJSON *firmware_version = cJSON_GetObjectItem(root, DUET_FIRM_VER);
+    if (firmware_version)
+        strncpy(reprap_firmware_version, firmware_version->valuestring, sizeof(reprap_firmware_version));
 
     // Get current tool temperatures
     cJSON *duet_temps_current = cJSON_GetObjectItem(duet_temps, DUET_TEMPS_CURRENT);
@@ -310,7 +308,7 @@ void process_reprap_status(char *buff, int type) {
         update_bed_temps_ui();  // update UI with new values
         update_heater_status_ui(_heater_states, num_heaters);  // update UI with new values
         update_current_tool_temps_ui();     // update UI with new values
-        if (type == 2 && label_extruder_name != NULL) {
+        if (got_extended_status && label_extruder_name != NULL) {
             lv_label_set_text(label_extruder_name, reprap_tools[current_visible_tool_indx].name);
         }
         if (got_printjob_status) update_print_job_status_ui();
@@ -397,6 +395,7 @@ void process_reprap_settings(char *buff) {
             pos++;
         }
     }
+    ESP_LOGI(TAG, "Got D2WC status json");
     got_duet_settings = true;
     cJSON_Delete(root);
 }
@@ -589,7 +588,7 @@ void process_reprap_reply(wifi_response_buff_t *response_buffer) {
 
 void reprap_uart_send_gcode(char *gcode) {
     reppanel_write_uart(gcode, strlen(gcode));
-    ESP_LOGI(TAG, "Sent %s", gcode);
+    ESP_LOGD(TAG, "Sent %s", gcode);
 }
 
 void reprap_uart_get_status(uart_response_buff_t *receive_buff, int type) {
@@ -598,13 +597,13 @@ void reprap_uart_get_status(uart_response_buff_t *receive_buff, int type) {
     sprintf(buff, "M408 S%i", type);
     reprap_uart_send_gcode(buff);
     if (reppanel_read_response(receive_buff)) {
-        process_reprap_status((char *) receive_buff->buffer, type);
+        process_reprap_status((char *) receive_buff->buffer);
     }
 }
 
 void reprap_uart_get_file_info(uart_response_buff_t *receive_buff) {
     char buff[524];
-    sprintf(buff, "M36 \"%s\"", uart_file_path);
+    sprintf(buff, "M36 \"%s\"", request_file_path);
     reprap_uart_send_gcode(buff);
     if (reppanel_read_response(receive_buff)) {
         process_reprap_fileinfo((char *) receive_buff->buffer);
@@ -626,8 +625,9 @@ void reprap_uart_get_filelist(uart_response_buff_t *receive_buff, char *path) {
  */
 void reprap_uart_download(uart_response_buff_t *receive_buff, char *path) {
     ESP_LOGI(TAG, "Setting hardcoded values for bed/tool temperatures");
-    static double bed_temps_hardcoded[] = {0, 30, 40, 60, 80, 100, 105, 110};  // max len 15
-    static double tool_temps_hardcoded[] = {0, 160, 180, 185, 190, 200, 210, 250, 265, 280};  // max len 15
+    // max len NUM_TEMPS_BUFF, last must be <0
+    static double bed_temps_hardcoded[] = {0, 30, 40, 60, 63, 70, 80, 90, 100, 105, 110, -1};
+    static double tool_temps_hardcoded[] = {0, 160, 180, 190, 200, 210, 230, 240, 250, 260, 270, 280, -1};
     memcpy(reprap_bed_poss_temps.temps_standby, bed_temps_hardcoded, sizeof(bed_temps_hardcoded));
     memcpy(reprap_bed_poss_temps.temps_active, bed_temps_hardcoded, sizeof(bed_temps_hardcoded));
     memcpy(reprap_tool_poss_temps.temps_standby, tool_temps_hardcoded, sizeof(tool_temps_hardcoded));
@@ -711,7 +711,7 @@ void reprap_wifi_get_status(wifi_response_buff_t *resp_buff, int type) {
                 status_request_err_cnt = 0;
                 if (rp_conn_stat != REPPANEL_UART_CONNECTED)
                     rp_conn_stat = REPPANEL_WIFI_CONNECTED;
-                process_reprap_status(resp_buff->buffer, type);
+                process_reprap_status(resp_buff->buffer);
                 break;
             case 401:
                 ESP_LOGI(TAG, "Authorising with Duet");
@@ -821,8 +821,7 @@ void reprap_wifi_get_filelist(wifi_response_buff_t *resp_buffer, char *directory
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
-        ESP_LOGI(TAG, "Status = %d, content_length = %d",
-                 esp_http_client_get_status_code(client),
+        ESP_LOGI(TAG, "Got file list via WiFi %d",
                  esp_http_client_get_content_length(client));
 
         switch (esp_http_client_get_status_code(client)) {
@@ -852,8 +851,8 @@ void reprap_wifi_get_filelist_task(void *params) {
     char encoded_dir[strlen(directory) * 3];
     url_encode((unsigned char *) directory, encoded_dir);
     sprintf(request_addr, "%s/rr_filelist?dir=%s&first=0", rep_addr, encoded_dir);
-    ESP_LOGI("FileListTask", "Unformatted: %s", directory);
-    ESP_LOGI("FileListTask", "Request: %s", request_addr);
+    ESP_LOGD("FileListTask", "Unformatted: %s", directory);
+    ESP_LOGD("FileListTask", "Request: %s", request_addr);
     wifi_response_buff_t resp_buff_filelist_task;
     esp_http_client_config_t config = {
             .url = request_addr,
@@ -1023,10 +1022,11 @@ bool reprap_send_gcode(char *gcode_command) {
  */
 void request_macros_async(char *folder_path) {
     if (rp_conn_stat == REPPANEL_WIFI_CONNECTED) {
-        ESP_LOGI(TAG, "Requesting macros");
+        ESP_LOGW(TAG, "Requesting macros async not stable!");
         TaskHandle_t get_filelist_async_task_handle = NULL;
-        xTaskCreate(reprap_wifi_get_filelist_task, "macros request task", 1024 * 3, folder_path,
+        xTaskCreate(reprap_wifi_get_filelist_task, "macros request task", 1024 * 5, folder_path,
                     tskIDLE_PRIORITY, &get_filelist_async_task_handle);
+        configASSERT(get_filelist_async_task_handle);
     } else if (rp_conn_stat == REPPANEL_UART_CONNECTED) {
         request_macros(folder_path);
     }
@@ -1035,9 +1035,10 @@ void request_macros_async(char *folder_path) {
 void request_macros(char *folder_path) {
     if (rp_conn_stat == REPPANEL_WIFI_CONNECTED) {
         ESP_LOGI(TAG, "Requesting macros");
-        reprap_wifi_get_filelist(&resp_buff_gui_task, "0:/macros");
+        strncpy(request_file_path, folder_path, sizeof(request_file_path));  // buffer path to request
+        duet_request_macros = true; // Set flag - processed by status update task
     } else if (rp_conn_stat == REPPANEL_UART_CONNECTED) {
-        strncpy(uart_file_path, folder_path, sizeof(uart_file_path));  // buffer path to request
+        strncpy(request_file_path, folder_path, sizeof(request_file_path));  // buffer path to request
         duet_request_macros = true;
     }
 }
@@ -1053,9 +1054,9 @@ void request_fileinfo(char *file_name) {
     } else if (rp_conn_stat == REPPANEL_UART_CONNECTED) {
         uart_request_file_info = true;
         if (file_name != NULL)
-            strncpy(uart_file_path, file_name, sizeof(uart_file_path));
+            strncpy(request_file_path, file_name, sizeof(request_file_path));
         else
-            strcpy(uart_file_path, "");
+            strcpy(request_file_path, "");
     }
 }
 
@@ -1064,10 +1065,11 @@ void request_fileinfo(char *file_name) {
  */
 void request_jobs_async(char *folder_path) {
     if (rp_conn_stat == REPPANEL_WIFI_CONNECTED) {
-        ESP_LOGI(TAG, "Requesting jobs");
+        ESP_LOGW(TAG, "Requesting jobs async not stable");
         TaskHandle_t get_filelist_async_task_handle = NULL;
-        xTaskCreate(reprap_wifi_get_filelist_task, "jobs request task", 1024 * 3, folder_path,
+        xTaskCreate(reprap_wifi_get_filelist_task, "jobs request task", 1024 * 5, folder_path,
                     tskIDLE_PRIORITY, &get_filelist_async_task_handle);
+        configASSERT(get_filelist_async_task_handle);
     } else if (rp_conn_stat == REPPANEL_UART_CONNECTED) {
         request_jobs(folder_path);
     }
@@ -1076,9 +1078,10 @@ void request_jobs_async(char *folder_path) {
 void request_jobs(char *folder_path) {
     if (rp_conn_stat == REPPANEL_WIFI_CONNECTED) {
         ESP_LOGI(TAG, "Requesting jobs");
-        reprap_wifi_get_filelist(&resp_buff_gui_task, "0:/gcodes");
+        strncpy(request_file_path, folder_path, sizeof(request_file_path));  // buffer path to request
+        duet_request_jobs = true; // Set flag - processed by status update task
     } else if (rp_conn_stat == REPPANEL_UART_CONNECTED) {
-        strncpy(uart_file_path, folder_path, sizeof(uart_file_path));  // buffer path to request
+        strncpy(request_file_path, folder_path, sizeof(request_file_path));  // buffer path to request
         duet_request_jobs = true;   // set flag so task knows what to do in next iteration
     }
 }
@@ -1095,6 +1098,7 @@ void request_reprap_status_updates(void *params) {
     UBaseType_t uxHighWaterMark;
     uart_response_buff_t uart_receive_buff;
     wifi_response_buff_t resp_buff_status_update_task;
+
     while (1) {
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
         if (rp_conn_stat == REPPANEL_UART_CONNECTED) {
@@ -1104,14 +1108,14 @@ void request_reprap_status_updates(void *params) {
             if (!got_filaments) reprap_uart_get_filelist(&uart_receive_buff, "0:/filaments");
             if (uart_request_file_info) reprap_uart_get_file_info(&uart_receive_buff);
             if (duet_request_jobs) {
-                reprap_uart_get_filelist(&uart_receive_buff, uart_file_path);
+                reprap_uart_get_filelist(&uart_receive_buff, request_file_path);
                 duet_request_jobs = false;
             }
             if (duet_request_macros) {
-                reprap_uart_get_filelist(&uart_receive_buff, uart_file_path);
+                reprap_uart_get_filelist(&uart_receive_buff, request_file_path);
                 duet_request_macros = false;
             }
-            if (!got_status_two) reprap_uart_get_status(&uart_receive_buff, 3);
+            if (!got_extended_status) reprap_uart_get_status(&uart_receive_buff, 3);
             if (!job_running)
                 reprap_uart_get_status(&uart_receive_buff, 0);
             else
@@ -1127,8 +1131,18 @@ void request_reprap_status_updates(void *params) {
             if (!got_duet_settings)
                 reprap_wifi_download(&resp_buff_status_update_task, "0%3A%2Fsys%2Fdwc2settings.json");
             if (!got_filaments) reprap_wifi_get_filelist(&resp_buff_gui_task, "0:/filaments&first=0");
-            if (!got_status_two) reprap_wifi_get_status(&resp_buff_status_update_task, 2);
+            if (!got_extended_status) reprap_wifi_get_status(&resp_buff_status_update_task, 2);
             if (duet_request_reply) reprap_wifi_get_rreply(&resp_buff_status_update_task);
+            // for synchron request of jobs
+            if (duet_request_jobs) {
+                reprap_wifi_get_filelist(&resp_buff_status_update_task, request_file_path);
+                duet_request_jobs = false;
+            }
+            // for synchron request of macros
+            if (duet_request_macros) {
+                reprap_wifi_get_filelist(&resp_buff_gui_task, request_file_path);
+                duet_request_macros = false;
+            }
             if (!job_running)
                 reprap_wifi_get_status(&resp_buff_status_update_task, 0);
             else
