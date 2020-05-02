@@ -360,17 +360,20 @@ static void _set_bed_temp_status_event_handler(lv_obj_t *obj, lv_event_t event) 
         for (int i = 0; i < NUM_TEMPS_BUFF + 1; i++) {
             if (i != 0 && i % 4 == 0) {
                 temp_map_tmp[map_indx] = "\n";
+                ESP_LOGI(TAG, "%s", temp_map_tmp[map_indx]);
                 map_indx++;
             }
-            if (temps[i] >= 0) {
+            if (temps[i] >= 0 && i != (NUM_TEMPS_BUFF - 1)) {
                 sprintf(txt[i], "%.0f°%c", temps[i], get_temp_unit());
                 temp_map_tmp[map_indx] = txt[i];
             } else {
                 temp_map_tmp[map_indx] = "";
                 break;
             }
+            ESP_LOGI(TAG, "%s", temp_map_tmp[map_indx]);
             map_indx++;
         }
+        temp_map_tmp[map_indx] = "";    // just to be sure. Last element has to be empty
         lv_btnm_set_map(btn_matrix, (const char **) temp_map_tmp);
         lv_obj_set_event_cb(btn_matrix, _change_tmp_event_handler);
         lv_obj_align(btn_matrix, NULL, LV_ALIGN_CENTER, 0, 0);

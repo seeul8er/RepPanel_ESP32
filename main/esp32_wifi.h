@@ -5,6 +5,9 @@
 #ifndef REPPANEL_ESP32_ESP32_WIFI_H
 #define REPPANEL_ESP32_ESP32_WIFI_H
 
+void find_mdns_service(const char *service_name, const char *proto);
+int resolve_mdns_host(const char *host_name, char *result_ip);
+
 void wifi_init_sta();
 
 void reconnect_wifi();

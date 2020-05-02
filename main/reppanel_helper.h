@@ -11,7 +11,11 @@ LV_FONT_DECLARE(reppanel_font_roboto_light_36)
 LV_FONT_DECLARE(reppanel_font_roboto_bold_22)
 LV_FONT_DECLARE(reppanel_font_roboto_regular_22)
 
+char *get_version_string();
+
 char *url_encode(unsigned char *s, char *enc);
+
+bool ends_with(const char *base, char *str);
 
 void init_reprap_buffers();
 
@@ -19,7 +23,9 @@ lv_obj_t *create_button(lv_obj_t *parent, lv_obj_t *button_pnt, char *text, void
 
 void reppanel_disp_msg(char *msg_txt);
 
-void _duet_show_dialog(char *title, char *msg);
+void duet_show_dialog(char *title, char *msg);
+
+void get_avail_duets(char *txt_buffer);
 
 void RepPanelLogE(char *tag, char *msg);
 

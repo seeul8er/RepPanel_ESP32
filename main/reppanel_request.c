@@ -19,11 +19,13 @@
 #include "reppanel_console.h"
 #include "reppanel_machine.h"
 #include "esp32_uart.h"
+#include "esp32_wifi.h"
 
 #define TAG                 "RequestTask"
 #define REQUEST_TIMEOUT_MS  150
 
 static wifi_response_buff_t resp_buff_gui_task;
+char rep_addr_resolved[256];
 
 static bool got_filaments = false;
 static bool got_extended_status = false;
@@ -314,7 +316,7 @@ void process_reprap_status(char *buff) {
         if (got_printjob_status) update_print_job_status_ui();
         if (disp_msg) reppanel_disp_msg(msg_txt);
         if (disp_h_msgbox) show_height_adjust_dialog();
-        if (disp_msgbox) _duet_show_dialog(msg_title, msg_msg);
+        if (disp_msgbox) duet_show_dialog(msg_title, msg_msg);
         update_rep_panel_conn_status();
         xSemaphoreGive(xGuiSemaphore);
     }
@@ -580,7 +582,7 @@ void process_reprap_reply(wifi_response_buff_t *response_buffer) {
     duet_request_reply = false;
     if (response_buffer->buf_pos > 1) {
         if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
-            _duet_show_dialog("Response to G-Code", response_buffer->buffer);
+            duet_show_dialog("Response to G-Code", response_buffer->buffer);
             xSemaphoreGive(xGuiSemaphore);
         }
     }
@@ -673,7 +675,7 @@ esp_err_t http_event_handle(esp_http_client_event_t *evt) {
 
 void wifi_duet_authorise(wifi_response_buff_t *buffer, bool get_d2wc_config) {
     char printer_url[MAX_REQ_ADDR_LENGTH];
-    sprintf(printer_url, "%s/rr_connect?password=%s", rep_addr, rep_pass);
+    sprintf(printer_url, "%s/rr_connect?password=%s", rep_addr_resolved, rep_pass);
     esp_http_client_config_t config = {
             .url = printer_url,
             .timeout_ms = REQUEST_TIMEOUT_MS,
@@ -695,7 +697,7 @@ void wifi_duet_authorise(wifi_response_buff_t *buffer, bool get_d2wc_config) {
 void reprap_wifi_get_status(wifi_response_buff_t *resp_buff, int type) {
     ESP_LOGI(TAG, "Getting status %i", type);
     char request_addr[MAX_REQ_ADDR_LENGTH];
-    sprintf(request_addr, "%s/rr_status?type=%i", rep_addr, type);
+    sprintf(request_addr, "%s/rr_status?type=%i", rep_addr_resolved, type);
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
@@ -737,7 +739,7 @@ void reprap_wifi_get_status(wifi_response_buff_t *resp_buff, int type) {
 
 void reprap_wifi_get_rreply(wifi_response_buff_t *response_buffer) {
     char request_addr[MAX_REQ_ADDR_LENGTH];
-    sprintf(request_addr, "%s/rr_reply", rep_addr);
+    sprintf(request_addr, "%s/rr_reply", rep_addr_resolved);
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = 1000,
@@ -771,7 +773,7 @@ bool reprap_wifi_send_gcode(char *gcode) {
     char request_addr[MAX_REQ_ADDR_LENGTH];
     char encoded_gcode[strlen(gcode) * 3];
     url_encode((unsigned char *) gcode, encoded_gcode);
-    sprintf(request_addr, "%s/rr_gcode?gcode=%s", rep_addr, encoded_gcode);
+    sprintf(request_addr, "%s/rr_gcode?gcode=%s", rep_addr_resolved, encoded_gcode);
     ESP_LOGV(TAG, "%s", request_addr);
     esp_http_client_config_t config = {
             .url = request_addr,
@@ -809,7 +811,7 @@ void reprap_wifi_get_filelist(wifi_response_buff_t *resp_buffer, char *directory
     char request_addr[MAX_REQ_ADDR_LENGTH];
     char encoded_dir[strlen(directory) * 3];
     url_encode((unsigned char *) directory, encoded_dir);
-    sprintf(request_addr, "%s/rr_filelist?dir=%s", rep_addr, encoded_dir);
+    sprintf(request_addr, "%s/rr_filelist?dir=%s", rep_addr_resolved, encoded_dir);
     ESP_LOGI(TAG, "%s", request_addr);
     esp_http_client_config_t config = {
             .url = request_addr,
@@ -850,7 +852,7 @@ void reprap_wifi_get_filelist_task(void *params) {
     char request_addr[MAX_REQ_ADDR_LENGTH];
     char encoded_dir[strlen(directory) * 3];
     url_encode((unsigned char *) directory, encoded_dir);
-    sprintf(request_addr, "%s/rr_filelist?dir=%s&first=0", rep_addr, encoded_dir);
+    sprintf(request_addr, "%s/rr_filelist?dir=%s&first=0", rep_addr_resolved, encoded_dir);
     ESP_LOGD("FileListTask", "Unformatted: %s", directory);
     ESP_LOGD("FileListTask", "Request: %s", request_addr);
     wifi_response_buff_t resp_buff_filelist_task;
@@ -891,9 +893,9 @@ void reprap_wifi_get_fileinfo(wifi_response_buff_t *resp_data, char *filename) {
     if (filename != NULL) {
         char encoded_filename[strlen(filename) * 3];
         url_encode((unsigned char *) filename, encoded_filename);
-        sprintf(request_addr, "%s/rr_fileinfo?dir=%s", rep_addr, encoded_filename);
+        sprintf(request_addr, "%s/rr_fileinfo?dir=%s", rep_addr_resolved, encoded_filename);
     } else {
-        sprintf(request_addr, "%s/rr_fileinfo", rep_addr);
+        sprintf(request_addr, "%s/rr_fileinfo", rep_addr_resolved);
     }
     ESP_LOGI(TAG, "Getting file info %s", request_addr);
     esp_http_client_config_t config = {
@@ -929,7 +931,7 @@ void reprap_wifi_get_fileinfo(wifi_response_buff_t *resp_data, char *filename) {
 
 void reprap_wifi_get_config() {
     char request_addr[MAX_REQ_ADDR_LENGTH];
-    sprintf(request_addr, "%s/rr_config", rep_addr);
+    sprintf(request_addr, "%s/rr_config", rep_addr_resolved);
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
@@ -961,7 +963,7 @@ void reprap_wifi_get_config() {
 void reprap_wifi_download(wifi_response_buff_t *response_buffer, char *file) {
     ESP_LOGI(TAG, "Downloading %s", file);
     char request_addr[MAX_REQ_ADDR_LENGTH];
-    sprintf(request_addr, "%s/rr_download?name=%s", rep_addr, file);
+    sprintf(request_addr, "%s/rr_download?name=%s", rep_addr_resolved, file);
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
@@ -1086,6 +1088,21 @@ void request_jobs(char *folder_path) {
     }
 }
 
+void update_printer_addr() {
+    ESP_LOGI(TAG, "Updating printer address");
+    if (ends_with(rep_addr, ".local")) {
+        char tmp_addr[strlen(rep_addr)];
+        strcpy(tmp_addr, rep_addr);
+        tmp_addr[strlen(tmp_addr) - 6] = '\0';
+        strcpy(tmp_addr, &tmp_addr[7]);
+        ESP_LOGI(TAG, "Resolving %s", tmp_addr);
+        char tmp_res[32];
+        if (resolve_mdns_host(tmp_addr, tmp_res)) {
+            strcpy(rep_addr_resolved, tmp_res);
+        }
+    }
+}
+
 /**
  * Called every 750ms
  * @param task
@@ -1094,11 +1111,17 @@ void request_reprap_status_updates(void *params) {
     TickType_t xLastWakeTime;
     const TickType_t xFrequency = (500 / portTICK_PERIOD_MS);
     xLastWakeTime = xTaskGetTickCount();
-    int i = 8;
+    int i = 8, b = 0;
     UBaseType_t uxHighWaterMark;
     uart_response_buff_t uart_receive_buff;
     wifi_response_buff_t resp_buff_status_update_task;
-
+    while (strlen(rep_addr) < 1) {  // wait till request addr is set
+        vTaskDelayUntil(&xLastWakeTime, xFrequency);
+    }
+    ESP_LOGI(TAG, "%s", rep_addr);
+    strncpy(rep_addr_resolved, rep_addr, 256);
+    ESP_LOGI(TAG, "%s", rep_addr_resolved);
+    update_printer_addr();
     while (1) {
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
         if (rp_conn_stat == REPPANEL_UART_CONNECTED) {
@@ -1163,6 +1186,10 @@ void request_reprap_status_updates(void *params) {
             } else {
                 i++;
             }
+            if (b % 50000 == 0) {
+                update_printer_addr();
+                b = 0;
+            } else { b++; }
         } else {
             if (reppanel_is_uart_connected()) {
                 rp_conn_stat = REPPANEL_UART_CONNECTED;
@@ -1174,7 +1201,7 @@ void request_reprap_status_updates(void *params) {
             }
         }
         uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-        // ESP_LOGI(TAG, "%i free bytes", uxHighWaterMark * 4);
+        ESP_LOGD(TAG, "%i free bytes", uxHighWaterMark * 4);
     }
     vTaskDelete(NULL);
 }

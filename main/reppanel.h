@@ -38,7 +38,9 @@ extern "C" {
 #define REPPANEL_UARTDUETCONNECTED_MASK 0x20    // Can communicate with Duet via UART
 
 
-#define VERSION_STR             "v0.2.0"
+#define VERSION_MAJOR           0
+#define VERSION_MINOR           2
+#define VERSION_HOTFIX          0
 
 #define NUM_TEMPS_BUFF      15
 #define MAX_FILA_NAME_LEN   64

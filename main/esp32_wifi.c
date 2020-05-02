@@ -23,24 +23,87 @@
 static EventGroupHandle_t s_wifi_event_group;
 static int s_retry_num = 0;
 
-void resolve_mdns_host(const char * host_name)
-{
-    ESP_LOGI(TAG, "Query A: %s.local", host_name);
-
+int resolve_mdns_host(const char *host_name, char *result_ip) {
+    ESP_LOGI(TAG, "Query A: %s", host_name);
     struct ip4_addr addr;
     addr.addr = 0;
-
-    esp_err_t err = mdns_query_a(host_name, 2000,  &addr);
-    if(err){
-        if(err == ESP_ERR_NOT_FOUND){
+    esp_err_t err = mdns_query_a(host_name, 2000, &addr);
+    if (err) {
+        if (err == ESP_ERR_NOT_FOUND) {
             ESP_LOGI(TAG, "Host was not found!");
-            return;
+            return 0;
         }
-        ESP_LOGI(TAG, "Query Failed");
+        ESP_LOGI(TAG, "Query failed: %s", esp_err_to_name(err));
+        return 0;
+    }
+    ESP_LOGI(TAG, IPSTR, IP2STR(&addr));
+    sprintf(result_ip, "http://"IPSTR, IP2STR(&addr));
+    return 1;
+}
+
+void mdns_print_results(mdns_result_t *results) {
+    const char *if_str[] = {"STA", "AP", "ETH", "MAX"};
+    const char *ip_protocol_str[] = {"V4", "V6", "MAX"};
+    mdns_result_t *r = results;
+    mdns_ip_addr_t *a = NULL;
+    int i = 1, t;
+    while (r) {
+        printf("%d: Interface: %s, Type: %s\n", i++, if_str[r->tcpip_if], ip_protocol_str[r->ip_protocol]);
+        if (r->instance_name) {
+            printf("  PTR : %s\n", r->instance_name);
+        }
+        if (r->hostname) {
+            printf("  SRV : %s.local:%u\n", r->hostname, r->port);
+        }
+        if (r->txt_count) {
+            printf("  TXT : [%u] ", r->txt_count);
+            for (t = 0; t < r->txt_count; t++) {
+                printf("%s=%s; ", r->txt[t].key, r->txt[t].value);
+            }
+            printf("\n");
+        }
+        a = r->addr;
+        while (a) {
+            if (a->addr.type == IPADDR_TYPE_V6) {
+                printf("  AAAA: " IPV6STR "\n", IPV62STR(a->addr.u_addr.ip6));
+            } else {
+                printf("  A   : " IPSTR "\n", IP2STR(&(a->addr.u_addr.ip4)));
+            }
+            a = a->next;
+        }
+        r = r->next;
+    }
+}
+
+void find_mdns_service(const char *service_name, const char *proto) {
+    ESP_LOGI(TAG, "Query PTR: %s.%s.local", service_name, proto);
+    mdns_result_t *results = NULL;
+    esp_err_t err = mdns_query_ptr(service_name, proto, 3000, 20, &results);
+    if (err) {
+        ESP_LOGE(TAG, "Query failed: %s", esp_err_to_name(err));
         return;
     }
+    if (!results) {
+        ESP_LOGW(TAG, "No results found!");
+        return;
+    }
+    mdns_print_results(results);
+    mdns_query_results_free(results);
+}
 
-    ESP_LOGI(TAG, IPSTR, IP2STR(&addr));
+static void start_mdns_service() {
+    //initialize mDNS service
+    esp_err_t err = mdns_init();
+    if (err) {
+        ESP_LOGE(TAG, "MDNS Init failed: %d", err);
+        return;
+    }
+    //set hostname
+    mdns_hostname_set("RepPanel");
+    //set default instance
+    char tmp[20];
+    sprintf(tmp, "RepPanel %s", get_version_string());
+    mdns_instance_name_set(tmp);
 }
 
 static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
@@ -67,7 +130,6 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
         if (rp_conn_stat != REPPANEL_UART_CONNECTED)
             rp_conn_stat = REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED;
-        resolve_mdns_host("cyberprint");
     }
     if (xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
         update_rep_panel_conn_status();
@@ -95,6 +157,7 @@ void wifi_init_sta() {
     ESP_ERROR_CHECK(esp_wifi_start());
 
     ESP_LOGI(TAG, "wifi_init_sta finished.");
+    start_mdns_service();
 }
 
 /**
@@ -169,4 +232,33 @@ void get_avail_wifi_networks(char *aps) {
         sprintf(tmp, "\n%s", ap_info[i].ssid);
         strcat(aps, tmp);
     }
+}
+
+/**
+ * Scan for available mDNS devices. Format list so that it can be used by a ddlist.
+ * @param txt_buffer Elements separated by new line character
+ */
+void get_avail_duets(char *txt_buffer) {
+    mdns_result_t *results = NULL;
+    esp_err_t err = mdns_query_ptr("_http", "_tcp", 2000, 20, &results);
+    if (err) {
+        ESP_LOGE("mDNS Scanner", "Query failed: %s", esp_err_to_name(err));
+        return;
+    }
+    if (!results) {
+        ESP_LOGW("mDNS Scanner", "No results found!");
+        return;
+    }
+    mdns_result_t *r = results;
+    while (r) {
+        if (r->hostname) {
+            char tmp[32]; tmp[0] = '\0';
+            sprintf(tmp, "%s.local\n", &r->hostname[0]);
+            strcat(txt_buffer, tmp);
+        }
+        r = r->next;
+    }
+    txt_buffer[strlen(txt_buffer) - 1] = '\0';  // remove new line
+
+    mdns_query_results_free(results);
 }
