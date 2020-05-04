@@ -21,7 +21,7 @@ console_entry_t console_enties[MAX_CONSOLE_ENTRY_COUNT];
 static int num_console_entries = 0;
 static int pos_newest_entry = -1;
 
-void _send_user_command() {
+void send_user_command() {
     if (strlen(lv_ta_get_text(ta_command)) > 0) {
         char txt[strlen(lv_ta_get_text(ta_command))];
         strcpy(txt, lv_ta_get_text(ta_command));
@@ -37,7 +37,7 @@ static void kb_event_cb(lv_obj_t *event_kb, lv_event_t event) {
         lv_obj_del(kb);
         kb = NULL;
     } else if (event == LV_EVENT_APPLY) {
-        _send_user_command();
+        send_user_command();
     }
 }
 
@@ -53,13 +53,13 @@ static void ta_event_handler(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
-static void _send_gcode_event_handler(lv_obj_t *obj, lv_event_t event) {
+static void send_gcode_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
-        _send_user_command();
+        send_user_command();
     }
 }
 
-void _add_entry_to_ui(char *command, char *response, enum console_msg_type type) {
+void add_entry_to_ui(char *command, char *response, enum console_msg_type type) {
     lv_obj_t *c1 = lv_cont_create(comm_page, NULL);
 
     static lv_style_t entry_style_info;
@@ -121,7 +121,7 @@ void update_entries_ui() {
         entry = &console_enties[indx];
         for (int i = 0; i < num_console_entries; i++) {
             if (strlen(entry->command) > 0) {
-                _add_entry_to_ui(entry->command, entry->response, entry->type);
+                add_entry_to_ui(entry->command, NULL, entry->type);
                 entry--;
                 indx--;
                 if (indx < 0) {
@@ -140,17 +140,14 @@ void update_entries_ui() {
  * @param response
  * @param type For example CONSOLE_TYPE_WARN | CONSOLE_TYPE_REPPANEL
  */
-void add_console_hist_entry(char *command, char *response, enum console_msg_type type) {
+void add_console_hist_entry(char *command, enum console_msg_type type) {
     if ((MAX_CONSOLE_ENTRY_COUNT - 1) > pos_newest_entry) {
         pos_newest_entry++;
         num_console_entries++;
     } else
         pos_newest_entry = 0;
-    console_entry_t e = {.command = "", .response = "", .type = type};
+    console_entry_t e = {.command = "", .type = type};
     strncpy(e.command, command, MAX_LEN_COMMAND);
-    if (response != NULL) {
-        strncpy(e.response, response, MAX_LEN_RESPONSE);
-    }
     console_enties[pos_newest_entry] = e;
 }
 
@@ -176,7 +173,7 @@ void draw_console(lv_obj_t *parent_screen) {
     lv_ta_set_text(ta_command, "G28");
 
     static lv_obj_t *btn_send_gcode;
-    create_button(user_comm_enter_cont, btn_send_gcode, LV_SYMBOL_UPLOAD" Send", _send_gcode_event_handler);
+    create_button(user_comm_enter_cont, btn_send_gcode, LV_SYMBOL_UPLOAD" Send", send_gcode_event_handler);
 
     lv_obj_set_size(ta_command, lv_disp_get_hor_res(NULL) - 180, 30);
 

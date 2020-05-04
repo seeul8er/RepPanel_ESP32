@@ -28,7 +28,7 @@ int reprap_chamber_temp_curr_pos = 0;
 double reprap_babysteps_amount = 0.05;
 double reprap_move_feedrate = 6000;
 double reprap_mcu_temp = 0;
-char reprap_firmware_name[100];
+char reprap_firmware_name[32];
 char reprap_firmware_version[5];
 
 //Creates a semaphore to handle concurrent call to lvgl stuff
@@ -49,7 +49,7 @@ void app_main() {
     xTaskCreatePinnedToCore(guiTask, "gui", 512 * 11, NULL, 0, NULL, 1);
 
     TaskHandle_t printer_status_task_handle = NULL;
-    xTaskCreate(request_reprap_status_updates, "Printer Status Update Task", 1024 * 11, NULL,
+    xTaskCreate(request_reprap_status_updates, "Printer Status Update Task", 1024 * 15, NULL,
                 tskIDLE_PRIORITY, &printer_status_task_handle);
     configASSERT(printer_status_task_handle);
 }
@@ -62,7 +62,6 @@ static void IRAM_ATTR lv_tick_task(void *arg) {
 void guiTask() {
     /* Inspect our own high water mark on entering the task. */
 //    UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
-
     xGuiSemaphore = xSemaphoreCreateMutex();
     lv_init();
     lvgl_driver_init();

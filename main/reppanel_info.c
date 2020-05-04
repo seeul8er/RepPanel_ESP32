@@ -13,7 +13,7 @@
 
 #define TAG "RepPanelInfo"
 
-lv_obj_t *info_page, *label_sig_strength, *save_bnt;
+lv_obj_t *info_page;
 lv_obj_t *ta_wifi_pass;
 lv_obj_t *ta_ssid;
 lv_obj_t *ta_printer_addr;
@@ -257,6 +257,7 @@ void draw_info(lv_obj_t *parent_screen) {
 //    lv_label_set_long_mode(label_sig_strength, LV_LABEL_LONG_BREAK);
 //    lv_label_set_text_fmt(label_sig_strength, "RepRap signal: %s-124dBm# RepPanel signal: %s-125dBm#",
 //            REP_PANEL_DARK_ACCENT_ALT2_STR, REP_PANEL_DARK_ACCENT_ALT2_STR);
+    static lv_obj_t *save_bnt;
     create_button(info_page, save_bnt, "Save", save_reppanel_settings_event);
 
 

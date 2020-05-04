@@ -24,7 +24,6 @@
 #define TAG                 "RequestTask"
 #define REQUEST_TIMEOUT_MS  150
 
-static wifi_response_buff_t resp_buff_gui_task;
 char rep_addr_resolved[256];
 
 static bool got_filaments = false;
@@ -43,7 +42,6 @@ static char request_file_path[512];
 
 const char *decode_reprap_status(const char *valuestring) {
     job_paused = false;
-    reprap_status = *valuestring;
     switch (*valuestring) {
         case REPRAP_STATUS_PROCESS_CONFIG:
             job_running = false;
@@ -447,30 +445,17 @@ void process_reprap_filelist(char *buffer) {
         ESP_LOGI(TAG, "Processing macros");
         cJSON *_folders = cJSON_GetObjectItem(root, "files");
         cJSON *iterator = NULL;
-        for (int i = 0; i < MAX_NUM_MACROS; i++) {
-            if (reprap_macros[i].element != NULL) {
-                free(((reprap_macro_t *) reprap_macros[i].element)->name);
-                free(((reprap_macro_t *) reprap_macros[i].element)->last_mod);
-                free(((reprap_macro_t *) reprap_macros[i].element)->dir);
-                free((reprap_macro_t *) reprap_macros[i].element);
-                reprap_macros[i].element = NULL;
-            }
+        for (int i = 0; i < MAX_NUM_MACROS_DIR; i++) {
             reprap_macros[i].type = TREE_EMPTY_ELEM;
         }
         int pos = 0;
+        static reprap_macro_t new_macros[MAX_NUM_MACROS_DIR];
         cJSON_ArrayForEach(iterator, _folders) {
             if (cJSON_IsObject(iterator)) {
-                if (pos < MAX_NUM_MACROS) {
-                    if (reprap_macros[pos].element == NULL) {
-                        reprap_macros[pos].element = (reprap_macro_t *) malloc(sizeof(reprap_macro_t));
-                    }
-                    ((reprap_macro_t *) reprap_macros[pos].element)->name = malloc(
-                            strlen(cJSON_GetObjectItem(iterator, "name")->valuestring) + 1);
-                    ((reprap_macro_t *) reprap_macros[pos].element)->dir = malloc(strlen(dir_name->valuestring) + 1);
-                    ((reprap_macro_t *) reprap_macros[pos].element)->last_mod = malloc(1 + 1);
-                    strcpy(((reprap_macro_t *) reprap_macros[pos].element)->name,
-                           cJSON_GetObjectItem(iterator, "name")->valuestring);
-                    strcpy(((reprap_macro_t *) reprap_macros[pos].element)->dir, dir_name->valuestring);
+                if (pos < MAX_NUM_MACROS_DIR) {
+                    strncpy(new_macros[pos].name, cJSON_GetObjectItem(iterator, "name")->valuestring, MAX_LEN_FILENAME-1);
+                    reprap_macros[pos].element = &new_macros[pos];
+                    strncpy(reprap_macros[pos].dir, dir_name->valuestring, MAX_LEN_DIRNAME-1);
                     if (strncmp("f", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0) {
                         reprap_macros[pos].type = TREE_FILE_ELEM;
                     } else {
@@ -488,32 +473,17 @@ void process_reprap_filelist(char *buffer) {
         ESP_LOGI(TAG, "Processing jobs");
         cJSON *_folders = cJSON_GetObjectItem(root, "files");
         cJSON *iterator = NULL;
-        for (int i = 0; i < MAX_NUM_JOBS; i++) {  // clear array
-            if (reprap_jobs[i].element != NULL) {
-                free(((reprap_job_t *) reprap_jobs[i].element)->name);
-                free(((reprap_job_t *) reprap_jobs[i].element)->last_mod);
-                free(((reprap_job_t *) reprap_jobs[i].element)->generator);
-                free(((reprap_job_t *) reprap_jobs[i].element)->dir);
-                free((reprap_job_t *) reprap_jobs[i].element);
-                reprap_jobs[i].element = NULL;
-            }
+        for (int i = 0; i < MAX_NUM_JOBS_DIR; i++) {  // clear array
             reprap_jobs[i].type = TREE_EMPTY_ELEM;
         }
         int pos = 0;
+        static reprap_macro_t new_jobs[MAX_NUM_JOBS_DIR];
         cJSON_ArrayForEach(iterator, _folders) {
             if (cJSON_IsObject(iterator)) {
-                if (pos < MAX_NUM_JOBS) {
-                    if (reprap_jobs[pos].element == NULL) {
-                        reprap_jobs[pos].element = (reprap_job_t *) malloc(sizeof(reprap_job_t));
-                    }
-                    ((reprap_job_t *) reprap_jobs[pos].element)->name = malloc(
-                            strlen(cJSON_GetObjectItem(iterator, "name")->valuestring) + 1);
-                    ((reprap_job_t *) reprap_jobs[pos].element)->dir = malloc(strlen(dir_name->valuestring) + 1);
-                    ((reprap_job_t *) reprap_jobs[pos].element)->last_mod = malloc(1 + 1);
-                    ((reprap_job_t *) reprap_jobs[pos].element)->generator = malloc(1 + 1);
-                    strcpy(((reprap_job_t *) reprap_jobs[pos].element)->name,
-                           cJSON_GetObjectItem(iterator, "name")->valuestring);
-                    strcpy(((reprap_job_t *) reprap_jobs[pos].element)->dir, dir_name->valuestring);
+                if (pos < MAX_NUM_JOBS_DIR) {
+                    strncpy(new_jobs[pos].name, cJSON_GetObjectItem(iterator, "name")->valuestring, MAX_LEN_FILENAME-1);
+                    reprap_jobs[pos].element = &new_jobs[pos];
+                    strncpy(reprap_jobs[pos].dir, dir_name->valuestring, MAX_LEN_DIRNAME-1);
                     if (strncmp("f", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0) {
                         reprap_jobs[pos].type = TREE_FILE_ELEM;
                     } else {
@@ -775,6 +745,7 @@ bool reprap_wifi_send_gcode(char *gcode) {
     url_encode((unsigned char *) gcode, encoded_gcode);
     sprintf(request_addr, "%s/rr_gcode?gcode=%s", rep_addr_resolved, encoded_gcode);
     ESP_LOGV(TAG, "%s", request_addr);
+    wifi_response_buff_t resp_buff_gui_task;
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
@@ -932,6 +903,7 @@ void reprap_wifi_get_fileinfo(wifi_response_buff_t *resp_data, char *filename) {
 void reprap_wifi_get_config() {
     char request_addr[MAX_REQ_ADDR_LENGTH];
     sprintf(request_addr, "%s/rr_config", rep_addr_resolved);
+    wifi_response_buff_t resp_buff_gui_task;
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
@@ -1005,13 +977,13 @@ void reprap_wifi_download(wifi_response_buff_t *response_buffer, char *file) {
 bool reprap_send_gcode(char *gcode_command) {
     if (rp_conn_stat == REPPANEL_WIFI_CONNECTED) {
         if (reprap_wifi_send_gcode(gcode_command)) {
-            add_console_hist_entry(gcode_command, "", CONSOLE_TYPE_REPPANEL);
+            add_console_hist_entry(gcode_command, CONSOLE_TYPE_REPPANEL);
             update_entries_ui();
             return true;
         }
     } else if (rp_conn_stat == REPPANEL_UART_CONNECTED) {
         reprap_uart_send_gcode(gcode_command);
-        add_console_hist_entry(gcode_command, "", CONSOLE_TYPE_REPPANEL);
+        add_console_hist_entry(gcode_command, CONSOLE_TYPE_REPPANEL);
         update_entries_ui();
         return true;
     }
@@ -1052,6 +1024,7 @@ void request_macros(char *folder_path) {
 void request_fileinfo(char *file_name) {
     if (rp_conn_stat == REPPANEL_WIFI_CONNECTED) {
         ESP_LOGI(TAG, "Requesting file info");
+        wifi_response_buff_t resp_buff_gui_task;
         reprap_wifi_get_fileinfo(&resp_buff_gui_task, file_name);
     } else if (rp_conn_stat == REPPANEL_UART_CONNECTED) {
         uart_request_file_info = true;
@@ -1114,7 +1087,8 @@ void request_reprap_status_updates(void *params) {
     int i = 8, b = 0;
     UBaseType_t uxHighWaterMark;
     uart_response_buff_t uart_receive_buff;
-    wifi_response_buff_t resp_buff_status_update_task;
+    static wifi_response_buff_t resp_buff_status_update_task;
+    wifi_response_buff_t resp_buff_gui_task;
     while (strlen(rep_addr) < 1) {  // wait till request addr is set
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }

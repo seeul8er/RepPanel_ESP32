@@ -19,24 +19,23 @@
 #define JOBS_ROOT_DIR  "0:/gcodes"
 #define JOBS_EMPTY ""
 #define BACK_TXT    "Back"
-#define MAX_LEN_DIR 64
 
-file_tree_elem_t reprap_jobs[MAX_NUM_JOBS];
+file_tree_elem_t reprap_jobs[MAX_NUM_JOBS_DIR];
 
-lv_obj_t *jobs_container;
 lv_obj_t *jobs_list;
 lv_obj_t *msg_box1;
 lv_obj_t *msg_box2;
 lv_obj_t *msg_box3;
 lv_obj_t *preloader;
 
-char parent_dir[MAX_LEN_DIR];
+char parent_dir_jobs[MAX_LEN_DIRNAME + 1];
 reprap_job_t *edit_job;
+char *edit_dir;
 
 void send_print_command() {
     ESP_LOGI(TAG, "Printing %s", edit_job->name);
-    char tmp_txt[strlen(edit_job->dir) + strlen(edit_job->name) + 10];
-    sprintf(tmp_txt, "M32 \"%s/%s\"", edit_job->dir, edit_job->name);
+    char tmp_txt[strlen(edit_dir) + strlen(edit_job->name) + 10];
+    sprintf(tmp_txt, "M32 \"%s/%s\"", edit_dir, edit_job->name);
     reprap_send_gcode(tmp_txt);
 }
 
@@ -56,8 +55,8 @@ static void delete_file_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         if (strcmp(lv_mbox_get_active_btn_text(msg_box2), "Yes") == 0) {
             ESP_LOGI(TAG, "Deleting %s", edit_job->name);
-            char tmp_txt[strlen(edit_job->dir) + strlen(edit_job->name) + 10];
-            sprintf(tmp_txt, "M30 \"%s/%s\"", edit_job->dir, edit_job->name);
+            char tmp_txt[strlen(edit_dir) + strlen(edit_job->name) + 10];
+            sprintf(tmp_txt, "M30 \"%s/%s\"", edit_dir, edit_job->name);
             reprap_send_gcode(tmp_txt);
             lv_obj_del_async(msg_box2);
             lv_obj_del_async(msg_box1);
@@ -86,8 +85,8 @@ static void job_action_handler(lv_obj_t *obj, lv_event_t event) {
             display_jobstatus();
         } else if (strcmp(lv_mbox_get_active_btn_text(msg_box1), SIM_BTN_TXT) == 0) {
             ESP_LOGI(TAG, "Simulate %s", edit_job->name);
-            char tmp_txt[strlen(edit_job->dir) + strlen(edit_job->name) + 10];
-            sprintf(tmp_txt, "M37 P\"%s/%s\"", edit_job->dir, edit_job->name);
+            char tmp_txt[strlen(edit_dir) + strlen(edit_job->name) + 10];
+            sprintf(tmp_txt, "M37 P\"%s/%s\"", edit_dir, edit_job->name);
             reprap_send_gcode(tmp_txt);
             lv_obj_del_async(msg_box1);
             display_jobstatus();
@@ -98,15 +97,15 @@ static void job_action_handler(lv_obj_t *obj, lv_event_t event) {
 static void job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
     int selected_indx = lv_list_get_btn_index(jobs_list, obj);
     // check if back button exists
-    if (strcmp(((reprap_job_t *) reprap_jobs[selected_indx].element)->dir, JOBS_ROOT_DIR) != 0) {
+    if (strcmp(reprap_jobs[selected_indx].dir, JOBS_ROOT_DIR) != 0) {
         if (selected_indx == 0 && event == LV_EVENT_SHORT_CLICKED) {
             // back button was pressed
-            ESP_LOGI(TAG, "Going back to parent %s", parent_dir);
+            ESP_LOGI(TAG, "Going back to parent %s", parent_dir_jobs);
             if (!preloader)
                 preloader = lv_preload_create(lv_layer_top(), NULL);
             lv_obj_set_size(preloader, 75, 75);
             lv_obj_align_origo(preloader, lv_layer_top(), LV_ALIGN_CENTER, 0, 0);
-            request_jobs(parent_dir);
+            request_jobs(parent_dir_jobs);
             return;
         } else if (selected_indx != 0) {
             // no back button pressed
@@ -115,6 +114,7 @@ static void job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
         }
     }
     edit_job = ((reprap_job_t *) reprap_jobs[selected_indx].element);
+    edit_dir = reprap_jobs[selected_indx].dir;
     if (event == LV_EVENT_SHORT_CLICKED) {
         if (reprap_jobs[selected_indx].type == TREE_FILE_ELEM) {
             static const char *btns[] = {"Yes", "No", ""};
@@ -132,8 +132,8 @@ static void job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
                 preloader = lv_preload_create(lv_layer_top(), NULL);
             lv_obj_set_size(preloader, 75, 75);
             lv_obj_align_origo(preloader, lv_layer_top(), LV_ALIGN_CENTER, 0, 0);
-            static char tmp_txt_job_path[128];
-            sprintf(tmp_txt_job_path, "%s/%s", edit_job->dir, edit_job->name);
+            static char tmp_txt_job_path[MAX_LEN_DIRNAME + MAX_LEN_FILENAME + 1];
+            sprintf(tmp_txt_job_path, "%s/%s", reprap_jobs[selected_indx].dir, edit_job->name);
             request_jobs(tmp_txt_job_path);
         }
     } else if (event == LV_EVENT_LONG_PRESSED && reprap_jobs[selected_indx].type == TREE_FILE_ELEM) {
@@ -157,17 +157,17 @@ void update_job_list_ui() {
     }
 
     // Add back button in case we are not in root directory
-    if (strcmp(((reprap_job_t *) reprap_jobs[0].element)->dir, JOBS_ROOT_DIR) != 0) {
+    if (strcmp(reprap_jobs[0].dir, JOBS_ROOT_DIR) != 0) {
         lv_obj_t *back_btn;
         back_btn = lv_list_add_btn(jobs_list, LV_SYMBOL_LEFT, BACK_TXT);
         lv_obj_set_event_cb(back_btn, job_clicked_event_handler);
         // update parent dir
-        strcpy(parent_dir, ((reprap_job_t *) reprap_jobs[0].element)->dir);
+        strcpy(parent_dir_jobs, reprap_jobs[0].dir);
         char *pch;
-        pch = strrchr(parent_dir, '/');
-        parent_dir[pch - parent_dir] = '\0';
+        pch = strrchr(parent_dir_jobs, '/');
+        parent_dir_jobs[pch - parent_dir_jobs] = '\0';
     } else {
-        strcpy(parent_dir, JOBS_EMPTY);
+        strcpy(parent_dir_jobs, JOBS_EMPTY);
     }
     for (int i = 0; reprap_jobs[i].element != NULL; i++) {
         lv_obj_t *list_btn;
@@ -181,7 +181,7 @@ void update_job_list_ui() {
 
 
 void draw_jobselect(lv_obj_t *parent_screen) {
-    jobs_container = lv_cont_create(parent_screen, NULL);
+    lv_obj_t *jobs_container = lv_cont_create(parent_screen, NULL);
     lv_cont_set_layout(jobs_container, LV_LAYOUT_COL_M);
     lv_cont_set_fit(jobs_container, LV_FIT_FILL);
 
@@ -191,5 +191,5 @@ void draw_jobselect(lv_obj_t *parent_screen) {
     jobs_list = lv_list_create(jobs_container, NULL);
     lv_obj_set_size(jobs_list, LV_HOR_RES - 10, lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
 
-    request_jobs("0:/gcodes");
+    request_jobs(JOBS_ROOT_DIR);
 }

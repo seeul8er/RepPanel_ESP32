@@ -65,16 +65,16 @@ void init_reprap_buffers() {
         reprap_extruder_feedrates[i] = -1;
         reprap_chamber_temp_buff[i] = -1;
     }
-    for (int i = 0; i < MAX_NUM_MACROS; i++) {
+    for (int i = 0; i < MAX_NUM_MACROS_DIR; i++) {
         reprap_macros[i].type = TREE_EMPTY_ELEM;
         reprap_macros[i].element = NULL;
     }
-    for (int i = 0; i < MAX_NUM_JOBS; i++) {
+    for (int i = 0; i < MAX_NUM_JOBS_DIR; i++) {
         reprap_jobs[i].type = TREE_EMPTY_ELEM;
         reprap_jobs[i].element = NULL;
     }
     for (int i = 0; i < MAX_CONSOLE_ENTRY_COUNT; i++) {
-        console_enties[i] = (console_entry_t) {"", "", CONSOLE_TYPE_EMPTY};
+        console_enties[i] = (console_entry_t) {"",  CONSOLE_TYPE_EMPTY};
     }
 
     reprap_tool_poss_temps.temps_active[0] = -1;

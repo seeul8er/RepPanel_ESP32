@@ -44,7 +44,6 @@ lv_obj_t *main_menu_button;
 lv_obj_t *console_button;
 lv_obj_t *label_connection_status;
 
-char reprap_status;     // printer status
 char reppanel_status[MAX_REPRAP_STATUS_LEN];
 char reppanel_chamber_temp[MAX_REPRAP_STATUS_LEN];
 char reppanel_job_progess[MAX_PREPANEL_TEMP_LEN];
