@@ -15,9 +15,8 @@
 
 #define MAX_SSID_LEN        32
 #define MAX_WIFI_PASS_LEN   64
-#define MAX_REP_ADDR_LEN    200
+#define MAX_REP_ADDR_LEN    128
 #define MAX_REP_PASS_LEN    64
-#define MAX_LEN_TMPS_DDLIST_LEN 256
 
 extern char wifi_ssid[MAX_SSID_LEN];
 extern char wifi_pass[MAX_REP_PASS_LEN];

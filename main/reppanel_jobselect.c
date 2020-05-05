@@ -20,8 +20,6 @@
 #define JOBS_EMPTY ""
 #define BACK_TXT    "Back"
 
-file_tree_elem_t reprap_jobs[MAX_NUM_JOBS_DIR];
-
 lv_obj_t *jobs_list;
 lv_obj_t *msg_box1;
 lv_obj_t *msg_box2;
@@ -29,13 +27,12 @@ lv_obj_t *msg_box3;
 lv_obj_t *preloader;
 
 char parent_dir_jobs[MAX_LEN_DIRNAME + 1];
-reprap_job_t *edit_job;
-char *edit_dir;
+file_tree_elem_t *edit_job;
 
 void send_print_command() {
     ESP_LOGI(TAG, "Printing %s", edit_job->name);
-    char tmp_txt[strlen(edit_dir) + strlen(edit_job->name) + 10];
-    sprintf(tmp_txt, "M32 \"%s/%s\"", edit_dir, edit_job->name);
+    char tmp_txt[strlen(edit_job->dir) + strlen(edit_job->name) + 10];
+    sprintf(tmp_txt, "M32 \"%s/%s\"", edit_job->dir, edit_job->name);
     reprap_send_gcode(tmp_txt);
 }
 
@@ -55,11 +52,12 @@ static void delete_file_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         if (strcmp(lv_mbox_get_active_btn_text(msg_box2), "Yes") == 0) {
             ESP_LOGI(TAG, "Deleting %s", edit_job->name);
-            char tmp_txt[strlen(edit_dir) + strlen(edit_job->name) + 10];
-            sprintf(tmp_txt, "M30 \"%s/%s\"", edit_dir, edit_job->name);
+            char tmp_txt[strlen(edit_job->dir) + strlen(edit_job->name) + 10];
+            sprintf(tmp_txt, "M30 \"%s/%s\"", edit_job->dir, edit_job->name);
             reprap_send_gcode(tmp_txt);
             lv_obj_del_async(msg_box2);
             lv_obj_del_async(msg_box1);
+            request_jobs(edit_job->dir);
         } else {
             lv_obj_del_async(msg_box2);
         }
@@ -85,8 +83,8 @@ static void job_action_handler(lv_obj_t *obj, lv_event_t event) {
             display_jobstatus();
         } else if (strcmp(lv_mbox_get_active_btn_text(msg_box1), SIM_BTN_TXT) == 0) {
             ESP_LOGI(TAG, "Simulate %s", edit_job->name);
-            char tmp_txt[strlen(edit_dir) + strlen(edit_job->name) + 10];
-            sprintf(tmp_txt, "M37 P\"%s/%s\"", edit_dir, edit_job->name);
+            char tmp_txt[strlen(edit_job->dir) + strlen(edit_job->name) + 10];
+            sprintf(tmp_txt, "M37 P\"%s/%s\"", edit_job->dir, edit_job->name);
             reprap_send_gcode(tmp_txt);
             lv_obj_del_async(msg_box1);
             display_jobstatus();
@@ -97,7 +95,7 @@ static void job_action_handler(lv_obj_t *obj, lv_event_t event) {
 static void job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
     int selected_indx = lv_list_get_btn_index(jobs_list, obj);
     // check if back button exists
-    if (strcmp(reprap_jobs[selected_indx].dir, JOBS_ROOT_DIR) != 0) {
+    if (strcmp(reprap_dir_elem[selected_indx].dir, JOBS_ROOT_DIR) != 0) {
         if (selected_indx == 0 && event == LV_EVENT_SHORT_CLICKED) {
             // back button was pressed
             ESP_LOGI(TAG, "Going back to parent %s", parent_dir_jobs);
@@ -113,10 +111,9 @@ static void job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
             selected_indx--;
         }
     }
-    edit_job = ((reprap_job_t *) reprap_jobs[selected_indx].element);
-    edit_dir = reprap_jobs[selected_indx].dir;
+    edit_job = &reprap_dir_elem[selected_indx];
     if (event == LV_EVENT_SHORT_CLICKED) {
-        if (reprap_jobs[selected_indx].type == TREE_FILE_ELEM) {
+        if (reprap_dir_elem[selected_indx].type == TREE_FILE_ELEM) {
             static const char *btns[] = {"Yes", "No", ""};
             msg_box3 = lv_mbox_create(lv_layer_top(), NULL);
             char msg[strlen(edit_job->name) + 23];
@@ -126,17 +123,17 @@ static void job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
             lv_obj_set_event_cb(msg_box3, print_file_handler);
             lv_obj_set_width(msg_box3, lv_disp_get_hor_res(NULL) - 20);
             lv_obj_align(msg_box3, lv_layer_top(), LV_ALIGN_CENTER, 0, 0);
-        } else if (reprap_jobs[selected_indx].type == TREE_FOLDER_ELEM) {
+        } else if (reprap_dir_elem[selected_indx].type == TREE_FOLDER_ELEM) {
             ESP_LOGI(TAG, "Clicked folder %s (index %i)", edit_job->name, selected_indx);
             if (!preloader)
                 preloader = lv_preload_create(lv_layer_top(), NULL);
             lv_obj_set_size(preloader, 75, 75);
             lv_obj_align_origo(preloader, lv_layer_top(), LV_ALIGN_CENTER, 0, 0);
             static char tmp_txt_job_path[MAX_LEN_DIRNAME + MAX_LEN_FILENAME + 1];
-            sprintf(tmp_txt_job_path, "%s/%s", reprap_jobs[selected_indx].dir, edit_job->name);
+            sprintf(tmp_txt_job_path, "%s/%s", reprap_dir_elem[selected_indx].dir, edit_job->name);
             request_jobs(tmp_txt_job_path);
         }
-    } else if (event == LV_EVENT_LONG_PRESSED && reprap_jobs[selected_indx].type == TREE_FILE_ELEM) {
+    } else if (event == LV_EVENT_LONG_PRESSED && reprap_dir_elem[selected_indx].type == TREE_FILE_ELEM) {
         static const char *btns[] = {SIM_BTN_TXT, PRINT_BTN_TXT, DELETE_BTN_TXT, CANCEL_BTN_TXT, ""};
         msg_box1 = lv_mbox_create(lv_layer_top(), NULL);
         lv_mbox_set_text(msg_box1, "Select action");
@@ -157,24 +154,24 @@ void update_job_list_ui() {
     }
 
     // Add back button in case we are not in root directory
-    if (strcmp(reprap_jobs[0].dir, JOBS_ROOT_DIR) != 0) {
+    if (strcmp(reprap_dir_elem[0].dir, JOBS_ROOT_DIR) != 0) {
         lv_obj_t *back_btn;
         back_btn = lv_list_add_btn(jobs_list, LV_SYMBOL_LEFT, BACK_TXT);
         lv_obj_set_event_cb(back_btn, job_clicked_event_handler);
         // update parent dir
-        strcpy(parent_dir_jobs, reprap_jobs[0].dir);
+        strcpy(parent_dir_jobs, reprap_dir_elem[0].dir);
         char *pch;
         pch = strrchr(parent_dir_jobs, '/');
         parent_dir_jobs[pch - parent_dir_jobs] = '\0';
     } else {
         strcpy(parent_dir_jobs, JOBS_EMPTY);
     }
-    for (int i = 0; reprap_jobs[i].element != NULL; i++) {
+    for (int i = 0; reprap_dir_elem[i].type != TREE_EMPTY_ELEM && i < MAX_NUM_ELEM_DIR; i++) {
         lv_obj_t *list_btn;
-        if (reprap_jobs[i].type == TREE_FOLDER_ELEM)
-            list_btn = lv_list_add_btn(jobs_list, LV_SYMBOL_DIRECTORY, ((reprap_job_t *) reprap_jobs[i].element)->name);
+        if (reprap_dir_elem[i].type == TREE_FOLDER_ELEM)
+            list_btn = lv_list_add_btn(jobs_list, LV_SYMBOL_DIRECTORY, reprap_dir_elem[i].name);
         else
-            list_btn = lv_list_add_btn(jobs_list, LV_SYMBOL_FILE, ((reprap_job_t *) reprap_jobs[i].element)->name);
+            list_btn = lv_list_add_btn(jobs_list, LV_SYMBOL_FILE, reprap_dir_elem[i].name);
         lv_obj_set_event_cb(list_btn, job_clicked_event_handler);
     }
 }

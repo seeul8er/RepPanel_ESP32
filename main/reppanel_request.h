@@ -15,11 +15,6 @@ typedef struct {
 } wifi_response_buff_t;
 
 typedef struct {
-    char *buffer;   // pointer to allocated memory
-    int buf_pos;
-} wifi_dyn_response_buff_t;
-
-typedef struct {
     uint8_t buffer[UART_RESP_BUFF_SIZE];
     int buf_pos;
 } uart_response_buff_t;

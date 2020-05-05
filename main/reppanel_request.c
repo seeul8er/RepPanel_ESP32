@@ -24,6 +24,8 @@
 #define TAG                 "RequestTask"
 #define REQUEST_TIMEOUT_MS  150
 
+file_tree_elem_t reprap_dir_elem[MAX_NUM_ELEM_DIR];
+
 char rep_addr_resolved[256];
 
 static bool got_filaments = false;
@@ -91,7 +93,7 @@ void process_reprap_status(char *buff) {
     if (root == NULL) {
         const char *error_ptr = cJSON_GetErrorPtr();
         if (error_ptr != NULL) {
-            ESP_LOGE(TAG, "Error before: %s\n", error_ptr);
+            ESP_LOGE(TAG, "Error before: %s", error_ptr);
         }
         cJSON_Delete(root);
         return;
@@ -131,7 +133,8 @@ void process_reprap_status(char *buff) {
                                                                                       DUET_TEMPS_BED_CURRENT)->valuedouble;
         }
         // Get bed heater index
-        cJSON *duet_temps_bed_heater = cJSON_GetObjectItem(duet_temps_bed, DUET_TEMPS_BED_HEATER);    // bed heater state
+        cJSON *duet_temps_bed_heater = cJSON_GetObjectItem(duet_temps_bed,
+                                                           DUET_TEMPS_BED_HEATER);    // bed heater state
         if (duet_temps_bed_heater && cJSON_IsNumber(duet_temps_bed_heater)) {
             reprap_bed.heater_indx = duet_temps_bed_heater->valueint;
         }
@@ -176,7 +179,8 @@ void process_reprap_status(char *buff) {
             // Beware. This is dirty. Check if we want to show this msg box. We might already display it
             if (seq->valueint != seq_num_msgbox) {
                 seq_num_msgbox = seq->valueint;
-                if (strcmp(duet_msg->valuestring, "Adjust height until the nozzle just touches the bed, then press OK") == 0)
+                if (strcmp(duet_msg->valuestring,
+                           "Adjust height until the nozzle just touches the bed, then press OK") == 0)
                     disp_h_msgbox = true;
                 else
                     disp_msgbox = true;
@@ -283,7 +287,7 @@ void process_reprap_status(char *buff) {
                                                               0)->valuedouble;
         }
     }
-     // print job status
+    // print job status
     bool got_printjob_status = false;
     cJSON *print_progess = cJSON_GetObjectItem(root, REPRAP_FRAC_PRINTED);
     if (print_progess && cJSON_IsNumber(print_progess)) {
@@ -328,7 +332,7 @@ void process_reprap_settings(char *buff) {
     if (root == NULL) {
         const char *error_ptr = cJSON_GetErrorPtr();
         if (error_ptr != NULL) {
-            ESP_LOGE(TAG, "Error before: %s\n", error_ptr);
+            ESP_LOGE(TAG, "Error before: %s", error_ptr);
         }
         cJSON_Delete(root);
         return;
@@ -405,7 +409,7 @@ void process_reprap_filelist(char *buffer) {
     if (root == NULL) {
         const char *error_ptr = cJSON_GetErrorPtr();
         if (error_ptr != NULL) {
-            ESP_LOGE(TAG, "Error before: %s\n", error_ptr);
+            ESP_LOGE(TAG, "Error before: %s", error_ptr);
         }
         cJSON_Delete(root);
         return;
@@ -445,21 +449,20 @@ void process_reprap_filelist(char *buffer) {
         ESP_LOGI(TAG, "Processing macros");
         cJSON *_folders = cJSON_GetObjectItem(root, "files");
         cJSON *iterator = NULL;
-        for (int i = 0; i < MAX_NUM_MACROS_DIR; i++) {
-            reprap_macros[i].type = TREE_EMPTY_ELEM;
+        for (int i = 0; i < MAX_NUM_ELEM_DIR; i++) {
+            reprap_dir_elem[i].type = TREE_EMPTY_ELEM;
         }
         int pos = 0;
-        static reprap_macro_t new_macros[MAX_NUM_MACROS_DIR];
         cJSON_ArrayForEach(iterator, _folders) {
             if (cJSON_IsObject(iterator)) {
-                if (pos < MAX_NUM_MACROS_DIR) {
-                    strncpy(new_macros[pos].name, cJSON_GetObjectItem(iterator, "name")->valuestring, MAX_LEN_FILENAME-1);
-                    reprap_macros[pos].element = &new_macros[pos];
-                    strncpy(reprap_macros[pos].dir, dir_name->valuestring, MAX_LEN_DIRNAME-1);
+                if (pos < MAX_NUM_ELEM_DIR) {
+                    strncpy(reprap_dir_elem[pos].name, cJSON_GetObjectItem(iterator, "name")->valuestring,
+                            MAX_LEN_FILENAME - 1);
+                    strncpy(reprap_dir_elem[pos].dir, dir_name->valuestring, MAX_LEN_DIRNAME - 1);
                     if (strncmp("f", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0) {
-                        reprap_macros[pos].type = TREE_FILE_ELEM;
+                        reprap_dir_elem[pos].type = TREE_FILE_ELEM;
                     } else {
-                        reprap_macros[pos].type = TREE_FOLDER_ELEM;
+                        reprap_dir_elem[pos].type = TREE_FOLDER_ELEM;
                     }
                     pos++;
                 }
@@ -473,21 +476,20 @@ void process_reprap_filelist(char *buffer) {
         ESP_LOGI(TAG, "Processing jobs");
         cJSON *_folders = cJSON_GetObjectItem(root, "files");
         cJSON *iterator = NULL;
-        for (int i = 0; i < MAX_NUM_JOBS_DIR; i++) {  // clear array
-            reprap_jobs[i].type = TREE_EMPTY_ELEM;
+        for (int i = 0; i < MAX_NUM_ELEM_DIR; i++) {  // clear array
+            reprap_dir_elem[i].type = TREE_EMPTY_ELEM;
         }
         int pos = 0;
-        static reprap_macro_t new_jobs[MAX_NUM_JOBS_DIR];
         cJSON_ArrayForEach(iterator, _folders) {
             if (cJSON_IsObject(iterator)) {
-                if (pos < MAX_NUM_JOBS_DIR) {
-                    strncpy(new_jobs[pos].name, cJSON_GetObjectItem(iterator, "name")->valuestring, MAX_LEN_FILENAME-1);
-                    reprap_jobs[pos].element = &new_jobs[pos];
-                    strncpy(reprap_jobs[pos].dir, dir_name->valuestring, MAX_LEN_DIRNAME-1);
+                if (pos < MAX_NUM_ELEM_DIR) {
+                    strncpy(reprap_dir_elem[pos].name, cJSON_GetObjectItem(iterator, "name")->valuestring,
+                            MAX_LEN_FILENAME - 1);
+                    strncpy(reprap_dir_elem[pos].dir, dir_name->valuestring, MAX_LEN_DIRNAME - 1);
                     if (strncmp("f", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0) {
-                        reprap_jobs[pos].type = TREE_FILE_ELEM;
+                        reprap_dir_elem[pos].type = TREE_FILE_ELEM;
                     } else {
-                        reprap_jobs[pos].type = TREE_FOLDER_ELEM;
+                        reprap_dir_elem[pos].type = TREE_FOLDER_ELEM;
                     }
                     pos++;
                 }
@@ -506,7 +508,8 @@ void process_reprap_fileinfo(char *data_buff) {
     if (root == NULL) {
         const char *error_ptr = cJSON_GetErrorPtr();
         if (error_ptr != NULL) {
-            ESP_LOGE(TAG, "Error before: %s\n", error_ptr);
+            ESP_LOGE(TAG, "Got %s", data_buff);
+            ESP_LOGE(TAG, "Error before: %s", error_ptr);
         }
         cJSON_Delete(root);
         return;
@@ -530,7 +533,7 @@ void process_reprap_fileinfo(char *data_buff) {
 
     cJSON *job_name = cJSON_GetObjectItem(root, "fileName");
     if (job_name && cJSON_IsString(job_name)) {
-        strncpy(current_job_name, &job_name->valuestring[10], MAX_FILA_NAME_LEN);
+        strncpy(current_job_name, &job_name->valuestring[10], MAX_LEN_FILENAME);
     }
 
     cJSON *job_height = cJSON_GetObjectItem(root, "height");
@@ -618,6 +621,8 @@ esp_err_t http_event_handle(esp_http_client_event_t *evt) {
             ESP_LOGI(TAG, "Event handler detected http error");
             break;
         case HTTP_EVENT_ON_CONNECTED:
+            resp_buff->buf_pos = 0;
+            break;
         case HTTP_EVENT_HEADER_SENT:
         case HTTP_EVENT_ON_HEADER:
             break;
@@ -636,7 +641,6 @@ esp_err_t http_event_handle(esp_http_client_event_t *evt) {
         case HTTP_EVENT_ON_FINISH:
             break;
         case HTTP_EVENT_DISCONNECTED:
-            // ESP_LOGI(TAG, "HTTP_EVENT_DISCONNECTED");
             resp_buff->buf_pos = 0;
             break;
     }
@@ -879,10 +883,6 @@ void reprap_wifi_get_fileinfo(wifi_response_buff_t *resp_data, char *filename) {
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
-//        ESP_LOGI(TAG, "Status = %d, content_length = %d",
-//                 esp_http_client_get_status_code(client),
-//                 esp_http_client_get_content_length(client));
-
         switch (esp_http_client_get_status_code(client)) {
             case 200:
                 process_reprap_fileinfo(resp_data->buffer);
@@ -1061,7 +1061,7 @@ void request_jobs(char *folder_path) {
     }
 }
 
-void update_printer_addr() {
+bool update_printer_addr() {
     ESP_LOGI(TAG, "Updating printer address");
     if (ends_with(rep_addr, ".local")) {
         char tmp_addr[strlen(rep_addr)];
@@ -1072,8 +1072,11 @@ void update_printer_addr() {
         char tmp_res[32];
         if (resolve_mdns_host(tmp_addr, tmp_res)) {
             strcpy(rep_addr_resolved, tmp_res);
+            return true;
         }
+        return false;
     }
+    return true;    // no resolving required. User entered IP directly
 }
 
 /**
@@ -1084,18 +1087,15 @@ void request_reprap_status_updates(void *params) {
     TickType_t xLastWakeTime;
     const TickType_t xFrequency = (500 / portTICK_PERIOD_MS);
     xLastWakeTime = xTaskGetTickCount();
-    int i = 8, b = 0;
+    int i = 0, b = 0;
     UBaseType_t uxHighWaterMark;
     uart_response_buff_t uart_receive_buff;
-    static wifi_response_buff_t resp_buff_status_update_task;
-    wifi_response_buff_t resp_buff_gui_task;
+    wifi_response_buff_t resp_buff_status_update_task;
     while (strlen(rep_addr) < 1) {  // wait till request addr is set
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
-    ESP_LOGI(TAG, "%s", rep_addr);
     strncpy(rep_addr_resolved, rep_addr, 256);
-    ESP_LOGI(TAG, "%s", rep_addr_resolved);
-    update_printer_addr();
+    bool init_printer_addr_updated = false;
     while (1) {
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
         if (rp_conn_stat == REPPANEL_UART_CONNECTED) {
@@ -1117,17 +1117,16 @@ void request_reprap_status_updates(void *params) {
                 reprap_uart_get_status(&uart_receive_buff, 0);
             else
                 reprap_uart_get_status(&uart_receive_buff, 4);
-            if (i % 20 == 0) {
+            if (i == 20) {
                 reprap_uart_get_status(&uart_receive_buff, 3);
                 i = 0;
-            } else {
-                i++;
-            }
+            } else { i++; }
         } else if (rp_conn_stat == REPPANEL_WIFI_CONNECTED ||
                    rp_conn_stat == REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED) {
+            if (!init_printer_addr_updated) init_printer_addr_updated = update_printer_addr();  // initial resolving
             if (!got_duet_settings)
                 reprap_wifi_download(&resp_buff_status_update_task, "0%3A%2Fsys%2Fdwc2settings.json");
-            if (!got_filaments) reprap_wifi_get_filelist(&resp_buff_gui_task, "0:/filaments&first=0");
+            if (!got_filaments) reprap_wifi_get_filelist(&resp_buff_status_update_task, "0:/filaments&first=0");
             if (!got_extended_status) reprap_wifi_get_status(&resp_buff_status_update_task, 2);
             if (duet_request_reply) reprap_wifi_get_rreply(&resp_buff_status_update_task);
             // for synchron request of jobs
@@ -1137,14 +1136,14 @@ void request_reprap_status_updates(void *params) {
             }
             // for synchron request of macros
             if (duet_request_macros) {
-                reprap_wifi_get_filelist(&resp_buff_gui_task, request_file_path);
+                reprap_wifi_get_filelist(&resp_buff_status_update_task, request_file_path);
                 duet_request_macros = false;
             }
             if (!job_running)
                 reprap_wifi_get_status(&resp_buff_status_update_task, 0);
             else
                 reprap_wifi_get_status(&resp_buff_status_update_task, 3);
-            if (i % 20 == 0) {
+            if (i == 20) {
                 reprap_wifi_get_status(&resp_buff_status_update_task, 2);
 
                 // Check if we got a UART connection
@@ -1157,11 +1156,9 @@ void request_reprap_status_updates(void *params) {
                     }
                 }
                 i = 0;
-            } else {
-                i++;
-            }
-            if (b % 50000 == 0) {
-                update_printer_addr();
+            } else { i++; }
+            if (b == 20) {
+                update_printer_addr();  // in case addres has changed
                 b = 0;
             } else { b++; }
         } else {

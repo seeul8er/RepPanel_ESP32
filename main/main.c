@@ -46,7 +46,7 @@ void guiTask();
 void app_main() {
     //If you want to use a task to create the graphic, you NEED to create a Pinned task
     //Otherwise there can be problem such as memory corruption and so on
-    xTaskCreatePinnedToCore(guiTask, "gui", 512 * 11, NULL, 0, NULL, 1);
+    xTaskCreatePinnedToCore(guiTask, "gui", 512 * 15, NULL, 0, NULL, 1);
 
     TaskHandle_t printer_status_task_handle = NULL;
     xTaskCreate(request_reprap_status_updates, "Printer Status Update Task", 1024 * 15, NULL,
@@ -117,6 +117,8 @@ void guiTask() {
             lv_task_handler();
             xSemaphoreGive(xGuiSemaphore);
         }
+//        uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+//        ESP_LOGI(TAG, "%i free bytes", uxHighWaterMark * 4);
     }
     //A task should NEVER return
     vTaskDelete(NULL);

@@ -38,16 +38,20 @@ extern "C" {
 #define REPPANEL_UARTDUETCONNECTED_MASK 0x20    // Can communicate with Duet via UART
 
 
-#define VERSION_MAJOR           0
-#define VERSION_MINOR           2
+#define VERSION_MAJOR           1
+#define VERSION_MINOR           0
 #define VERSION_HOTFIX          0
 
 #define NUM_TEMPS_BUFF      15
 #define MAX_FILA_NAME_LEN   32
-#define MAX_TOOL_NAME_LEN   16
+#define MAX_TOOL_NAME_LEN   12
 #define MAX_LEN_STR_FILAMENT_LIST   MAX_FILA_NAME_LEN*32
-#define MAX_NUM_MACROS_DIR  16
-#define MAX_NUM_JOBS_DIR        MAX_NUM_MACROS_DIR
+#define MAX_NUM_ELEM_DIR    16      // Max number of elements per directory that can be listed
+
+#define MAX_LEN_FILENAME    64
+#define MAX_LEN_DIRNAME     128
+#define MAX_LEN_LAST_MOD    0
+#define MAX_LEN_GENERATOR   0
 
 #define TREE_EMPTY_ELEM     -1
 #define TREE_FOLDER_ELEM    0
@@ -93,7 +97,7 @@ extern int reprap_job_time_sim;
 extern double reprap_job_first_layer_height;
 extern double reprap_job_layer_height;
 extern double reprap_job_height;
-extern char current_job_name[MAX_FILA_NAME_LEN];
+extern char current_job_name[MAX_LEN_FILENAME];
 extern char reprap_firmware_name[32];
 extern char reprap_firmware_version[5];
 
@@ -136,36 +140,13 @@ typedef struct {
     double temps_active[NUM_TEMPS_BUFF];
 } reprap_bed_poss_temps_t;
 
-#define MAX_LEN_FILENAME    24
-#define MAX_LEN_DIRNAME     128
-#define MAX_LEN_LAST_MOD    0
-#define MAX_LEN_GENERATOR   0
-
 typedef struct {
-    char name[MAX_LEN_FILENAME];
-//    char last_mod[MAX_LEN_LAST_MOD];
-//    char generator[MAX_LEN_GENERATOR];        // slicer engine
-//    int size;
-//    double height;
-//    double layer_height;
-//    int print_time;
-//    int sim_print_time;
-} reprap_job_t;
-
-typedef struct {
-    char name[MAX_LEN_FILENAME];
-//    char last_mod[MAX_LEN_LAST_MOD];
-//    int size;
-} reprap_macro_t;
-
-typedef struct {
-    void *element;  // reprap_macro_t or reprap_job_t
+    char name[MAX_LEN_FILENAME];    // name of the files
     char dir[MAX_LEN_DIRNAME];  // current directory
     int type;       // TREE_FOLDER_ELEM, TREE_FILE_ELEM
 } file_tree_elem_t;
 
-extern file_tree_elem_t reprap_jobs[MAX_NUM_JOBS_DIR];
-extern file_tree_elem_t reprap_macros[MAX_NUM_MACROS_DIR];
+extern file_tree_elem_t reprap_dir_elem[MAX_NUM_ELEM_DIR];  // Array used for buffering directory listings like macros/jobs
 
 // pos 0 is bed temp, rest are tool heaters
 extern int heater_states[MAX_NUM_TOOLS];       // 0=off, 1=standby, 2=active, 3=fault - Storage for incoming data
