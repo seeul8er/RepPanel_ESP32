@@ -166,6 +166,7 @@ void wifi_init_sta() {
 void reconnect_wifi() {
     rp_conn_stat = REPPANEL_WIFI_RECONNECTING;
     update_rep_panel_conn_status();
+    esp_wifi_disconnect();
     ESP_LOGI(TAG, "Reconnecting to %s with password %s", wifi_ssid, wifi_pass);
     wifi_config_t wifi_config;
     memset(&wifi_config, 0, sizeof(wifi_config));
@@ -239,6 +240,7 @@ void get_avail_wifi_networks(char *aps) {
  * @param txt_buffer Elements separated by new line character
  */
 void get_avail_duets(char *txt_buffer) {
+    txt_buffer[0] = '\0';
     mdns_result_t *results = NULL;
     esp_err_t err = mdns_query_ptr("_http", "_tcp", 2000, 20, &results);
     if (err) {
@@ -248,17 +250,18 @@ void get_avail_duets(char *txt_buffer) {
     if (!results) {
         ESP_LOGW("mDNS Scanner", "No results found!");
         return;
-    }
-    mdns_result_t *r = results;
-    while (r) {
-        if (r->hostname) {
-            char tmp[32]; tmp[0] = '\0';
-            sprintf(tmp, "%s.local\n", &r->hostname[0]);
-            strcat(txt_buffer, tmp);
+    } else {
+        mdns_result_t *r = results;
+        while (r) {
+            if (r->hostname) {
+                char tmp[32]; tmp[0] = '\0';
+                sprintf(tmp, "%s.local\n", &r->hostname[0]);
+                strcat(txt_buffer, tmp);
+            }
+            r = r->next;
         }
-        r = r->next;
+        txt_buffer[strlen(txt_buffer) - 1] = '\0';  // remove new line
+        ESP_LOGI(TAG, "Found: %s", txt_buffer);
+        mdns_query_results_free(results);
     }
-    txt_buffer[strlen(txt_buffer) - 1] = '\0';  // remove new line
-
-    mdns_query_results_free(results);
 }

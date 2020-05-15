@@ -1067,7 +1067,7 @@ bool update_printer_addr() {
         char tmp_addr[strlen(rep_addr)];
         strcpy(tmp_addr, rep_addr);
         tmp_addr[strlen(tmp_addr) - 6] = '\0';
-        strcpy(tmp_addr, &tmp_addr[7]);
+        memmove(tmp_addr, tmp_addr + 7, strlen(tmp_addr)); // cut off http://
         ESP_LOGI(TAG, "Resolving %s", tmp_addr);
         char tmp_res[32];
         if (resolve_mdns_host(tmp_addr, tmp_res)) {
@@ -1123,44 +1123,47 @@ void request_reprap_status_updates(void *params) {
             } else { i++; }
         } else if (rp_conn_stat == REPPANEL_WIFI_CONNECTED ||
                    rp_conn_stat == REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED) {
-            if (!init_printer_addr_updated) init_printer_addr_updated = update_printer_addr();  // initial resolving
-            if (!got_duet_settings)
-                reprap_wifi_download(&resp_buff_status_update_task, "0%3A%2Fsys%2Fdwc2settings.json");
-            if (!got_filaments) reprap_wifi_get_filelist(&resp_buff_status_update_task, "0:/filaments&first=0");
-            if (!got_extended_status) reprap_wifi_get_status(&resp_buff_status_update_task, 2);
-            if (duet_request_reply) reprap_wifi_get_rreply(&resp_buff_status_update_task);
-            // for synchron request of jobs
-            if (duet_request_jobs) {
-                reprap_wifi_get_filelist(&resp_buff_status_update_task, request_file_path);
-                duet_request_jobs = false;
-            }
-            // for synchron request of macros
-            if (duet_request_macros) {
-                reprap_wifi_get_filelist(&resp_buff_status_update_task, request_file_path);
-                duet_request_macros = false;
-            }
-            if (!job_running)
-                reprap_wifi_get_status(&resp_buff_status_update_task, 0);
-            else
-                reprap_wifi_get_status(&resp_buff_status_update_task, 3);
-            if (i == 20) {
-                reprap_wifi_get_status(&resp_buff_status_update_task, 2);
-
-                // Check if we got a UART connection
-                if (reppanel_is_uart_connected()) {
-                    rp_conn_stat = REPPANEL_UART_CONNECTED;
-                    memset(&resp_buff_status_update_task, 0, JSON_BUFF_SIZE);
-                    if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
-                        update_rep_panel_conn_status();
-                        xSemaphoreGive(xGuiSemaphore);
-                    }
+            if (init_printer_addr_updated) {
+                if (!got_duet_settings)
+                    reprap_wifi_download(&resp_buff_status_update_task, "0%3A%2Fsys%2Fdwc2settings.json");
+                if (!got_filaments) reprap_wifi_get_filelist(&resp_buff_status_update_task, "0:/filaments&first=0");
+                if (!got_extended_status) reprap_wifi_get_status(&resp_buff_status_update_task, 2);
+                if (duet_request_reply) reprap_wifi_get_rreply(&resp_buff_status_update_task);
+                // for synchron request of jobs
+                if (duet_request_jobs) {
+                    reprap_wifi_get_filelist(&resp_buff_status_update_task, request_file_path);
+                    duet_request_jobs = false;
                 }
-                i = 0;
-            } else { i++; }
-            if (b == 20) {
-                update_printer_addr();  // in case addres has changed
-                b = 0;
-            } else { b++; }
+                // for synchron request of macros
+                if (duet_request_macros) {
+                    reprap_wifi_get_filelist(&resp_buff_status_update_task, request_file_path);
+                    duet_request_macros = false;
+                }
+                if (!job_running)
+                    reprap_wifi_get_status(&resp_buff_status_update_task, 0);
+                else
+                    reprap_wifi_get_status(&resp_buff_status_update_task, 3);
+                if (i == 20) {
+                    reprap_wifi_get_status(&resp_buff_status_update_task, 2);
+
+                    // Check if we got a UART connection
+                    if (reppanel_is_uart_connected()) {
+                        rp_conn_stat = REPPANEL_UART_CONNECTED;
+                        memset(&resp_buff_status_update_task, 0, JSON_BUFF_SIZE);
+                        if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
+                            update_rep_panel_conn_status();
+                            xSemaphoreGive(xGuiSemaphore);
+                        }
+                    }
+                    i = 0;
+                } else { i++; }
+                if (b == 20) {
+                    update_printer_addr();  // in case addres has changed
+                    b = 0;
+                } else { b++; }
+            } else {
+                init_printer_addr_updated = update_printer_addr();  // initial resolving
+            }
         } else {
             if (reppanel_is_uart_connected()) {
                 rp_conn_stat = REPPANEL_UART_CONNECTED;
