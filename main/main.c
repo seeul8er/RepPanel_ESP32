@@ -30,6 +30,7 @@
 #endif
 #define TAG "Main"
 
+SemaphoreHandle_t xGuiSemaphore;
 double reprap_chamber_temp_buff[NUM_TEMPS_BUFF] = {0};
 int reprap_chamber_temp_curr_pos = 0;
 double reprap_babysteps_amount = 0.05;
