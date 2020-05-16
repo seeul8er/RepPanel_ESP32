@@ -53,14 +53,11 @@ by RepPanel.
   - ESP32 DevKit
   - [ER-TFTM035-6 display with capacitive touch screen](https://www.buydisplay.com/lcd-3-5-inch-320x480-tft-display-module-optl-touch-screen-w-breakout-board)
 
-Other display modules with a resolution of 480x320 should also work as long as they are supported by **lv_port_esp32**
-
-**As of now RepPanel is optimized for 3.5" displays with a resolution of 480x320 pixels. The display is connected via SPI.**
+Other display modules with a resolution of 480x320 should also work as long as they are supported by `lv_port_esp32`  
+As of now RepPanel is optimized for 3.5" displays with a resolution of 480x320 pixels. The display is connected via SPI.
 
 **Tested Firmware**
   - Duet2 WiFi with RepRap Firmware v3.0 and corresponding Duet2WebControl
-
-**All Duet2 boards or newer with RepRap Firmware v3.x should work.**
 
 ## Installation
 
@@ -79,7 +76,8 @@ git clone --recurse-submodules https://github.com/seeul8er/RepPanel_ESP32
 **Configure Project**
 
 **Temporary workaround:**  
-Copy file content of `main/lv_conf_back.h` over to `externals/lv_port_esp32/components/lvgl/lv_conf.h`. Or simply add:
+Copy file content of `main/lv_conf_back.h` over to `externals/lv_port_esp32/components/lvgl/lv_conf.h`.  
+Or simply add:
 - Set `LV_USE_USER_DATA` to 1
 - Add `#define LV_USE_THEME_REP_PANEL_DARK 1`
 - `CONFIG_LVGL_FONT_ROBOTO16` & `CONFIG_LVGL_FONT_ROBOTO22` must be activated
@@ -108,14 +106,14 @@ idf.py -p (YOUR PORT) flash
 **See [Littlevgl port for the ESP32](https://github.com/littlevgl/lv_port_esp32) for further and more detailed instructions.**
 
 ### Use ready made images
-**Ready made images are only available for selected hardware combinations! Please compile the project by yourself in
-case you use different hardware or want a different pin connection layout**
+Ready made images are only available for selected hardware combinations! Please compile the project by yourself in
+case you use different hardware or want a different pin connection layout
 
 Check out [releases](https://github.com/seeul8er/RepPanel_ESP32/releases) for compiled binaries.
 
 ### Wiring ER-TFTM035-6 to the ESP32 DevKit with 36GPIOs
 
-**Beware: The available development boards have different pin configurations. Some have GND & 3.3V at the bottom. Others at the top.**
+**Beware:** The available development boards have different pin configurations. Some have GND & 3.3V at the bottom. Others at the top.
 ![ESP32 Devkit wire connections](wiki/Wiring_ESP32_DevKit_38GPIOs.jpg)
 ![ER-TFTM035-6 wiring](wiki/Wiring_ERTFT.jpg)
 
@@ -134,7 +132,7 @@ Pin configuration of ready made images:
 |     GPIO 16    	|   UART RX  	| Connect to TX PanelDue port	|
 
 ## Screenshots
-![ESP32 Devkit wire connections](wiki/RepPanel_Working.jpg)
+![RepPanel with case](wiki/RepPanel_with_case.png)
 ![RepPanel print job status](wiki/RepPanel_JobStatus.png)
 ![RepPanel process menu](wiki/RepPanel_Process.png)
 ![RepPanel console](wiki/RepPanel_Console.png)
@@ -143,7 +141,11 @@ Pin configuration of ready made images:
 ## For Developers
 [Check out the simulator project.](https://github.com/seeul8er/RepPanel_sim) Simulates the RepPanel GUI on Desktop computers for more efficient testing and implementation.
 
-## Known Bugs
+## Known Limitations
 - Multiple tools supported but not tested
+- Auto swap from UART to WiFi connection might take up to 10s
+- Entries per directory listing limited to 16 for jobs and macros
+- Directory path limited to 128 characters
+- Filament listing (all filament names separated by one character) limited to 1014
 - Can not list all files within a directory in case DuetWebControl API requires multiple requests per listing
   - Workaround: Delete files to reduce file count to make all files fit within one response
