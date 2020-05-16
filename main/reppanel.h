@@ -149,6 +149,7 @@ typedef struct {
 extern file_tree_elem_t reprap_dir_elem[MAX_NUM_ELEM_DIR];  // Array used for buffering directory listings like macros/jobs
 
 // pos 0 is bed temp, rest are tool heaters
+enum {HEATER_OFF, HEATER_STDBY, HEATER_ACTIVE, HEATER_FAULT};
 extern int heater_states[MAX_NUM_TOOLS];       // 0=off, 1=standby, 2=active, 3=fault - Storage for incoming data
 extern int num_heaters;     // max is MAX_NUM_TOOLS
 extern int num_tools;     // max is MAX_NUM_TOOLS

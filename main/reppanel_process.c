@@ -200,7 +200,7 @@ static void change_heater_status(lv_obj_t *obj, bool force_temp_update) {
     ESP_LOGI(TAG, "%i", lv_btn_get_state(obj));
     char *temp_txt;
     if (button_type == BTN_BED_TMP_ACTIVE) {
-        if (heater_states[0] == 2 && !force_temp_update) {  // check user long pressed an already set and active temp
+        if (heater_states[0] == HEATER_ACTIVE && !force_temp_update) {  // check user long pressed and already set and active temp
             send_deactivate_bed_heater();
         } else {
             ESP_LOGI(TAG, "\tActivating bed active temp");
@@ -213,7 +213,7 @@ static void change_heater_status(lv_obj_t *obj, bool force_temp_update) {
             reprap_send_gcode(gcode_buff);
         }
     } else if (button_type == BTN_BED_TMP_STANDBY) {
-        if (heater_states[0] == 1 && !force_temp_update) {
+        if (heater_states[0] == HEATER_STDBY && !force_temp_update) {
             send_deactivate_bed_heater();
         } else {
             ESP_LOGI(TAG, "\tActivating bed standby temp");
@@ -222,7 +222,7 @@ static void change_heater_status(lv_obj_t *obj, bool force_temp_update) {
             reprap_send_gcode(gcode_buff);
         }
     } else if (button_type == BTN_TOOL_TMP_ACTIVE) {
-        if (heater_states[(current_visible_tool_indx + 1)] == 2 && !force_temp_update) {
+        if (heater_states[(current_visible_tool_indx + 1)] == HEATER_ACTIVE && !force_temp_update) {
             send_deactivate_tool_heater();
         } else {
             ESP_LOGI(TAG, "\tActivating tool with indx %i active temp", current_visible_tool_indx);
@@ -237,7 +237,8 @@ static void change_heater_status(lv_obj_t *obj, bool force_temp_update) {
             sprintf(gcode_buff, "T%i", reprap_tools[current_visible_tool_indx].number);
             reprap_send_gcode(gcode_buff);
         }
-    } else if (heater_states[(current_visible_tool_indx + 1)] == 2 && !force_temp_update) {
+    // button_type must now be BTN_TOOL_TMP_STANDBY
+    } else if (heater_states[(current_visible_tool_indx + 1)] == HEATER_STDBY && !force_temp_update) {
         send_deactivate_tool_heater();
     } else {
         ESP_LOGI(TAG, "\tActivating tool with indx %i standby temp", current_visible_tool_indx);

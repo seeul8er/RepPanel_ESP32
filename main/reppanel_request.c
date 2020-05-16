@@ -202,7 +202,7 @@ void process_reprap_status(char *buff) {
         }
     }
     num_heaters = pos;
-    num_tools = pos - 1;
+    num_tools = pos - 1;    // best guess: (number of heaters - bed heater) = number of tools
 
     cJSON *duet_seq = cJSON_GetObjectItem(root, "seq");    // Get seq number
     if (duet_seq && cJSON_IsNumber(duet_seq)) {
@@ -211,8 +211,8 @@ void process_reprap_status(char *buff) {
             ESP_LOGI(TAG, "Need reply!");
             // When connected via UART the reply is already part of the msg
             cJSON *duet_resp = cJSON_GetObjectItem(root, "resp");
-            if (duet_resp && strlen(duet_resp->valuestring) > 0) {
-                ESP_LOGI(TAG, "Length MSG: %i", strlen(duet_resp->valuestring));
+            if (duet_resp && strlen(duet_resp->valuestring) > 0 && duet_resp->valuestring[0] != '\n') {      // sometimes it's just a new line char
+                ESP_LOGI(TAG, "Length MSG: %i - %s", strlen(duet_resp->valuestring), duet_resp->valuestring);
                 disp_msg = true;
                 strncpy(msg_txt, duet_resp->valuestring, 512);
             }
@@ -234,6 +234,7 @@ void process_reprap_status(char *buff) {
                 if (cJSON_IsString(cJSON_GetObjectItem(iterator, "filament")))
                     strncpy(reprap_tools[pos].filament, cJSON_GetObjectItem(iterator, "filament")->valuestring,
                             MAX_FILA_NAME_LEN);
+                reprap_tools[pos].heater_indx = pos + 1;    // set to some default value
                 if (cJSON_IsArray(cJSON_GetObjectItem(iterator, "heaters"))) {
                     // Ignore multiple heaters per tool
                     cJSON *heaterindx_item = cJSON_GetArrayItem(cJSON_GetObjectItem(iterator, "heaters"), 0);
@@ -243,8 +244,8 @@ void process_reprap_status(char *buff) {
             }
         }
         got_extended_status = true;  // TODO: Not the same for WiFi and UART autoremove
+        num_tools = pos;
     }
-    num_tools = pos;
 
     // Get firmware information
     cJSON *mcutemp = cJSON_GetObjectItem(root, DUET_MCU_TEMP);
@@ -305,7 +306,7 @@ void process_reprap_status(char *buff) {
         reprap_job_curr_layer = job_curr_layer->valueint;
     }
 
-
+    // update UI
     if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
         if (label_status != NULL) lv_label_set_text(label_status, reppanel_status);
         update_ui_machine();
@@ -1114,7 +1115,7 @@ void request_reprap_status_updates(void *params) {
             }
             if (!got_extended_status) reprap_uart_get_status(&uart_receive_buff, 3);
             if (!job_running)
-                reprap_uart_get_status(&uart_receive_buff, 0);
+                reprap_uart_get_status(&uart_receive_buff, 2);
             else
                 reprap_uart_get_status(&uart_receive_buff, 4);
             if (i == 20) {
