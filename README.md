@@ -79,7 +79,20 @@ git clone --recurse-submodules https://github.com/seeul8er/RepPanel_ESP32
 **Configure Project**
 
 **Temporary workaround:**  
-Copy file content of `main/lv_conf_back.h` over to `externals/lv_port_esp32/components/lvgl/lv_conf.h`
+Copy file content of `main/lv_conf_back.h` over to `externals/lv_port_esp32/components/lvgl/lv_conf.h`. Or simply add:
+- Set `LV_USE_USER_DATA` to 1
+- Add `#define LV_USE_THEME_REP_PANEL_DARK 1`
+- `CONFIG_LVGL_FONT_ROBOTO16` & `CONFIG_LVGL_FONT_ROBOTO22` must be activated
+- Add 
+```C
+#define LV_FONT_CUSTOM_DECLARE  LV_FONT_DECLARE(reppanel_font_roboto_bold_16) \
+                                       LV_FONT_DECLARE(reppanel_font_roboto_bold_18) \
+                                       LV_FONT_DECLARE(reppanel_font_roboto_bold_24) \
+                                       LV_FONT_DECLARE(reppanel_font_roboto_regular_26) \
+                                       LV_FONT_DECLARE(reppanel_font_roboto_light_26) \
+                                       LV_FONT_DECLARE(reppanel_font_roboto_thin_numeric_160) \
+                                       LV_FONT_DECLARE(reppanel_font_roboto_regular_percent_40)
+```
 
 From its root run:
 ```bash
