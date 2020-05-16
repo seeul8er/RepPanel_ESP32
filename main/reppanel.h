@@ -29,23 +29,38 @@ extern "C" {
 #define REPPANEL_WIFI_RECONNECTING  4
 #define REPPANEL_UART_CONNECTED     5
 
-#define VERSION_STR             "v0.1.0"
+    // Masks for rp_conn_stat
+#define REPPANEL_POWERON_MASK           0x01    // Init state (dummy)
+#define REPPANEL_WIFIINITED_MASK        0x02
+#define REPPANEL_UARTINITED_MASK        0x04
+#define REPPANEL_WIFICONNECTED_MASK     0x08    // Connected to Wifi AP
+#define REPPANEL_WIFIDUETCONNECTED_MASK 0x10    // Can communicate with Duet via WiFi
+#define REPPANEL_UARTDUETCONNECTED_MASK 0x20    // Can communicate with Duet via UART
+
+
+#define VERSION_MAJOR           1
+#define VERSION_MINOR           0
+#define VERSION_HOTFIX          0
 
 #define NUM_TEMPS_BUFF      15
-#define MAX_FILA_NAME_LEN   64
-#define MAX_TOOL_NAME_LEN   32
-#define MAX_LEN_STR_FILAMENT_LIST   512*3
-#define MAX_NUM_MACROS      32
-#define MAX_NUM_JOBS        MAX_NUM_MACROS
+#define MAX_FILA_NAME_LEN   32
+#define MAX_TOOL_NAME_LEN   12
+#define MAX_LEN_STR_FILAMENT_LIST   MAX_FILA_NAME_LEN*32
+#define MAX_NUM_ELEM_DIR    16      // Max number of elements per directory that can be listed
+
+#define MAX_LEN_FILENAME    64
+#define MAX_LEN_DIRNAME     128
+#define MAX_LEN_LAST_MOD    0
+#define MAX_LEN_GENERATOR   0
 
 #define TREE_EMPTY_ELEM     -1
 #define TREE_FOLDER_ELEM    0
 #define TREE_FILE_ELEM      1
 
-extern uint8_t reppanel_conn_status;    // See REPPANEL_NO_CONNECTION, REPPANEL_WIFI_CONNECTED, etc.
+extern int rp_conn_stat;    // REPPANEL_NO_CONNECTION, ... etc.
 
 extern lv_obj_t *process_scr;               // screen for the process settings
-extern lv_obj_t *mainmenu_scr;              // screen for the main_menue
+extern lv_obj_t *mainmenu_scr;              // screen for the main_menu
 extern lv_obj_t *cont_header;
 
 extern lv_obj_t *label_status;
@@ -59,7 +74,6 @@ extern lv_obj_t *label_extruder_name;
 
 extern lv_obj_t *button_tool_filament;
 extern lv_obj_t *ddlist_selected_filament;
-extern lv_obj_t *label_sig_strength;
 extern lv_obj_t *label_connection_status;
 
 // Temp variable for writing to label. Contains current temp + °C or °F
@@ -83,8 +97,8 @@ extern int reprap_job_time_sim;
 extern double reprap_job_first_layer_height;
 extern double reprap_job_layer_height;
 extern double reprap_job_height;
-extern char current_job_name[MAX_FILA_NAME_LEN];
-extern char reprap_firmware_name[100];
+extern char current_job_name[MAX_LEN_FILENAME];
+extern char reprap_firmware_name[32];
 extern char reprap_firmware_version[5];
 
 typedef struct {
@@ -127,33 +141,15 @@ typedef struct {
 } reprap_bed_poss_temps_t;
 
 typedef struct {
-    char *name;
-    char *last_mod;
-    char *dir;
-    char *generator;        // slicer engine
-    int size;
-    double height;
-    double layer_height;
-    int print_time;
-    int sim_print_time;
-} reprap_job_t;
-
-typedef struct {
-    char *name;
-    char *last_mod;
-    char *dir;
-    int size;
-} reprap_macro_t;
-
-typedef struct {
-    void *element;  // reprap_macro_t or reprap_job_t
+    char name[MAX_LEN_FILENAME];    // name of the files
+    char dir[MAX_LEN_DIRNAME];  // current directory
     int type;       // TREE_FOLDER_ELEM, TREE_FILE_ELEM
 } file_tree_elem_t;
 
-extern file_tree_elem_t reprap_jobs[MAX_NUM_JOBS];
-extern file_tree_elem_t reprap_macros[MAX_NUM_MACROS];
+extern file_tree_elem_t reprap_dir_elem[MAX_NUM_ELEM_DIR];  // Array used for buffering directory listings like macros/jobs
 
 // pos 0 is bed temp, rest are tool heaters
+enum {HEATER_OFF, HEATER_STDBY, HEATER_ACTIVE, HEATER_FAULT};
 extern int heater_states[MAX_NUM_TOOLS];       // 0=off, 1=standby, 2=active, 3=fault - Storage for incoming data
 extern int num_heaters;     // max is MAX_NUM_TOOLS
 extern int num_tools;     // max is MAX_NUM_TOOLS
@@ -167,7 +163,6 @@ extern reprap_bed_poss_temps_t reprap_bed_poss_temps;
 
 extern char filament_names[MAX_LEN_STR_FILAMENT_LIST];
 
-extern char reprap_status;
 extern bool job_paused;
 extern bool job_running;
 extern int seq_num_msgbox;

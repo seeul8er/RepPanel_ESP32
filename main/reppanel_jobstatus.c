@@ -17,14 +17,13 @@ double reprap_job_percent;
 int reprap_job_file_pos;
 double reprap_job_duration;
 int reprap_job_curr_layer;
-char current_job_name[MAX_FILA_NAME_LEN];
+char current_job_name[MAX_LEN_FILENAME];
 int reprap_job_time_file = 0;
 int reprap_job_time_sim = 0;
 double reprap_job_first_layer_height = 0;
 double reprap_job_layer_height = 0;
 double reprap_job_height = 0;
 
-lv_obj_t *jobstatus_page;
 lv_obj_t *cont_percent;
 lv_obj_t *label_job_progress_percent;
 lv_obj_t *label_job_elapsed_time;
@@ -87,6 +86,7 @@ void update_print_job_status_ui() {
             lv_label_set_text_fmt(label_job_remaining_time, "%.0fs", file_time_left);
         }
     }
+
     if (label_job_filename) {
         // only update when changed. Otherwise label will not scroll
         if (strcmp(lv_label_get_text(label_job_filename), current_job_name) != 0) {
@@ -107,21 +107,21 @@ void update_print_job_status_ui() {
     }
 }
 
-void _resume_job_event(lv_obj_t *obj, lv_event_t event) {
+void resume_job_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         ESP_LOGI(TAG, "Resuming print job");
         reprap_send_gcode("M24");
     }
 }
 
-void _stop_job_event(lv_obj_t *obj, lv_event_t event) {
+void stop_job_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         ESP_LOGI(TAG, "Stopping print job");
         reprap_send_gcode("M0 H1");
     }
 }
 
-void _pause_job_event(lv_obj_t *obj, lv_event_t event) {
+void pause_job_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         ESP_LOGI(TAG, "Pausing print job");
         reprap_send_gcode("M25");
@@ -130,7 +130,7 @@ void _pause_job_event(lv_obj_t *obj, lv_event_t event) {
 
 
 void draw_jobstatus(lv_obj_t *parent_screen) {
-    jobstatus_page = lv_page_create(parent_screen, NULL);
+    lv_obj_t *jobstatus_page = lv_page_create(parent_screen, NULL);
     lv_obj_set_size(jobstatus_page, lv_disp_get_hor_res(NULL),
                     lv_disp_get_ver_res(NULL) - (lv_obj_get_height(cont_header) + 5));
     lv_page_set_scrl_fit(jobstatus_page, LV_FIT_FLOOD);
@@ -235,7 +235,7 @@ void draw_jobstatus(lv_obj_t *parent_screen) {
     lv_imgbtn_set_style(button_job_pause, LV_BTN_STATE_PR, &style_button_job_pause);
     lv_imgbtn_set_style(button_job_pause, LV_BTN_STATE_TGL_PR, &style_button_job_pause);
     lv_imgbtn_set_toggle(button_job_pause, true);
-    lv_obj_set_event_cb(button_job_pause, _pause_job_event);
+    lv_obj_set_event_cb(button_job_pause, pause_job_event);
 
     lv_obj_align(button_job_pause, jobstatus_page, LV_ALIGN_IN_BOTTOM_RIGHT, -32, -30);
     lv_obj_align(label_job_filename, jobstatus_page, LV_ALIGN_IN_BOTTOM_LEFT, 15, -30);
@@ -260,7 +260,7 @@ void draw_jobstatus(lv_obj_t *parent_screen) {
     lv_imgbtn_set_style(button_job_resume, LV_BTN_STATE_PR, &style_button_job_pause);
     lv_imgbtn_set_style(button_job_resume, LV_BTN_STATE_TGL_PR, &style_button_job_pause);
     lv_imgbtn_set_toggle(button_job_resume, true);
-    lv_obj_set_event_cb(button_job_resume, _resume_job_event);
+    lv_obj_set_event_cb(button_job_resume, resume_job_event);
 
     static lv_style_t style_button_job_stop;
     lv_style_copy(&style_button_job_stop, &lv_style_plain);
@@ -278,7 +278,7 @@ void draw_jobstatus(lv_obj_t *parent_screen) {
     lv_imgbtn_set_style(button_job_stop, LV_BTN_STATE_PR, &style_button_job_pause);
     lv_imgbtn_set_style(button_job_stop, LV_BTN_STATE_TGL_PR, &style_button_job_pause);
     lv_imgbtn_set_toggle(button_job_stop, true);
-    lv_obj_set_event_cb(button_job_stop, _stop_job_event);
+    lv_obj_set_event_cb(button_job_stop, stop_job_event);
 
     // hidden from the start
     lv_obj_align(button_job_resume, jobstatus_page, LV_ALIGN_IN_BOTTOM_RIGHT, -32, -30);

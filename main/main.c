@@ -21,6 +21,9 @@
 #include "reppanel.h"
 #include "esp32_wifi.h"
 #include "reppanel_request.h"
+#include "lvgl_driver.h"
+#include "esp32_uart.h"
+
 
 #ifdef CONFIG_LVGL_TFT_DISPLAY_MONOCHROME
 #include "lv_theme_mono.h"
@@ -30,17 +33,10 @@
 double reprap_chamber_temp_buff[NUM_TEMPS_BUFF] = {0};
 int reprap_chamber_temp_curr_pos = 0;
 double reprap_babysteps_amount = 0.05;
-double reprap_extruder_amounts[NUM_TEMPS_BUFF];
-double reprap_extruder_feedrates[NUM_TEMPS_BUFF];
 double reprap_move_feedrate = 6000;
 double reprap_mcu_temp = 0;
-char reprap_firmware_name[100];
+char reprap_firmware_name[32];
 char reprap_firmware_version[5];
-int num_tools = 0;
-reprap_tool_t reprap_tools[MAX_NUM_TOOLS];
-reprap_bed_t reprap_bed;
-reprap_tool_poss_temps_t reprap_tool_poss_temps;
-reprap_bed_poss_temps_t reprap_bed_poss_temps;
 
 static void IRAM_ATTR lv_tick_task(void *arg);
 void guiTask();
@@ -51,10 +47,10 @@ void guiTask();
 void app_main() {
     //If you want to use a task to create the graphic, you NEED to create a Pinned task
     //Otherwise there can be problem such as memory corruption and so on
-    xTaskCreatePinnedToCore(guiTask, "gui", 512 * 11, NULL, 0, NULL, 1);
+    xTaskCreatePinnedToCore(guiTask, "gui", 512 * 15, NULL, 0, NULL, 1);
 
     TaskHandle_t printer_status_task_handle = NULL;
-    xTaskCreate(request_reprap_status_updates, "Printer Status Update Task", 1024 * 4, NULL,
+    xTaskCreate(request_reprap_status_updates, "Printer Status Update Task", 1024 * 15, NULL,
                 tskIDLE_PRIORITY, &printer_status_task_handle);
     configASSERT(printer_status_task_handle);
 }
@@ -64,12 +60,9 @@ static void IRAM_ATTR lv_tick_task(void *arg) {
     lv_tick_inc(portTICK_RATE_MS);
 }
 
-//Creates a semaphore to handle concurrent call to lvgl stuff
-//If you wish to call *any* lvgl function from other threads/tasks
-//you should lock on the very same semaphore!
-SemaphoreHandle_t xGuiSemaphore;
-
 void guiTask() {
+    /* Inspect our own high water mark on entering the task. */
+//    UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
     xGuiSemaphore = xSemaphoreCreateMutex();
     lv_init();
     lvgl_driver_init();
@@ -127,8 +120,8 @@ void guiTask() {
     rep_panel_ui_create();
 
     wifi_init_sta();
+    init_uart();
 
-//    int c = 0;
     while (1) {
         vTaskDelay(1);
         //Try to lock the semaphore, if success, call lvgl stuff
@@ -136,11 +129,8 @@ void guiTask() {
             lv_task_handler();
             xSemaphoreGive(xGuiSemaphore);
         }
-//        uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
-//        if (c%50000 == 0) {
-//            c = 0;
-//            ESP_LOGI(TAG, "%i free bytes" , uxHighWaterMark*4);
-//        } else c++;
+//        uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+//        ESP_LOGI(TAG, "%i free bytes", uxHighWaterMark * 4);
     }
     //A task should NEVER return
     vTaskDelete(NULL);

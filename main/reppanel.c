@@ -26,7 +26,7 @@ void draw_main_menu(lv_obj_t *parent_screen);
  *  STATIC VARIABLES
  **********************/
 
-uint8_t reppanel_conn_status = REPPANEL_NO_CONNECTION;
+int rp_conn_stat = 0;
 
 lv_obj_t *process_scr;  // screen for the process settings
 lv_obj_t *machine_scr;
@@ -44,7 +44,6 @@ lv_obj_t *main_menu_button;
 lv_obj_t *console_button;
 lv_obj_t *label_connection_status;
 
-char reprap_status;     // printer status
 char reppanel_status[MAX_REPRAP_STATUS_LEN];
 char reppanel_chamber_temp[MAX_REPRAP_STATUS_LEN];
 char reppanel_job_progess[MAX_PREPANEL_TEMP_LEN];
@@ -198,7 +197,7 @@ void draw_header(lv_obj_t *parent_screen) {
 
 void update_rep_panel_conn_status() {
     if (label_connection_status) {
-        switch (reppanel_conn_status) {
+        switch (rp_conn_stat) {
             default:
             case REPPANEL_NO_CONNECTION:     // no connection
                 lv_label_set_text_fmt(label_connection_status, "#e84e43 "LV_SYMBOL_WARNING"#");
@@ -222,7 +221,7 @@ void update_rep_panel_conn_status() {
     }
 }
 
-static void _show_process_screen(lv_obj_t *obj, lv_event_t event) {
+static void show_process_screen(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         update_rep_panel_conn_status();
         if (process_scr) lv_obj_del(process_scr);
@@ -234,7 +233,7 @@ static void _show_process_screen(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
-static void _show_job_screen(lv_obj_t *obj, lv_event_t event) {
+static void show_job_screen(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         update_rep_panel_conn_status();
         if (job_running) {
@@ -250,7 +249,7 @@ static void _show_job_screen(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
-static void _show_machine_screen(lv_obj_t *obj, lv_event_t event) {
+static void show_machine_screen(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         update_rep_panel_conn_status();
         if (machine_scr) lv_obj_del(machine_scr);
@@ -262,7 +261,7 @@ static void _show_machine_screen(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
-static void _show_macros_screen(lv_obj_t *obj, lv_event_t event) {
+static void show_macros_screen(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         update_rep_panel_conn_status();
         if (info_scr) lv_obj_del(info_scr);
@@ -274,7 +273,7 @@ static void _show_macros_screen(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
-static void _show_info_screen(lv_obj_t *obj, lv_event_t event) {
+static void show_info_screen(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         update_rep_panel_conn_status();
         if (info_scr) lv_obj_del(info_scr);
@@ -304,7 +303,7 @@ void draw_main_menu(lv_obj_t *parent_screen) {
     LV_IMG_DECLARE(process_icon);
     lv_obj_t *button_main_menu_process = lv_btn_create(cont_row1, NULL);
     lv_btn_set_layout(button_main_menu_process, LV_LAYOUT_OFF);
-    lv_obj_set_event_cb(button_main_menu_process, _show_process_screen);
+    lv_obj_set_event_cb(button_main_menu_process, show_process_screen);
     lv_obj_t *img_process = lv_img_create(button_main_menu_process, NULL);
     lv_img_set_src(img_process, &process_icon);
     lv_obj_t *label_process = lv_label_create(button_main_menu_process, NULL);
@@ -331,7 +330,7 @@ void draw_main_menu(lv_obj_t *parent_screen) {
 
     LV_IMG_DECLARE(job_icon);
     lv_obj_t *button_main_menu_job = lv_btn_create(cont_row1, button_main_menu_process);
-    lv_obj_set_event_cb(button_main_menu_job, _show_job_screen);
+    lv_obj_set_event_cb(button_main_menu_job, show_job_screen);
     lv_obj_t *img_job = lv_img_create(button_main_menu_job, NULL);
     lv_img_set_src(img_job, &job_icon);
     lv_obj_t *label_job = lv_label_create(button_main_menu_job, NULL);
@@ -348,7 +347,7 @@ void draw_main_menu(lv_obj_t *parent_screen) {
 
     LV_IMG_DECLARE(machine_icon);
     lv_obj_t *button_main_menu_machine = lv_btn_create(cont_row1, button_main_menu_process);
-    lv_obj_set_event_cb(button_main_menu_machine, _show_machine_screen);
+    lv_obj_set_event_cb(button_main_menu_machine, show_machine_screen);
     lv_obj_t *img_machine = lv_img_create(button_main_menu_machine, NULL);
     lv_img_set_src(img_machine, &machine_icon);
     lv_obj_t *label_machine = lv_label_create(button_main_menu_machine, NULL);
@@ -359,7 +358,7 @@ void draw_main_menu(lv_obj_t *parent_screen) {
     LV_IMG_DECLARE(macro_icon);
     lv_obj_t *button_main_menu_macro = lv_btn_create(cont_row2, NULL);
     lv_btn_set_layout(button_main_menu_macro, LV_LAYOUT_OFF);
-    lv_obj_set_event_cb(button_main_menu_macro, _show_macros_screen);
+    lv_obj_set_event_cb(button_main_menu_macro, show_macros_screen);
     lv_obj_t *img_macro = lv_img_create(button_main_menu_macro, NULL);
     lv_img_set_src(img_macro, &macro_icon);
     lv_obj_t *label_macro = lv_label_create(button_main_menu_macro, NULL);
@@ -373,7 +372,7 @@ void draw_main_menu(lv_obj_t *parent_screen) {
 
     LV_IMG_DECLARE(info_icon);
     lv_obj_t *button_main_menu_info = lv_btn_create(cont_row2, button_main_menu_macro);
-    lv_obj_set_event_cb(button_main_menu_info, _show_info_screen);
+    lv_obj_set_event_cb(button_main_menu_info, show_info_screen);
     lv_obj_t *img_info = lv_img_create(button_main_menu_info, NULL);
     lv_img_set_src(img_info, &info_icon);
     lv_obj_t *label_info = lv_label_create(button_main_menu_info, NULL);

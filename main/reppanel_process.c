@@ -15,8 +15,6 @@ lv_obj_t *label_bed_temp;
 lv_obj_t *label_tool_temp;
 lv_obj_t *label_extruder_name;
 lv_obj_t *button_tool_filament;
-lv_obj_t *process_container;
-lv_obj_t *cont_fila_overlay;
 
 lv_obj_t *btn_bed_temp_active;
 lv_obj_t *btn_bed_temp_standby;
@@ -31,10 +29,19 @@ lv_obj_t *label_tool_temp_standby;
 lv_obj_t *prev_extruder_label;
 lv_obj_t *next_extruder_label;
 
+lv_obj_t *cont_fila_overlay;
 lv_obj_t *popup_page;
 
 lv_obj_t *ddlist_selected_filament;
 static lv_obj_t *cont_filament;
+
+int num_tools = 0;
+reprap_tool_t reprap_tools[MAX_NUM_TOOLS];
+reprap_bed_t reprap_bed;
+reprap_tool_poss_temps_t reprap_tool_poss_temps;
+reprap_bed_poss_temps_t reprap_bed_poss_temps;
+double reprap_extruder_amounts[NUM_TEMPS_BUFF];
+double reprap_extruder_feedrates[NUM_TEMPS_BUFF];
 
 int current_visible_tool_indx = 0;     // heater/tool/extruder that is currently visible within the UI
 
@@ -115,7 +122,7 @@ void update_current_tool_temps_ui() {
                               get_temp_unit());
 }
 
-void _update_next_tool_button_visibility() {
+void update_next_tool_button_visibility() {
     if (current_visible_tool_indx == (num_tools - 1))
         lv_obj_set_hidden(next_extruder_label, true);
     else
@@ -126,27 +133,27 @@ void _update_next_tool_button_visibility() {
         lv_obj_set_hidden(prev_extruder_label, false);
 }
 
-static void _choose_prev_tool_event_handler(lv_obj_t *obj, lv_event_t event) {
+static void choose_prev_tool_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         if (current_visible_tool_indx > 0) current_visible_tool_indx--;
-        _update_next_tool_button_visibility();
+        update_next_tool_button_visibility();
     }
 }
 
-static void _choose_next_tool_event_handler(lv_obj_t *obj, lv_event_t event) {
+static void choose_next_tool_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         if (current_visible_tool_indx < (num_tools - 1)) current_visible_tool_indx++;
-        _update_next_tool_button_visibility();
+        update_next_tool_button_visibility();
     }
 }
 
-static void _redraw_process_event_handler(lv_obj_t *obj, lv_event_t event) {
+static void redraw_process_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         lv_obj_del_async(cont_fila_overlay);
     }
 }
 
-static void _load_filament_event_handler(lv_obj_t *obj, lv_event_t event) {
+static void load_filament_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         char val_txt_buff[100];
         lv_ddlist_get_selected_str(ddlist_selected_filament, val_txt_buff, 100);
@@ -157,7 +164,7 @@ static void _load_filament_event_handler(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
-static void _unload_filament_event_handler(lv_obj_t *obj, lv_event_t event) {
+static void unload_filament_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         char val_txt_buff[100];
         lv_ddlist_get_selected_str(ddlist_selected_filament, val_txt_buff, 100);
@@ -168,14 +175,14 @@ static void _unload_filament_event_handler(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
-static void _send_deactivate_bed_heater() {
+static void send_deactivate_bed_heater() {
     char gcode_buff[64];
     ESP_LOGI(TAG, "\tDeactivating bed heater\n");
     sprintf(gcode_buff, "M140 P%i S-273.15", reprap_bed.heater_indx);
     reprap_send_gcode(gcode_buff);
 }
 
-static void _send_deactivate_tool_heater() {
+static void send_deactivate_tool_heater() {
     char gcode_buff[64];
     ESP_LOGI(TAG, "\tDeactivating tool %i heater\n", current_visible_tool_indx);
     sprintf(gcode_buff, "G10 P%i S-273.15 R-273.15", reprap_tools[current_visible_tool_indx].number);
@@ -187,14 +194,14 @@ static void _send_deactivate_tool_heater() {
  * @param obj
  * @param force_temp_update Activate/Set heater temperature. Does not deactivate heater
  */
-static void _change_heater_status(lv_obj_t *obj, bool force_temp_update) {
+static void change_heater_status(lv_obj_t *obj, bool force_temp_update) {
     char gcode_buff[64];
     int button_type = (int) (lv_obj_user_data_t) obj->user_data;
     ESP_LOGI(TAG, "%i", lv_btn_get_state(obj));
     char *temp_txt;
     if (button_type == BTN_BED_TMP_ACTIVE) {
-        if (heater_states[0] == 2 && !force_temp_update) {  // check user long pressed an already set and active temp
-            _send_deactivate_bed_heater();
+        if (heater_states[0] == HEATER_ACTIVE && !force_temp_update) {  // check user long pressed and already set and active temp
+            send_deactivate_bed_heater();
         } else {
             ESP_LOGI(TAG, "\tActivating bed active temp");
             lv_btn_set_state(btn_bed_temp_standby, LV_BTN_STATE_REL);
@@ -206,8 +213,8 @@ static void _change_heater_status(lv_obj_t *obj, bool force_temp_update) {
             reprap_send_gcode(gcode_buff);
         }
     } else if (button_type == BTN_BED_TMP_STANDBY) {
-        if (heater_states[0] == 1 && !force_temp_update) {
-            _send_deactivate_bed_heater();
+        if (heater_states[0] == HEATER_STDBY && !force_temp_update) {
+            send_deactivate_bed_heater();
         } else {
             ESP_LOGI(TAG, "\tActivating bed standby temp");
             lv_btn_set_state(btn_bed_temp_active, LV_BTN_STATE_REL);
@@ -215,8 +222,8 @@ static void _change_heater_status(lv_obj_t *obj, bool force_temp_update) {
             reprap_send_gcode(gcode_buff);
         }
     } else if (button_type == BTN_TOOL_TMP_ACTIVE) {
-        if (heater_states[(current_visible_tool_indx + 1)] == 2 && !force_temp_update) {
-            _send_deactivate_tool_heater();
+        if (heater_states[(current_visible_tool_indx + 1)] == HEATER_ACTIVE && !force_temp_update) {
+            send_deactivate_tool_heater();
         } else {
             ESP_LOGI(TAG, "\tActivating tool with indx %i active temp", current_visible_tool_indx);
             lv_btn_set_state(btn_tool_temp_standby, LV_BTN_STATE_REL);
@@ -230,8 +237,9 @@ static void _change_heater_status(lv_obj_t *obj, bool force_temp_update) {
             sprintf(gcode_buff, "T%i", reprap_tools[current_visible_tool_indx].number);
             reprap_send_gcode(gcode_buff);
         }
-    } else if (heater_states[(current_visible_tool_indx + 1)] == 2 && !force_temp_update) {
-        _send_deactivate_tool_heater();
+    // button_type must now be BTN_TOOL_TMP_STANDBY
+    } else if (heater_states[(current_visible_tool_indx + 1)] == HEATER_STDBY && !force_temp_update) {
+        send_deactivate_tool_heater();
     } else {
         ESP_LOGI(TAG, "\tActivating tool with indx %i standby temp", current_visible_tool_indx);
         lv_btn_set_state(btn_tool_temp_active, LV_BTN_STATE_REL);
@@ -247,7 +255,7 @@ static void _change_heater_status(lv_obj_t *obj, bool force_temp_update) {
     }
 }
 
-static void _change_tmp_event_handler(lv_obj_t *obj, lv_event_t event) {
+static void change_tmp_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         char gcode_buff[64];
         char char_temp_only[6];
@@ -286,12 +294,12 @@ static void _change_tmp_event_handler(lv_obj_t *obj, lv_event_t event) {
                     break;
             }
         }
-        _change_heater_status(obj, true);     // Directly update new value to Duet to be in sync
+        change_heater_status(obj, true);     // Directly update new value to Duet to be in sync
         lv_obj_del_async(popup_page);
     }
 }
 
-static void _close_popup_page(lv_obj_t *obj, lv_event_t event) {
+static void close_popup_page(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         lv_obj_del_async(popup_page);
     }
@@ -302,7 +310,7 @@ static void _close_popup_page(lv_obj_t *obj, lv_event_t event) {
  * @param obj
  * @param event
  */
-static void _set_bed_temp_status_event_handler(lv_obj_t *obj, lv_event_t event) {
+static void set_bed_temp_status_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_SHORT_CLICKED) {
         ESP_LOGI(TAG, "Change heater temperature");
         // keep current selection. Toggle buttons will otherwise switch
@@ -352,30 +360,33 @@ static void _set_bed_temp_status_event_handler(lv_obj_t *obj, lv_event_t event) 
         for (int i = 0; i < NUM_TEMPS_BUFF + 1; i++) {
             if (i != 0 && i % 4 == 0) {
                 temp_map_tmp[map_indx] = "\n";
+                ESP_LOGI(TAG, "%s", temp_map_tmp[map_indx]);
                 map_indx++;
             }
-            if (temps[i] > 0) {
+            if (temps[i] >= 0 && i != (NUM_TEMPS_BUFF - 1)) {
                 sprintf(txt[i], "%.0f°%c", temps[i], get_temp_unit());
                 temp_map_tmp[map_indx] = txt[i];
             } else {
                 temp_map_tmp[map_indx] = "";
                 break;
             }
+            ESP_LOGI(TAG, "%s", temp_map_tmp[map_indx]);
             map_indx++;
         }
+        temp_map_tmp[map_indx] = "";    // just to be sure. Last element has to be empty
         lv_btnm_set_map(btn_matrix, (const char **) temp_map_tmp);
-        lv_obj_set_event_cb(btn_matrix, _change_tmp_event_handler);
+        lv_obj_set_event_cb(btn_matrix, change_tmp_event_handler);
         lv_obj_align(btn_matrix, NULL, LV_ALIGN_CENTER, 0, 0);
         lv_obj_set_user_data(btn_matrix, obj->user_data);       // pass on user data to know which temp is adjusted
         static lv_obj_t *cancle_btn;
-        create_button(popup_page, cancle_btn, "Cancel", _close_popup_page);
+        create_button(popup_page, cancle_btn, "Cancel", close_popup_page);
     } else if (event == LV_EVENT_LONG_PRESSED) {
         printf("Change heater status\n");
-        _change_heater_status(obj, false);
+        change_heater_status(obj, false);
     }
 }
 
-static void _filament_change_event(lv_obj_t *obj, lv_event_t event) {
+static void filament_change_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         cont_fila_overlay = lv_cont_create(lv_layer_top(), NULL);
         static lv_style_t somestyle;
@@ -411,12 +422,12 @@ static void _filament_change_event(lv_obj_t *obj, lv_event_t event) {
         lv_cont_set_fit2(cont2, LV_FIT_FILL, LV_FIT_TIGHT);
 
         static lv_obj_t *button_load_filament;
-        create_button(cont2, button_load_filament, "Load", _load_filament_event_handler);
+        create_button(cont2, button_load_filament, "Load", load_filament_event_handler);
         static lv_obj_t *button_unload_filament;
-        create_button(cont2, button_unload_filament, "Unload", _unload_filament_event_handler);
+        create_button(cont2, button_unload_filament, "Unload", unload_filament_event_handler);
 
         static lv_obj_t *button_exit;
-        create_button(cont_fila_overlay, button_exit, "Ok", _redraw_process_event_handler);
+        create_button(cont_fila_overlay, button_exit, "Ok", redraw_process_event_handler);
 
         lv_obj_align(cont_filament, cont_fila_overlay, LV_ALIGN_CENTER, 0, 0); /*Align to the corner*/
     }
@@ -427,7 +438,7 @@ static void _filament_change_event(lv_obj_t *obj, lv_event_t event) {
  * @param parent_screen Parent screen to draw elements on
  */
 void draw_process(lv_obj_t *parent_screen) {
-    process_container = lv_cont_create(parent_screen, NULL);
+    lv_obj_t *process_container = lv_cont_create(parent_screen, NULL);
     lv_cont_set_layout(process_container, LV_LAYOUT_ROW_T);
     lv_cont_set_fit2(process_container, LV_FIT_TIGHT, LV_FIT_TIGHT);
 
@@ -475,7 +486,7 @@ void draw_process(lv_obj_t *parent_screen) {
     const lv_style_t *panel_style = lv_cont_get_style(holder_empty, LV_CONT_STYLE_MAIN);
 
     btn_bed_temp_active = lv_btn_create(holder2, NULL);
-    lv_obj_set_event_cb(btn_bed_temp_active, _set_bed_temp_status_event_handler);
+    lv_obj_set_event_cb(btn_bed_temp_active, set_bed_temp_status_event_handler);
     static lv_style_t new_released_style;
     lv_style_copy(&new_released_style, lv_btn_get_style(btn_bed_temp_active, LV_BTN_STYLE_REL));
     new_released_style.body.main_color = panel_style->body.main_color;
@@ -504,14 +515,14 @@ void draw_process(lv_obj_t *parent_screen) {
 
     prev_extruder_label = lv_label_create(holder_extruder, NULL);
     lv_label_set_text(prev_extruder_label, LV_SYMBOL_LEFT);
-    lv_obj_set_event_cb(prev_extruder_label, _choose_prev_tool_event_handler);
+    lv_obj_set_event_cb(prev_extruder_label, choose_prev_tool_event_handler);
 
     label_extruder_name = lv_label_create(holder_extruder, NULL);
     lv_label_set_text(label_extruder_name, reprap_tools[current_visible_tool_indx].name);
 
     next_extruder_label = lv_label_create(holder_extruder, NULL);
     lv_label_set_text(next_extruder_label, LV_SYMBOL_RIGHT);
-    lv_obj_set_event_cb(next_extruder_label, _choose_next_tool_event_handler);
+    lv_obj_set_event_cb(next_extruder_label, choose_next_tool_event_handler);
 
     label_tool_temp = lv_label_create(holder3, NULL);
     lv_label_set_text_fmt(label_tool_temp, "%.1f°%c",
@@ -530,7 +541,7 @@ void draw_process(lv_obj_t *parent_screen) {
     lv_label_set_text_fmt(label_tool_temp_standby, "%.0f°%c", reprap_tools[current_visible_tool_indx].standby_temp,
                           get_temp_unit());
 
-    create_button(holder3, button_tool_filament, "Filament", _filament_change_event);
+    create_button(holder3, button_tool_filament, "Filament", filament_change_event);
 
     // light big font for current temps
     static lv_style_t style_label;
@@ -556,5 +567,5 @@ void draw_process(lv_obj_t *parent_screen) {
     lv_obj_set_style(prev_extruder_label, &style_label_icon);
     lv_obj_set_style(next_extruder_label, &style_label_icon);
 
-    _update_next_tool_button_visibility();
+    update_next_tool_button_visibility();
 }

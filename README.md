@@ -67,7 +67,8 @@ Other display modules with a resolution of 480x320 should also work as long as t
 ### Compile yourself
 **Set up ESP-IDF**
 
-[Follow instructions](https://docs.espressif.com/projects/esp-idf/en/v4.0/get-started/index.html#step-1-install-prerequisites) on offical Espressif site.
+[Follow instructions](https://docs.espressif.com/projects/esp-idf/en/v4.0/get-started/index.html#step-1-install-prerequisites) on offical Espressif site.  
+ESP-IDF v4.0 is officially supported.
 
 **Clone Project**
 
@@ -76,6 +77,23 @@ git clone --recurse-submodules https://github.com/seeul8er/RepPanel_ESP32
 ```
 
 **Configure Project**
+
+**Temporary workaround:**  
+Copy file content of `main/lv_conf_back.h` over to `externals/lv_port_esp32/components/lvgl/lv_conf.h`. Or simply add:
+- Set `LV_USE_USER_DATA` to 1
+- Add `#define LV_USE_THEME_REP_PANEL_DARK 1`
+- `CONFIG_LVGL_FONT_ROBOTO16` & `CONFIG_LVGL_FONT_ROBOTO22` must be activated
+- Add 
+```C
+#define LV_FONT_CUSTOM_DECLARE  LV_FONT_DECLARE(reppanel_font_roboto_bold_16) \
+                                       LV_FONT_DECLARE(reppanel_font_roboto_bold_18) \
+                                       LV_FONT_DECLARE(reppanel_font_roboto_bold_24) \
+                                       LV_FONT_DECLARE(reppanel_font_roboto_regular_26) \
+                                       LV_FONT_DECLARE(reppanel_font_roboto_light_26) \
+                                       LV_FONT_DECLARE(reppanel_font_roboto_thin_numeric_160) \
+                                       LV_FONT_DECLARE(reppanel_font_roboto_regular_percent_40)
+```
+
 From its root run:
 ```bash
 idf.py menuconfig
@@ -112,6 +130,8 @@ Pin configuration of ready made images:
 |     GPIO 4     	|     Reset    	|        TFT related        	|
 |     GPIO 2     	|     Data     	|        TFT related        	|
 |     GPIO 27    	|   Backlight  	| Turn on/off TFT backlight 	|
+|     GPIO 17    	|   UART TX  	| Connect to RX PanelDue port 	|
+|     GPIO 16    	|   UART RX  	| Connect to TX PanelDue port	|
 
 ## Screenshots
 ![ESP32 Devkit wire connections](wiki/RepPanel_Working.jpg)
