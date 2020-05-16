@@ -2,25 +2,32 @@
 // Copyright (c) 2020 Wolfgang Christl
 // Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <nvs_flash.h>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include <esp_log.h>
-#include <nvs_flash.h>
-#include <freertos/semphr.h>
-
 #include "esp_freertos_hooks.h"
+#include "freertos/semphr.h"
 #include "esp_system.h"
+#include "driver/gpio.h"
+
+/* Littlevgl specific */
 #include "lvgl/lvgl.h"
-
+#include "lvgl_driver.h"
 #include "reppanel.h"
-#include "esp32_settings.h"
-
-#include "touch_driver.h"
 #include "esp32_wifi.h"
 #include "reppanel_request.h"
 #include "lvgl_driver.h"
 #include "esp32_uart.h"
 
+
+#ifdef CONFIG_LVGL_TFT_DISPLAY_MONOCHROME
+#include "lv_theme_mono.h"
+#endif
 #define TAG "Main"
 
 double reprap_chamber_temp_buff[NUM_TEMPS_BUFF] = {0};
@@ -31,13 +38,7 @@ double reprap_mcu_temp = 0;
 char reprap_firmware_name[32];
 char reprap_firmware_version[5];
 
-//Creates a semaphore to handle concurrent call to lvgl stuff
-//If you wish to call *any* lvgl function from other threads/tasks
-//you should lock on the very same semaphore!
-SemaphoreHandle_t xGuiSemaphore;
-
 static void IRAM_ATTR lv_tick_task(void *arg);
-
 void guiTask();
 
 /**********************
@@ -65,6 +66,7 @@ void guiTask() {
     xGuiSemaphore = xSemaphoreCreateMutex();
     lv_init();
     lvgl_driver_init();
+
     static lv_color_t buf1[DISP_BUF_SIZE];
     static lv_color_t buf2[DISP_BUF_SIZE];
     static lv_disp_buf_t disp_buf;
@@ -73,8 +75,18 @@ void guiTask() {
     lv_disp_drv_t disp_drv;
     lv_disp_drv_init(&disp_drv);
     disp_drv.flush_cb = disp_driver_flush;
+#ifdef CONFIG_LVGL_TFT_DISPLAY_MONOCHROME
+    disp_drv.rounder_cb = disp_driver_rounder;
+    disp_drv.set_px_cb = disp_driver_set_px;
+#endif
+
     disp_drv.buffer = &disp_buf;
     lv_disp_drv_register(&disp_drv);
+
+#if defined CONFIG_LVGL_TFT_DISPLAY_MONOCHROME
+    lv_theme_mono_init(0, NULL);
+    lv_theme_set_current( lv_theme_get_mono() );
+#endif
 
 #if CONFIG_LVGL_TOUCH_CONTROLLER != TOUCH_CONTROLLER_NONE
     lv_indev_drv_t indev_drv;

@@ -933,6 +933,7 @@ void reprap_wifi_get_config() {
     esp_http_client_cleanup(client);
 }
 
+
 void reprap_wifi_download(wifi_response_buff_t *response_buffer, char *file) {
     ESP_LOGI(TAG, "Downloading %s", file);
     char request_addr[MAX_REQ_ADDR_LENGTH];
@@ -943,6 +944,7 @@ void reprap_wifi_download(wifi_response_buff_t *response_buffer, char *file) {
             .event_handler = http_event_handle,
             .user_data = response_buffer,
     };
+    ESP_LOGI(TAG, "Downloading %s", request_addr);
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
 

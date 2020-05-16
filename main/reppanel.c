@@ -53,7 +53,7 @@ int num_heaters = 1;
 bool job_running = false;
 
 void rep_panel_ui_create() {
-    lv_theme_t *th = lv_theme_reppanel_light_init(81, &reppanel_font_roboto_regular_22);
+    lv_theme_t *th = lv_theme_reppanel_dark_init(81, &reppanel_font_roboto_regular_22);
     lv_theme_set_current(th);
 
     mainmenu_scr = lv_cont_create(NULL, NULL);
