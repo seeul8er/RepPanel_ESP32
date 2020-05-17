@@ -1,0 +1,222 @@
+{
+  "key": "",
+  "flags": "d99fn",
+  "result": {
+    "boards": [
+      {
+        "mcuTemp": {
+          "current": 27.1
+        },
+        "vIn": {
+          "current": 1.7
+        }
+      }
+    ],
+    "fans": [
+      {
+        "actualValue": 0,
+        "requestedValue": 0,
+        "rpm": -1
+      },
+      {
+        "actualValue": 0,
+        "requestedValue": 0.30,
+        "rpm": -1
+      }
+    ],
+    "heat": {
+      "heaters": [
+        {
+          "active": 0,
+          "current": 21.4,
+          "standby": 0,
+          "state": "off"
+        },
+        {
+          "active": 0,
+          "current": 21.3,
+          "standby": 0,
+          "state": "off"
+        }
+      ]
+    },
+    "inputs": [
+      {
+        "feedRate": 50.0,
+        "lineNumber": 1,
+        "state": "idle"
+      },
+      {
+        "feedRate": 50.0,
+        "lineNumber": 0,
+        "state": "idle"
+      },
+      {
+        "feedRate": 40.0,
+        "lineNumber": 6022,
+        "state": "idle"
+      },
+      {
+        "feedRate": 50.0,
+        "lineNumber": 0,
+        "state": "idle"
+      },
+      {
+        "feedRate": 50.0,
+        "lineNumber": 0,
+        "state": "idle"
+      },
+      {
+        "feedRate": 50.0,
+        "lineNumber": 0,
+        "state": "idle"
+      },
+      {
+        "feedRate": 50.0,
+        "lineNumber": 0,
+        "state": "idle"
+      },
+      null,
+      null,
+      {
+        "feedRate": 50.0,
+        "lineNumber": 0,
+        "state": "idle"
+      },
+      null,
+      {
+        "feedRate": 50.0,
+        "lineNumber": 0,
+        "state": "idle"
+      }
+    ],
+    "job": {
+      "build": {
+        "currentObject": -1
+      },
+      "duration": 4259,
+      "filePosition": 163738,
+      "layerTime": 10,
+      "timesLeft": {
+        "filament": null,
+        "file": 35,
+        "layer": null
+      }
+    },
+    "move": {
+      "axes": [
+        {
+          "homed": true,
+          "machinePosition": 126.856,
+          "userPosition": 127.835
+        },
+        {
+          "homed": true,
+          "machinePosition": 212.435,
+          "userPosition": 214.897
+        },
+        {
+          "homed": true,
+          "machinePosition": 1.050,
+          "userPosition": 1.050
+        }
+      ],
+      "currentMove": {
+        "acceleration": 0,
+        "deceleration": 0,
+        "laserPwm": null,
+        "requestedSpeed": 0,
+        "topSpeed": 0
+      },
+      "extruders": [
+        {
+          "position": 2854.2,
+          "rawPosition": 2854.8
+        }
+      ],
+      "virtualEPos": 0
+    },
+    "sensors": {
+      "analog": [
+        {
+          "lastReading": 21.4
+        },
+        {
+          "lastReading": 21.3
+        }
+      ],
+      "endstops": [
+        {
+          "triggered": false
+        },
+        {
+          "triggered": false
+        },
+        {
+          "triggered": true
+        }
+      ],
+      "filamentMonitors": [],
+      "gpIn": [],
+      "probes": [
+        {
+          "value": [
+            1000
+          ]
+        }
+      ]
+    },
+    "seqs": {
+      "boards": 0,
+      "directories": 0,
+      "fans": 4,
+      "heat": 9,
+      "inputs": 0,
+      "job": 3,
+      "move": 40,
+      "network": 7,
+      "reply": 1,
+      "scanner": 1,
+      "sensors": 2,
+      "spindles": 0,
+      "state": 1,
+      "tools": 6,
+      "volumes": 30
+    },
+    "spindles": [
+      {
+        "current": 0
+      },
+      {
+        "current": 0
+      },
+      {
+        "current": 0
+      },
+      {
+        "current": 0
+      }
+    ],
+    "state": {
+      "atxPower": null,
+      "currentTool": 0,
+      "gpOut": [],
+      "laserPwm": null,
+      "nextTool": 0,
+      "previousTool": -1,
+      "status": "simulating",
+      "upTime": 236
+    },
+    "tools": [
+      {
+        "active": [
+          0
+        ],
+        "standby": [
+          0
+        ],
+        "state": "off"
+      }
+    ]
+  }
+}

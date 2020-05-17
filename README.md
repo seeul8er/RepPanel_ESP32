@@ -57,7 +57,8 @@ Other display modules with a resolution of 480x320 should also work as long as t
 As of now RepPanel is optimized for 3.5" displays with a resolution of 480x320 pixels. The display is connected via SPI.
 
 **Tested Firmware**
-  - Duet2 WiFi with RepRap Firmware v3.0 and corresponding Duet2WebControl
+  - Duet2 WiFi running RepRap Firmware v3.0 and corresponding Duet2WebControl
+  - Duet2 WiFi running RepRap Firmware v3.1 and corresponding Duet2WebControl
 
 ## Installation
 

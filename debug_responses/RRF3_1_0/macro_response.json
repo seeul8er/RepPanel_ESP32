@@ -1,0 +1,37 @@
+{
+  "dir": "0:/macros/",
+  "first": 0,
+  "files": [
+    {
+      "type": "f",
+      "name": "Unload PLA",
+      "size": 532,
+      "date": "2020-04-12T20:18:58"
+    },
+    {
+      "type": "d",
+      "name": "Accelleration Tuning",
+      "size": 0,
+      "date": "2018-07-25T22:45:58"
+    },
+    {
+      "type": "d",
+      "name": "Jerk Tuning",
+      "size": 0,
+      "date": "2018-07-25T22:39:22"
+    },
+    {
+      "type": "d",
+      "name": "Pressure Advance Tuning",
+      "size": 0,
+      "date": "2018-07-26T00:44:30"
+    },
+    {
+      "type": "d",
+      "name": "Retraction Tuning",
+      "size": 0,
+      "date": "2018-07-26T00:50:50"
+    }
+  ],
+  "next": 0
+}
