@@ -11,7 +11,7 @@ An open source alternative to the PanelDue.
   - Compact and easy to use
   - Support for most operations required to set up a 3D print
   - Wireless connection - portable with power bar
-  - PanelDue-port/UART connection **(future release)**
+  - PanelDue-port/UART connection
 
 ![RepPanel main menu](wiki/RepPanel_Main.png)
 
