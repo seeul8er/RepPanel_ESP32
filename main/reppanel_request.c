@@ -282,10 +282,10 @@ void process_reprap_status(char *buff) {
                                                               reprap_tools[i].number);
             cJSON *tool_standby_temps_arr = cJSON_GetArrayItem(duet_temps_tools_standby,
                                                                reprap_tools[i].number);
-            reprap_tools[i].active_temp = cJSON_GetArrayItem(tool_active_temps_arr,
-                                                             0)->valuedouble;
-            reprap_tools[i].standby_temp = cJSON_GetArrayItem(tool_standby_temps_arr,
-                                                              0)->valuedouble;
+            if (tool_active_temps_arr) {
+                reprap_tools[i].active_temp = cJSON_GetArrayItem(tool_active_temps_arr,0)->valuedouble; }
+            if (tool_standby_temps_arr) {
+                reprap_tools[i].standby_temp = cJSON_GetArrayItem(tool_standby_temps_arr,0)->valuedouble; }
         }
     }
     // print job status
