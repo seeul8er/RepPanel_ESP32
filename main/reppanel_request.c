@@ -202,7 +202,6 @@ void process_reprap_status(char *buff) {
         }
     }
     num_heaters = pos;
-    num_tools = pos - 1;    // best guess: (number of heaters - bed heater) = number of tools
 
     cJSON *duet_seq = cJSON_GetObjectItem(root, "seq");    // Get seq number
     if (duet_seq && cJSON_IsNumber(duet_seq)) {
@@ -243,8 +242,8 @@ void process_reprap_status(char *buff) {
                 pos++;
             }
         }
-        got_extended_status = true;  // TODO: Not the same for WiFi and UART autoremove
-        num_tools = pos;
+        got_extended_status = true;
+        num_tools = pos;    // update number of tools
     }
 
     // Get firmware information

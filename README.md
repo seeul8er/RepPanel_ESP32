@@ -112,25 +112,25 @@ case you use different hardware or want a different pin connection layout
 
 Check out [releases](https://github.com/seeul8er/RepPanel_ESP32/releases) for compiled binaries.
 
-### Wiring ER-TFTM035-6 to the ESP32 DevKit with 36GPIOs
+### Wiring ER-TFTM035-6 to the ESP32 DevKit
 
 **Beware:** The available development boards have different pin configurations. Some have GND & 3.3V at the bottom. Others at the top.
-![ESP32 Devkit wire connections](wiki/Wiring_ESP32_DevKit_38GPIOs.jpg)
-![ER-TFTM035-6 wiring](wiki/Wiring_ERTFT.jpg)
 
 Pin configuration of ready made images:
-| **Pin Number** 	| **Function** 	|      **Description**      	|
-|:--------------:	|:------------:	|:-------------------------:	|
-|     GPIO 13    	|     MOSI     	|      Data line to TFT     	|
-|     GPIO 14    	|      SCL     	|      SPI CLK for TFT      	|
-|     GPIO 15    	| Slave Select 	|            SPI            	|
-|     GPIO 22    	|      SCL     	|        I²C - touch        	|
-|     GPIO 21    	|      SDA     	|        I²C - touch        	|
-|     GPIO 4     	|     Reset    	|        TFT related        	|
-|     GPIO 2     	|     Data     	|        TFT related        	|
-|     GPIO 27    	|   Backlight  	| Turn on/off TFT backlight 	|
-|     GPIO 17    	|   UART TX  	| Connect to RX PanelDue port 	|
-|     GPIO 16    	|   UART RX  	| Connect to TX PanelDue port	|
+| **Pin Number ESP32 ** |  **Pin Number ER-TFTM035-6** | **Function** | **Description** |    
+|:--------------:|:--:|:------------:   |:-------------------------:   |    
+|     VCC 3.3V   |  2 |     Power supply | Match TFT voltage with ESP32 pin |    
+|     GND        | 1  |      GND          |           Ground             |   
+|     GPIO 13    | 27 |     MOSI         |      Data line to TFT        |    
+|     GPIO 14    | 24 |      SCL         |      SPI CLK for TFT         |    
+|     GPIO 15    | 23 | Slave Select     |            SPI               |    
+|     GPIO 22    | 30 |      SCL         |        I²C - touch           |    
+|     GPIO 21    | 31 |      SDA         |        I²C - touch           |    
+|     GPIO 4     | 21 |   Reset          |        TFT related           |    
+|     GPIO 2     | 25 |   Data           |        TFT related           |    
+|     GPIO 27    | 29 |   Backlight      | Turn on/off TFT backlight    |    
+|     GPIO 17    |  - |   UART TX        | Connect to RX PanelDue port  |    
+|     GPIO 16    |  - |   UART RX        | Connect to TX PanelDue port  |
 
 ## Screenshots
 ![RepPanel with case](wiki/RepPanel_with_case.png)

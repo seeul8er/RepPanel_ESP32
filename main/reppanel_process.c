@@ -35,7 +35,7 @@ lv_obj_t *popup_page;
 lv_obj_t *ddlist_selected_filament;
 static lv_obj_t *cont_filament;
 
-int num_tools = 0;
+int num_tools = 1;
 reprap_tool_t reprap_tools[MAX_NUM_TOOLS];
 reprap_bed_t reprap_bed;
 reprap_tool_poss_temps_t reprap_tool_poss_temps;
@@ -177,14 +177,14 @@ static void unload_filament_event_handler(lv_obj_t *obj, lv_event_t event) {
 
 static void send_deactivate_bed_heater() {
     char gcode_buff[64];
-    ESP_LOGI(TAG, "\tDeactivating bed heater\n");
+    ESP_LOGI(TAG, "\tDeactivating bed heater");
     sprintf(gcode_buff, "M140 P%i S-273.15", reprap_bed.heater_indx);
     reprap_send_gcode(gcode_buff);
 }
 
 static void send_deactivate_tool_heater() {
     char gcode_buff[64];
-    ESP_LOGI(TAG, "\tDeactivating tool %i heater\n", current_visible_tool_indx);
+    ESP_LOGI(TAG, "\tDeactivating tool %i heater", current_visible_tool_indx);
     sprintf(gcode_buff, "G10 P%i S-273.15 R-273.15", reprap_tools[current_visible_tool_indx].number);
     reprap_send_gcode(gcode_buff);
 }

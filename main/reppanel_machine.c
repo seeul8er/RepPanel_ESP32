@@ -220,6 +220,17 @@ void draw_machine(lv_obj_t *parent_screen) {
     lv_page_set_scrl_fit2(machine_page, LV_FIT_FILL, LV_FIT_FILL);
     lv_page_set_scrl_layout(machine_page, LV_LAYOUT_COL_M);
 
+    lv_obj_t *home_cont = lv_cont_create(machine_page, NULL);
+    lv_cont_set_layout(home_cont, LV_LAYOUT_ROW_M);
+    lv_cont_set_fit(home_cont, LV_FIT_TIGHT);
+    lv_obj_t *label_home = lv_label_create(home_cont, NULL);
+    lv_label_set_text(label_home, "Home:");
+    btn_home_all = create_button(home_cont, btn_home_all, "  All Axis  ", _home_all_event);
+    btn_home_x = create_button(home_cont, btn_home_x, " X ", _home_x_event);
+    btn_home_y = create_button(home_cont, btn_home_y, " Y ", _home_y_event);
+    btn_home_z = create_button(home_cont, btn_home_z, " Z ", _home_z_event);
+    lv_style_copy(&not_homed_style, lv_btn_get_style(btn_home_x, LV_BTN_STYLE_REL));
+
     lv_obj_t *cont_cali = lv_cont_create(machine_page, NULL);
     lv_cont_set_fit(cont_cali, LV_FIT_TIGHT);
     lv_cont_set_layout(cont_cali, LV_LAYOUT_ROW_M);
@@ -233,17 +244,6 @@ void draw_machine(lv_obj_t *parent_screen) {
 
     static lv_obj_t *do_cali_butn;
     create_button(cont_cali, do_cali_butn, "Start", _start_cali_event);
-
-    lv_obj_t *home_cont = lv_cont_create(machine_page, NULL);
-    lv_cont_set_layout(home_cont, LV_LAYOUT_ROW_M);
-    lv_cont_set_fit(home_cont, LV_FIT_TIGHT);
-    lv_obj_t *label_home = lv_label_create(home_cont, NULL);
-    lv_label_set_text(label_home, "Home:");
-    btn_home_all = create_button(home_cont, btn_home_all, "  All Axis  ", _home_all_event);
-    btn_home_x = create_button(home_cont, btn_home_x, " X ", _home_x_event);
-    btn_home_y = create_button(home_cont, btn_home_y, " Y ", _home_y_event);
-    btn_home_z = create_button(home_cont, btn_home_z, " Z ", _home_z_event);
-    lv_style_copy(&not_homed_style, lv_btn_get_style(btn_home_x, LV_BTN_STYLE_REL));
 
     update_ui_machine();
 }
