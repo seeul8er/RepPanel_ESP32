@@ -39,6 +39,8 @@ browser.
  - Automatic reconnection
  - Low latency
 
+
+[![First release of RepPanel](https://img.youtube.com/vi/FfghWz1Lrw4/0.jpg)](https://youtu.be/FfghWz1Lrw4)  
 [![First test of RepPanel](https://img.youtube.com/vi/39FKTUVjrxc/0.jpg)](https://www.youtube.com/watch?v=39FKTUVjrxc)
 
 ## What this project is not
