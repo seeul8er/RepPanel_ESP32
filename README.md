@@ -53,8 +53,9 @@ by RepPanel.
 
 **Tested Hardware**
   - ESP32 DevKit
-  - [ER-TFTM035-6 display with capacitive touch screen](https://www.buydisplay.com/lcd-3-5-inch-320x480-tft-display-module-optl-touch-screen-w-breakout-board)
+  - [ER-TFTM035-6 display with capacitive touch screen, 4-Wire SPI, No font chip required](https://www.buydisplay.com/lcd-3-5-inch-320x480-tft-display-module-optl-touch-screen-w-breakout-board)
 
+**Beware: There are numerous version of the ER-TFT035-6. You must choose the one with the SPI interface. Do not get the arduino shield version (no SPI config). The version with the screen breakout board is sufficient.**  
 Other display modules with a resolution of 480x320 should also work as long as they are supported by `lv_port_esp32`  
 As of now RepPanel is optimized for 3.5" displays with a resolution of 480x320 pixels. The display is connected via SPI.
 
@@ -152,3 +153,7 @@ Pin configuration of ready made images:
 - Filament listing (all filament names separated by one character) limited to 1014
 - Can not list all files within a directory in case DuetWebControl API requires multiple requests per listing
   - Workaround: Delete files to reduce file count to make all files fit within one response
+  
+## Known Bugs
+- Messages printed by G-Code commands can not be "clicked away"
+- Irregular freezes of the screen with RRF 3.1
