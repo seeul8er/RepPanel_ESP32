@@ -47,9 +47,9 @@ browser.
 A full replacement for the DuetWebControl interface.
 
 ## Supported Hardware/Software
-The RepPanel project is based on the [Littlevgl port for the ESP32](https://github.com/littlevgl/lv_port_esp32).
-In theory This means all displays and touch controllers supported by the **lv_port_esp32** project are also supported
-by RepPanel.
+The RepPanel project is based on the [LVGL port for the ESP32](https://github.com/lvgl/lv_port_esp32/tree/c1f43bfb090df293059ab52baabbdbdd8df00712).
+In theory this means all displays and touch controllers supported by the **lv_port_esp32** project are also supported
+by RepPanel. Beware that the most 
 
 **Tested Hardware**
   - ESP32 DevKit
@@ -64,22 +64,25 @@ As of now RepPanel is optimized for 3.5" displays with a resolution of 480x320 p
   - Duet2 WiFi running RepRap Firmware v3.1 and corresponding Duet2WebControl
 
 ## Installation
+Use ready made images or compile yourself.
 
 ### Compile yourself
-**Set up ESP-IDF**
+
+#### Set up ESP-IDF
 
 [Follow instructions](https://docs.espressif.com/projects/esp-idf/en/v4.0/get-started/index.html#step-1-install-prerequisites) on offical Espressif site.  
 ESP-IDF v4.0 is officially supported.
 
-**Clone Project**
+#### Clone Project
 
 ```bash
 git clone --recurse-submodules https://github.com/seeul8er/RepPanel_ESP32
 ```
+LVGL v7 is not supported. Last tested release of `lv_port_esp32` is commit `c1f43bfb090df293059ab52baabbdbdd8df00712`
 
-**Configure Project**
+#### Configure Project
 
-**Temporary workaround:**  
+**Update lv_conf.h**  
 Copy file content of `main/lv_conf_back.h` over to `externals/lv_port_esp32/components/lvgl/lv_conf.h`.  
 Or simply add:
 - Set `LV_USE_USER_DATA` to 1
@@ -100,14 +103,14 @@ From its root run:
 ```bash
 idf.py menuconfig
 ```
-**See [Littlevgl port for the ESP32](https://github.com/littlevgl/lv_port_esp32) for further and more detailed instructions.**
+**See [LVGL port for the ESP32](https://github.com/littlevgl/lv_port_esp32) for further and more detailed instructions.**
 
-**Compile & Flash**
+#### Compile & Flash
 ```bash
 idf.py build
 idf.py -p (YOUR PORT) flash
 ```
-**See [Littlevgl port for the ESP32](https://github.com/littlevgl/lv_port_esp32) for further and more detailed instructions.**
+**See [LVGL port for the ESP32](https://github.com/lvgl/lv_port_esp32/tree/c1f43bfb090df293059ab52baabbdbdd8df00712) for further and more detailed instructions.**
 
 ### Use ready made images
 Ready made images are only available for selected hardware combinations! Please compile the project by yourself in

@@ -155,18 +155,19 @@ void process_reprap_status(char *buff) {
         }
     }
 
-    bool disp_msg = false;
-    bool disp_msgbox = false;
-    bool disp_h_msgbox = false;
-    static char msg_title[512];
-    static char msg_msg[512];
-    char msg_txt[512];
+    bool disp_msg = false;      // Message without title
+    bool disp_msgbox = false;   // Message box with title
+    bool disp_h_msgbox = false; // height adjust dialog
+    static char msg_title[384];
+    static char msg_msg[384];
+    static char msg_txt[384];
+    cJSON *duet_seq = cJSON_GetObjectItem(root, "seq");
     cJSON *duet_output = cJSON_GetObjectItem(root, "output");
     if (duet_output) {
         cJSON *duet_output_msg = cJSON_GetObjectItem(duet_output, "message");
-        if (duet_output_msg && cJSON_IsString(duet_output_msg)) {
+        if (duet_output_msg && cJSON_IsString(duet_output_msg) && duet_seq && duet_seq->valueint != last_status_seq) {
             disp_msg = true;
-            strncpy(msg_txt, duet_output_msg->valuestring, 512);
+            strncpy(msg_txt, duet_output_msg->valuestring, 384);
         }
         // Right now we only have a msg box for manual bed calibration
         cJSON *duet_output_msgbox = cJSON_GetObjectItem(duet_output, "msgBox");
@@ -174,8 +175,8 @@ void process_reprap_status(char *buff) {
             cJSON *seq = cJSON_GetObjectItem(duet_output_msgbox, "seq");
             cJSON *title = cJSON_GetObjectItem(duet_output_msgbox, "title");
             cJSON *duet_msg = cJSON_GetObjectItem(duet_output_msgbox, "msg");
-            strncpy(msg_title, title->valuestring, 512);
-            strncpy(msg_msg, duet_msg->valuestring, 512);
+            strncpy(msg_title, title->valuestring, 384);
+            strncpy(msg_msg, duet_msg->valuestring, 384);
             // Beware. This is dirty. Check if we want to show this msg box. We might already display it
             if (seq->valueint != seq_num_msgbox) {
                 seq_num_msgbox = seq->valueint;
@@ -188,6 +189,20 @@ void process_reprap_status(char *buff) {
         }
     }
 
+    if (duet_seq && cJSON_IsNumber(duet_seq)) {
+        if (duet_seq->valueint != last_status_seq) {
+            duet_request_reply = true;
+            ESP_LOGI(TAG, "Need reply!");
+            // When connected via UART the reply is already part of the msg
+            cJSON *duet_resp = cJSON_GetObjectItem(root, "resp");
+            if (duet_resp && strlen(duet_resp->valuestring) > 0 && duet_resp->valuestring[0] != '\n') {      // sometimes it's just a new line char
+                ESP_LOGI(TAG, "Length MSG: %i - %s", strlen(duet_resp->valuestring), duet_resp->valuestring);
+                disp_msg = true;
+                strncpy(msg_txt, duet_resp->valuestring, 384);
+            }
+        }
+        last_status_seq = duet_seq->valueint;
+    }
 
     // Get tool heater state
     cJSON *duet_temps_state = cJSON_GetObjectItem(duet_temps, DUET_TEMPS_BED_STATE);        // all other heater states
@@ -202,22 +217,6 @@ void process_reprap_status(char *buff) {
         }
     }
     num_heaters = pos;
-
-    cJSON *duet_seq = cJSON_GetObjectItem(root, "seq");    // Get seq number
-    if (duet_seq && cJSON_IsNumber(duet_seq)) {
-        if (duet_seq->valueint != last_status_seq) {
-            duet_request_reply = true;
-            ESP_LOGI(TAG, "Need reply!");
-            // When connected via UART the reply is already part of the msg
-            cJSON *duet_resp = cJSON_GetObjectItem(root, "resp");
-            if (duet_resp && strlen(duet_resp->valuestring) > 0 && duet_resp->valuestring[0] != '\n') {      // sometimes it's just a new line char
-                ESP_LOGI(TAG, "Length MSG: %i - %s", strlen(duet_resp->valuestring), duet_resp->valuestring);
-                disp_msg = true;
-                strncpy(msg_txt, duet_resp->valuestring, 512);
-            }
-        }
-        last_status_seq = duet_seq->valueint;
-    }
 
     // Get tool information
     pos = 0;

@@ -96,7 +96,7 @@ lv_obj_t *create_button(lv_obj_t *parent, lv_obj_t *button_pnt, char *text, void
 static void close_msg_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         // reprap_send_gcode("M292");
-        lv_obj_del_async(mbox_msg);
+        lv_obj_del(mbox_msg);
     }
 }
 

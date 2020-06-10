@@ -166,7 +166,14 @@ void update_job_list_ui() {
     } else {
         strcpy(parent_dir_jobs, JOBS_EMPTY);
     }
+    // first count number of elements so we can insert in reverse order
+    uint8_t cnt = 0;
     for (int i = 0; reprap_dir_elem[i].type != TREE_EMPTY_ELEM && i < MAX_NUM_ELEM_DIR; i++) {
+        cnt++;
+    }
+    // insert in reverse order so latest element is likely at the top
+    // TODO: order by modification date
+    for (int i = cnt-1; i >= 0; i--) {
         lv_obj_t *list_btn;
         if (reprap_dir_elem[i].type == TREE_FOLDER_ELEM)
             list_btn = lv_list_add_btn(jobs_list, LV_SYMBOL_DIRECTORY, reprap_dir_elem[i].name);
