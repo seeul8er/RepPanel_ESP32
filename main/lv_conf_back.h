@@ -125,7 +125,7 @@ typedef int16_t lv_coord_t;
 #define LV_INDEV_DEF_DRAG_LIMIT           10
 
 /* Drag throw slow-down in [%]. Greater value -> faster slow-down */
-#define LV_INDEV_DEF_DRAG_THROW           20
+#define LV_INDEV_DEF_DRAG_THROW           85
 
 /* Long press time in milliseconds.
  * Time to send `LV_EVENT_LONG_PRESSSED`) */
@@ -469,7 +469,7 @@ typedef void * lv_obj_user_data_t;
 #define LV_USE_DDLIST    1
 #if LV_USE_DDLIST != 0
 /*Open and close default animation time [ms] (0: no animation)*/
-#  define LV_DDLIST_DEF_ANIM_TIME     200
+#  define LV_DDLIST_DEF_ANIM_TIME     100
 #endif
 
 /*Gauge (dependencies:lv_bar, lv_lmeter)*/
@@ -527,7 +527,7 @@ typedef void * lv_obj_user_data_t;
 #define LV_USE_PAGE     1
 #if LV_USE_PAGE != 0
 /*Focus default animation time [ms] (0: no animation)*/
-#  define LV_PAGE_DEF_ANIM_TIME     400
+#  define LV_PAGE_DEF_ANIM_TIME     300
 #endif
 
 /*Preload (dependencies: lv_arc, lv_anim)*/

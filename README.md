@@ -85,8 +85,9 @@ LVGL v7 is not supported. Last tested release of `lv_port_esp32` is commit `c1f4
 **Update lv_conf.h**  
 Copy file content of `main/lv_conf_back.h` over to `externals/lv_port_esp32/components/lvgl/lv_conf.h`.  
 Or simply add:
-- Set `LV_USE_USER_DATA` to 1
+- Set `LV_USE_USER_DATA 1`
 - Add `#define LV_USE_THEME_REP_PANEL_DARK 1`
+- Set `LV_INDEV_DEF_DRAG_THROW 85` to decrease DMA usage and increase stability
 - `CONFIG_LVGL_FONT_ROBOTO16` & `CONFIG_LVGL_FONT_ROBOTO22` must be activated
 - Add 
 ```C
