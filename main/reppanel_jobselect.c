@@ -95,7 +95,7 @@ static void job_action_handler(lv_obj_t *obj, lv_event_t event) {
 static void job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
     int selected_indx = lv_list_get_btn_index(jobs_list, obj);
     // check if back button exists
-    if (strcmp(reprap_dir_elem[selected_indx].dir, JOBS_ROOT_DIR) != 0) {
+    if (strcmp(reprap_dir_elem[0].dir, JOBS_ROOT_DIR) != 0) {
         if (selected_indx == 0 && event == LV_EVENT_SHORT_CLICKED) {
             // back button was pressed
             ESP_LOGI(TAG, "Going back to parent %s", parent_dir_jobs);
@@ -132,6 +132,9 @@ static void job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
             static char tmp_txt_job_path[MAX_LEN_DIRNAME + MAX_LEN_FILENAME + 1];
             sprintf(tmp_txt_job_path, "%s/%s", reprap_dir_elem[selected_indx].dir, edit_job->name);
             request_jobs(tmp_txt_job_path);
+        } else {
+            ESP_LOGW(TAG, "Selected unknown file tree element -> Index: %i - Type: %i - Name: %s - Dir: %s", selected_indx,
+                     reprap_dir_elem[selected_indx].type, reprap_dir_elem[selected_indx].name, reprap_dir_elem[selected_indx].dir);
         }
     } else if (event == LV_EVENT_LONG_PRESSED && reprap_dir_elem[selected_indx].type == TREE_FILE_ELEM) {
         static const char *btns[] = {SIM_BTN_TXT, PRINT_BTN_TXT, DELETE_BTN_TXT, CANCEL_BTN_TXT, ""};
@@ -171,9 +174,8 @@ void update_job_list_ui() {
     for (int i = 0; reprap_dir_elem[i].type != TREE_EMPTY_ELEM && i < MAX_NUM_ELEM_DIR; i++) {
         cnt++;
     }
-    // insert in reverse order so latest element is likely at the top
     // TODO: order by modification date
-    for (int i = 0; i < cnt; i++) {
+    for (int i = 0; reprap_dir_elem[i].type != TREE_EMPTY_ELEM && i < MAX_NUM_ELEM_DIR; i++) {
         lv_obj_t *list_btn;
         if (reprap_dir_elem[i].type == TREE_FOLDER_ELEM)
             list_btn = lv_list_add_btn(jobs_list, LV_SYMBOL_DIRECTORY, reprap_dir_elem[i].name);

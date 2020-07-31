@@ -38,7 +38,7 @@ static void macro_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         int selected_indx = lv_list_get_btn_index(macro_list, obj);
         // check if back button exists
-        if (strcmp(reprap_dir_elem[selected_indx].dir, MACRO_ROOT_DIR) != 0) {
+        if (strcmp(reprap_dir_elem[0].dir, MACRO_ROOT_DIR) != 0) {
             if (selected_indx == 0) {
                 // back button was pressed
                 ESP_LOGI(TAG, "Going back to parent %s", parent_dir_macros);
