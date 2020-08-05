@@ -159,7 +159,7 @@ void draw_header(lv_obj_t *parent_screen) {
     lv_obj_t *cont_header_right = lv_cont_create(cont_header, NULL);
     lv_cont_set_fit(cont_header_right, LV_FIT_TIGHT);
     lv_cont_set_layout(cont_header_right, LV_LAYOUT_ROW_M);
-    lv_obj_align(cont_header_right, cont_header, LV_ALIGN_IN_TOP_RIGHT, -120, 12);
+    lv_obj_align(cont_header_right, cont_header, LV_ALIGN_IN_TOP_RIGHT, -130, 12);
 
     lv_obj_t *click_cont = lv_cont_create(cont_header_right, NULL);
     lv_cont_set_fit(click_cont, LV_FIT_TIGHT);
