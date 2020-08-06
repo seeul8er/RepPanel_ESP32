@@ -20,7 +20,7 @@
 reprap_axes_t reprap_axes;
 reprap_params_t reprap_params;
 
-static lv_style_t not_homed_style;
+static lv_style_t not_homed_style, homed_style;
 static char *cali_opt_map[] = {"True Bed Leveling", "Mesh Bed Leveling"};
 static char *cali_opt_list = {"True Bed Leveling\nMesh Bed Leveling"};
 
@@ -39,7 +39,7 @@ lv_obj_t *btn_closer;
 lv_obj_t *btn_away;
 lv_obj_t *cont_heigh_adj_diag, *label_z_pos_cali;
 lv_obj_t *btn_home_all, *btn_home_y, *btn_home_x, *btn_home_z;
-lv_obj_t *btn_power_off, *btn_power_on;
+lv_obj_t *btn_power, *label_power;
 lv_obj_t *btn_fan_off, *label_fan, *slider;
 
 #ifdef USE_LIGHTNING
@@ -91,15 +91,9 @@ static void _light_on_event(lv_obj_t *obj, lv_event_t event) {
 }
 #endif
 
-static void _power_on_event(lv_obj_t *obj, lv_event_t event) {
+static void _power_toggle_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
-        reprap_send_gcode("M80");
-    }
-}
-
-static void _power_off_event(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_CLICKED) {
-        reprap_send_gcode("M81");
+        reprap_send_gcode(reprap_params.power ? "M81" : "M80");
     }
 }
 
@@ -111,7 +105,7 @@ static void _fan_off_event(lv_obj_t *obj, lv_event_t event) {
 
 static void slider_event_cb(lv_obj_t * slider, lv_event_t event)
 {
-    if(event == LV_EVENT_VALUE_CHANGED) {
+    if(event == LV_EVENT_RELEASED) {        
         static char buf[11]; /* max 10 bytes for number plus 1 null terminating byte */
         snprintf(buf, 11, "M106 S%.2f", (lv_slider_get_value(slider) / 100.));
         reprap_send_gcode(buf);
@@ -246,15 +240,7 @@ void update_ui_machine() {
     portENTER_CRITICAL(&mutex); // not sure this really helps?!
     if (label_z_pos_cali) lv_label_set_text_fmt(label_z_pos_cali, "%.02f mm", reprap_axes.z);
     portEXIT_CRITICAL(&mutex);
-
-    static lv_style_t homed_style;
-    if (btn_home_x) {
-        lv_style_copy(&homed_style, lv_btn_get_style(btn_home_x, LV_BTN_STYLE_REL));
-        homed_style.body.main_color = REP_PANEL_DARK_ACCENT;
-        homed_style.body.grad_color = REP_PANEL_DARK_ACCENT;
-        homed_style.text.color = REP_PANEL_DARK;
-    }
-
+    
     if (btn_home_x) {
         if (reprap_axes.x_homed)
             lv_btn_set_style(btn_home_x, LV_BTN_STYLE_REL, &homed_style);
@@ -276,13 +262,13 @@ void update_ui_machine() {
         else
             lv_btn_set_style(btn_home_all, LV_BTN_STYLE_REL, &not_homed_style);
     }
-    if (btn_power_on) {
-        if (reprap_params.power) {            
-            lv_btn_set_style(btn_power_on, LV_BTN_STYLE_REL, &homed_style);
-            lv_btn_set_style(btn_power_off, LV_BTN_STYLE_REL, &not_homed_style);
-        } else {    
-            lv_btn_set_style(btn_power_on, LV_BTN_STYLE_REL, &not_homed_style);
-            lv_btn_set_style(btn_power_off, LV_BTN_STYLE_REL, &homed_style);
+    if (btn_power) {
+        if (reprap_params.power) {
+            lv_btn_set_style(btn_power, LV_BTN_STYLE_REL, &homed_style);
+            lv_label_set_text(label_power, "On");
+        } else {
+            lv_btn_set_style(btn_power, LV_BTN_STYLE_REL, &not_homed_style);
+            lv_label_set_text(label_power, "Off");
         }
     }
     if (label_fan) {
@@ -307,7 +293,12 @@ void draw_machine(lv_obj_t *parent_screen) {
     btn_home_x = create_button(home_cont, btn_home_x, " X ", _home_x_event);
     btn_home_y = create_button(home_cont, btn_home_y, " Y ", _home_y_event);
     btn_home_z = create_button(home_cont, btn_home_z, " Z ", _home_z_event);
+    
     lv_style_copy(&not_homed_style, lv_btn_get_style(btn_home_x, LV_BTN_STYLE_REL));
+    lv_style_copy(&homed_style, lv_btn_get_style(btn_home_x, LV_BTN_STYLE_REL));
+    homed_style.body.main_color = REP_PANEL_DARK_ACCENT;
+    homed_style.body.grad_color = REP_PANEL_DARK_ACCENT;
+    homed_style.text.color = REP_PANEL_DARK;
 
     lv_obj_t *cont_cali = lv_cont_create(machine_page, NULL);
     lv_cont_set_fit(cont_cali, LV_FIT_TIGHT);
@@ -326,20 +317,22 @@ void draw_machine(lv_obj_t *parent_screen) {
     lv_obj_t *power_cont = lv_cont_create(machine_page, NULL);
     lv_cont_set_layout(power_cont,  LV_LAYOUT_ROW_M);
     lv_cont_set_fit(power_cont, LV_FIT_TIGHT);
-    lv_obj_t *label_power = lv_label_create(power_cont, NULL);
-    lv_label_set_text(label_power, "Power:");
-    btn_power_on = create_button(power_cont, btn_power_on, " On ", _power_on_event); 
-    btn_power_off = create_button(power_cont, btn_power_off, " Off ", _power_off_event);    
+    lv_obj_t *label_power_header = lv_label_create(power_cont, NULL);
+    lv_label_set_text(label_power_header, "Power:");
+    
+    btn_power = lv_btn_create(power_cont, NULL);
+    lv_btn_set_fit(btn_power, LV_FIT_TIGHT);
+    lv_obj_set_event_cb(btn_power, _power_toggle_event);
+    lv_obj_align(btn_power, power_cont, LV_ALIGN_CENTER, 0, 0);
+    label_power = lv_label_create(btn_power, NULL);
+    lv_label_set_text(label_power, reprap_params.power ? "On" : "Off");
 
     #ifdef USE_LIGHTNING
-    lv_obj_t *light_cont = lv_cont_create(machine_page, NULL);
-    lv_cont_set_layout(light_cont,  LV_LAYOUT_ROW_M);
-    lv_cont_set_fit(light_cont, LV_FIT_TIGHT);
-    lv_obj_t *label_light = lv_label_create(light_cont, NULL);
-    lv_label_set_text(label_light, "Light:");    
-    btn_light_on = create_button(light_cont, btn_light_on, " On ", _light_on_event);
-    btn_light_half = create_button(light_cont, btn_light_half, " 50% ", _light_half_event);
-    btn_light_off = create_button(light_cont, btn_light_off, " Off ", _light_off_event);
+    lv_obj_t *label_light = lv_label_create(power_cont, NULL);
+    lv_label_set_text(label_light, "Light:");
+    btn_light_on = create_button(power_cont, btn_light_on, "On", _light_on_event);
+    btn_light_half = create_button(power_cont, btn_light_half, "50%", _light_half_event);
+    btn_light_off = create_button(power_cont, btn_light_off, "Off", _light_off_event);
     #endif
 
     lv_obj_t *fan_cont = lv_cont_create(machine_page, NULL);
