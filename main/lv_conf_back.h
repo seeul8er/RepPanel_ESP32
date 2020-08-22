@@ -36,16 +36,23 @@
 
 /* Swap the 2 bytes of RGB565 color.
  * Useful if the display has a 8 bit interface (e.g. SPI)*/
-#if CONFIG_LVGL_TFT_DISPLAY_CONTROLLER == 0
+
+#if defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9341
 #define LV_COLOR_16_SWAP   1
-#elif CONFIG_LVGL_TFT_DISPLAY_CONTROLLER == 1
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9488
 #define LV_COLOR_16_SWAP   0
-#elif CONFIG_LVGL_TFT_DISPLAY_CONTROLLER == 2
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ST7789
 #define LV_COLOR_16_SWAP   1
-#elif CONFIG_LVGL_TFT_DISPLAY_CONTROLLER == 3
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_HX8357
 #define LV_COLOR_16_SWAP   1
-#elif CONFIG_LVGL_TFT_DISPLAY_CONTROLLER == 4
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SH1107
+#define LV_COLOR_16_SWAP   0
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_SSD1306
+#define LV_COLOR_16_SWAP   0
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_ILI9486
 #define LV_COLOR_16_SWAP   1
+#elif defined CONFIG_LVGL_TFT_DISPLAY_CONTROLLER_FT81X
+#define LV_COLOR_16_SWAP   0
 #endif
 
 /* 1: Enable screen transparency.
@@ -85,7 +92,7 @@ typedef int16_t lv_coord_t;
 #define LV_MEM_CUSTOM      0
 #if LV_MEM_CUSTOM == 0
 /* Size of the memory used by `lv_mem_alloc` in bytes (>= 2kB)*/
-#  define LV_MEM_SIZE    (32U * 1024U)
+#  define LV_MEM_SIZE    (24U * 1024U)
 
 /* Complier prefix for a big array declaration */
 #  define LV_MEM_ATTR
