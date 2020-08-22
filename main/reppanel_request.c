@@ -119,6 +119,18 @@ void process_reprap_status(char *buff) {
         }
     }
 
+    cJSON *params = cJSON_GetObjectItem(root, "params");
+    if (params) {
+        cJSON *atxPower = cJSON_GetObjectItem(params, "atxPower");
+        if (atxPower && cJSON_IsNumber(atxPower)) {
+            reprap_params.power = atxPower->valueint == 1;
+        }
+        cJSON *fanPercent = cJSON_GetObjectItem(params, "fanPercent");
+        if (fanPercent && cJSON_IsArray(fanPercent)) {
+            reprap_params.fan = cJSON_GetArrayItem(fanPercent, 0)->valueint;
+        }        
+    }    
+
     int _heater_states[MAX_NUM_TOOLS];  // bed heater state must be on pos 0
     cJSON *duet_temps = cJSON_GetObjectItem(root, DUET_TEMPS);
     if (duet_temps) {
