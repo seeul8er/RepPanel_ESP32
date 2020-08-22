@@ -27,7 +27,7 @@ static char *cali_opt_list = {"True Bed Leveling\nMesh Bed Leveling"};
 #define AWAY_BTN    0
 #define CLOSER_BTN  1
 
-#define USE_LIGHTNING
+//#define USE_LIGHTNING                     // uncomment to add menu items for switching on/off a light/pin
 #define LIGHTNING_CMD_ON "M42 P2 S1"
 #define LIGHTNING_CMD_HALF "M42 P2 S0.5"
 #define LIGHTNING_CMD_OFF "M42 P2 S0"
