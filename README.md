@@ -25,6 +25,7 @@ browser.
  - Delete print jobs
  - Run macros (no dictionary support yet)
  - Home X, Y, Z or All axis
+ - Set extruder fan speed
  - Load/Unload filament per tool
  - Set bed temperatures
  - Set tool temperatures
@@ -49,7 +50,7 @@ A full replacement for the DuetWebControl interface.
 ## Supported Hardware/Software
 The RepPanel project is based on the [LVGL port for the ESP32](https://github.com/lvgl/lv_port_esp32/tree/c1f43bfb090df293059ab52baabbdbdd8df00712).
 In theory this means all displays and touch controllers supported by the **lv_port_esp32** project are also supported
-by RepPanel. Beware that the most 
+by RepPanel.
 
 **Tested Hardware**
   - ESP32 DevKit
@@ -104,7 +105,7 @@ From its root run:
 ```bash
 idf.py menuconfig
 ```
-**See [LVGL port for the ESP32](https://github.com/littlevgl/lv_port_esp32) for further and more detailed instructions.**
+**See [LVGL port for the ESP32](https://github.com/lvgl/lv_port_esp32/tree/c1f43bfb090df293059ab52baabbdbdd8df00712) for further and more detailed instructions.**
 
 #### Compile & Flash
 ```bash
