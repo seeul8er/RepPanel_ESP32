@@ -159,7 +159,8 @@ static void load_filament_event_handler(lv_obj_t *obj, lv_event_t event) {
         lv_ddlist_get_selected_str(ddlist_selected_filament, val_txt_buff, 100);
         ESP_LOGI(TAG, "Loading %s", val_txt_buff);
         char comm_buf[256];
-        sprintf(comm_buf, "T%i M701 S\"%s\" M703", reprap_tools[current_visible_tool_indx].number, val_txt_buff);
+        sprintf(comm_buf, "T%i M701 S\"%s\" T%i M703", reprap_tools[current_visible_tool_indx].number, val_txt_buff,
+                reprap_tools[current_visible_tool_indx].number);
         reprap_send_gcode(comm_buf);
     }
 }
@@ -170,7 +171,7 @@ static void unload_filament_event_handler(lv_obj_t *obj, lv_event_t event) {
         lv_ddlist_get_selected_str(ddlist_selected_filament, val_txt_buff, 100);
         ESP_LOGI(TAG, "Unloading %s", val_txt_buff);
         char comm_buf[256];
-        sprintf(comm_buf, "M702");
+        sprintf(comm_buf, "T%i M702", reprap_tools[current_visible_tool_indx].number);
         reprap_send_gcode(comm_buf);
     }
 }

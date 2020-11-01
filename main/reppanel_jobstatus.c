@@ -204,6 +204,7 @@ void draw_jobstatus(lv_obj_t *parent_screen) {
     lv_img_set_src(img_remain, &remaining_clock);
     label_job_remaining_time = lv_label_create(cont_remain, NULL);
     lv_obj_set_style(label_job_remaining_time, &style_job_info_label);
+    lv_label_set_text(label_job_remaining_time, "");
 
     lv_obj_t *cont_layer_status = lv_cont_create(cont_jobdetails, cont_remain);
     lv_obj_t *img_layers = lv_img_create(cont_layer_status, NULL);
