@@ -99,11 +99,11 @@ static void start_mdns_service() {
         return;
     }
     //set hostname
-    mdns_hostname_set("RepPanel");
+    ESP_ERROR_CHECK(mdns_hostname_set("RepPanel"));
     //set default instance
     char tmp[20];
     sprintf(tmp, "RepPanel %s", get_version_string());
-    mdns_instance_name_set(tmp);
+    ESP_ERROR_CHECK(mdns_instance_name_set(tmp));
 }
 
 static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data) {
@@ -125,7 +125,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         ESP_LOGI(TAG, "Connect to the AP fail");
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *) event_data;
-        ESP_LOGI(TAG, "got ip:%s", ip4addr_ntoa(&event->ip_info.ip));
+        ESP_LOGI(TAG, "got ip: "IPSTR, IP2STR(&event->ip_info.ip));
         s_retry_num = 0;
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
         if (rp_conn_stat != REPPANEL_UART_CONNECTED)

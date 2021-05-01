@@ -442,20 +442,24 @@ void process_reprap_filelist(char *buffer) {
         got_filaments = true;
 
         cJSON *filament_folders = cJSON_GetObjectItem(root, "files");
-        cJSON *iterator = NULL;
-        int pos = 0;
-        filament_names[0] = '\0';
-        cJSON_ArrayForEach(iterator, filament_folders) {
-            if (cJSON_IsObject(iterator)) {
-                if (strncmp("d", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0) {
-                    if (pos != 0) strncat(filament_names, "\n", MAX_LEN_STR_FILAMENT_LIST - strlen(filament_names));
-                    strncat(filament_names, cJSON_GetObjectItem(iterator, "name")->valuestring,
-                            MAX_LEN_STR_FILAMENT_LIST - strlen(filament_names));
-                    pos++;
+        if (filament_folders) {
+            cJSON *iterator = NULL;
+            int pos = 0;
+            filament_names[0] = '\0';
+            cJSON_ArrayForEach(iterator, filament_folders) {
+                if (cJSON_IsObject(iterator)) {
+                    if (strncmp("d", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0) {
+                        if (pos != 0) strncat(filament_names, "\n", MAX_LEN_STR_FILAMENT_LIST - strlen(filament_names));
+                        strncat(filament_names, cJSON_GetObjectItem(iterator, "name")->valuestring,
+                                MAX_LEN_STR_FILAMENT_LIST - strlen(filament_names));
+                        pos++;
+                    }
                 }
             }
+            ESP_LOGI(TAG, "Filament names\n%s", filament_names);
+        } else {
+            filament_names[0] = '\0';
         }
-        ESP_LOGI(TAG, "Filament names\n%s", filament_names);
     } else if (dir_name && strncmp("0:/macros", dir_name->valuestring, 9) == 0) {
         ESP_LOGI(TAG, "Processing macros");
         cJSON *_folders = cJSON_GetObjectItem(root, "files");

@@ -47,25 +47,25 @@ lv_obj_t *btn_fan_off, *label_fan, *slider;
 #endif
 
 
-static void _home_all_event(lv_obj_t *obj, lv_event_t event) {
+static void home_all_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         reprap_send_gcode("G28");
     }
 }
 
-static void _home_x_event(lv_obj_t *obj, lv_event_t event) {
+static void home_x_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         reprap_send_gcode("G28 X");
     }
 }
 
-static void _home_y_event(lv_obj_t *obj, lv_event_t event) {
+static void home_y_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         reprap_send_gcode("G28 Y");
     }
 }
 
-static void _home_z_event(lv_obj_t *obj, lv_event_t event) {
+static void home_z_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         reprap_send_gcode("G28 Z");
     }
@@ -91,13 +91,13 @@ static void _light_on_event(lv_obj_t *obj, lv_event_t event) {
 }
 #endif
 
-static void _power_toggle_event(lv_obj_t *obj, lv_event_t event) {
+static void power_toggle_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         reprap_send_gcode(reprap_params.power ? "M81" : "M80");
     }
 }
 
-static void _fan_off_event(lv_obj_t *obj, lv_event_t event) {
+static void fan_off_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         reprap_send_gcode("M106 S0");
     }
@@ -112,7 +112,7 @@ static void slider_event_cb(lv_obj_t * slider, lv_event_t event)
     }
 }
 
-static void _next_height_adjust_event(lv_obj_t *obj, lv_event_t event) {
+static void next_height_adjust_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         if (reprap_send_gcode("M292")) {
             lv_obj_del(label_z_pos_cali);
@@ -123,7 +123,7 @@ static void _next_height_adjust_event(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
-static void _height_adjust_event(lv_obj_t *obj, lv_event_t event) {
+static void height_adjust_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_VALUE_CHANGED) {
         const char *amount = lv_btnm_get_active_btn_text(obj);
         char *dir;
@@ -139,7 +139,7 @@ static void _height_adjust_event(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
-static void _away_closer_changed(lv_obj_t *obj, lv_event_t event) {
+static void away_closer_changed(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         if ((int) obj->user_data == CLOSER_BTN) {
             if (lv_btn_get_state(btn_closer) == LV_BTN_STATE_REL) {
@@ -158,7 +158,7 @@ static void _away_closer_changed(lv_obj_t *obj, lv_event_t event) {
 }
 
 void show_height_adjust_dialog() {
-    static const char *btns[] = {"15", "5", "2.5", "0.5", "0.1", "0.05", ""};
+    static const char *btns[] = {"5", "2.5", "0.5", "0.1", "0.05", "0.02", ""};
     cont_heigh_adj_diag = lv_cont_create(lv_layer_top(), NULL);
     static lv_style_t somestyle;
     lv_style_copy(&somestyle, lv_cont_get_style(cont_heigh_adj_diag, LV_CONT_STYLE_MAIN));
@@ -176,7 +176,7 @@ void show_height_adjust_dialog() {
     btnm_height = lv_btnm_create(cont_heigh_adj_diag, NULL);
 
     lv_btnm_set_map(btnm_height, btns);
-    lv_obj_set_event_cb(btnm_height, _height_adjust_event);
+    lv_obj_set_event_cb(btnm_height, height_adjust_event);
     lv_obj_set_height(btnm_height, 65);
     lv_obj_set_width(btnm_height, 350);
 
@@ -204,7 +204,7 @@ void show_height_adjust_dialog() {
     lv_img_set_src(img1, &closer_icon);
     lv_btn_set_toggle(btn_closer, true);
     lv_btn_set_state(btn_closer, LV_BTN_STATE_TGL_REL);
-    lv_obj_set_event_cb(btn_closer, _away_closer_changed);
+    lv_obj_set_event_cb(btn_closer, away_closer_changed);
     lv_obj_set_user_data(btn_closer, (lv_obj_user_data_t) CLOSER_BTN);
 
     LV_IMG_DECLARE(away_icon);
@@ -217,11 +217,11 @@ void show_height_adjust_dialog() {
     lv_obj_t *spacer = lv_cont_create(cont_closer_away, NULL);
     lv_obj_set_width(spacer, 50);
     static lv_obj_t *btn_close;
-    create_button(cont_closer_away, btn_close, "Next", _next_height_adjust_event);
+    create_button(cont_closer_away, btn_close, "Next", next_height_adjust_event);
     lv_obj_align_origo(cont_heigh_adj_diag, lv_layer_top(), LV_ALIGN_CENTER, 0, 0);
 }
 
-static void _start_cali_event(lv_obj_t *obj, lv_event_t event) {
+static void start_cali_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         char val_txt_buff[50];
         lv_ddlist_get_selected_str(ddlist_cali_options, val_txt_buff, 50);
@@ -289,10 +289,10 @@ void draw_machine(lv_obj_t *parent_screen) {
     lv_cont_set_fit(home_cont, LV_FIT_TIGHT);
     lv_obj_t *label_home = lv_label_create(home_cont, NULL);
     lv_label_set_text(label_home, "Home:");
-    btn_home_all = create_button(home_cont, btn_home_all, "  All Axis  ", _home_all_event);
-    btn_home_x = create_button(home_cont, btn_home_x, " X ", _home_x_event);
-    btn_home_y = create_button(home_cont, btn_home_y, " Y ", _home_y_event);
-    btn_home_z = create_button(home_cont, btn_home_z, " Z ", _home_z_event);
+    btn_home_all = create_button(home_cont, btn_home_all, "  All Axis  ", home_all_event);
+    btn_home_x = create_button(home_cont, btn_home_x, " X ", home_x_event);
+    btn_home_y = create_button(home_cont, btn_home_y, " Y ", home_y_event);
+    btn_home_z = create_button(home_cont, btn_home_z, " Z ", home_z_event);
     
     lv_style_copy(&not_homed_style, lv_btn_get_style(btn_home_x, LV_BTN_STYLE_REL));
     lv_style_copy(&homed_style, lv_btn_get_style(btn_home_x, LV_BTN_STYLE_REL));
@@ -312,7 +312,7 @@ void draw_machine(lv_obj_t *parent_screen) {
     lv_ddlist_set_fix_width(ddlist_cali_options, 300);
 
     static lv_obj_t *do_cali_butn;
-    create_button(cont_cali, do_cali_butn, "Start", _start_cali_event);
+    create_button(cont_cali, do_cali_butn, "Start", start_cali_event);
 
     lv_obj_t *power_cont = lv_cont_create(machine_page, NULL);
     lv_cont_set_layout(power_cont,  LV_LAYOUT_ROW_M);
@@ -322,7 +322,7 @@ void draw_machine(lv_obj_t *parent_screen) {
     
     btn_power = lv_btn_create(power_cont, NULL);
     lv_btn_set_fit(btn_power, LV_FIT_TIGHT);
-    lv_obj_set_event_cb(btn_power, _power_toggle_event);
+    lv_obj_set_event_cb(btn_power, power_toggle_event);
     lv_obj_align(btn_power, power_cont, LV_ALIGN_CENTER, 0, 0);
     label_power = lv_label_create(btn_power, NULL);
     lv_label_set_text(label_power, reprap_params.power ? "On" : "Off");
@@ -348,7 +348,7 @@ void draw_machine(lv_obj_t *parent_screen) {
     lv_slider_set_range(slider, 0, 100);
     label_fan = lv_label_create(fan_cont, NULL);
     lv_label_set_text_fmt(label_fan, " %u%% ", reprap_params.fan);    
-    btn_fan_off = create_button(fan_cont, btn_fan_off, " Off ", _fan_off_event);
+    btn_fan_off = create_button(fan_cont, btn_fan_off, " Off ", fan_off_event);
 
     update_ui_machine();
 }
