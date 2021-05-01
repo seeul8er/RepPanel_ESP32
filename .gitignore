@@ -19,3 +19,7 @@ cmake-build-debug/
 cmake-build-debug-xtensa-2019r2-820/
 
 cmake-build-debug-xtensa-2020r1-820/mconf-idf-prefix/tmp/
+
+cmake-build-debug-xtensa-2020r3/
+
+cmake-build-release-xtensa-2020r3/
