@@ -27,6 +27,10 @@ void duet_show_dialog(char *title, char *msg);
 
 void get_avail_duets(char *txt_buffer);
 
+time_t datestr_2unix(const char *input);
+
+int compare_tree_element_timestamp(const void *a, const void *b);
+
 void RepPanelLogE(char *tag, char *msg);
 
 void RepPanelLogW(char *tag, char *msg);

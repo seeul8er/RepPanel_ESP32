@@ -147,8 +147,9 @@ typedef struct {
 
 typedef struct {
     char name[MAX_LEN_FILENAME];    // name of the files
-    char dir[MAX_LEN_DIRNAME];  // current directory
-    int type;       // TREE_FOLDER_ELEM, TREE_FILE_ELEM
+    char dir[MAX_LEN_DIRNAME];      // current directory
+    time_t time_stamp;              // unix timestamp indicating last change/upload of element
+    int type;                       // TREE_FOLDER_ELEM, TREE_FILE_ELEM, TREE_EMPTY_ELEM -> last element
 } file_tree_elem_t;
 
 extern file_tree_elem_t reprap_dir_elem[MAX_NUM_ELEM_DIR];  // Array used for buffering directory listings like macros/jobs

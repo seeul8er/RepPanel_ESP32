@@ -101,6 +101,13 @@ void update_macro_list_ui() {
     } else {
         strcpy(parent_dir_macros, MACRO_EMPTY);
     }
+    // count number of elements
+    uint8_t cnt = 0;
+    for (int i = 0; reprap_dir_elem[i].type != TREE_EMPTY_ELEM && i < MAX_NUM_ELEM_DIR; i++) {
+        cnt++;
+    }
+    // sort by modification date
+    qsort(reprap_dir_elem, cnt, sizeof(file_tree_elem_t), compare_tree_element_timestamp);
     for (int i = 0; reprap_dir_elem[i].type != TREE_EMPTY_ELEM && i < MAX_NUM_ELEM_DIR; i++) {
         lv_obj_t *list_btn;
         if (reprap_dir_elem[i].type == TREE_FOLDER_ELEM)

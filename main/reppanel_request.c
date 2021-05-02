@@ -24,7 +24,7 @@
 #define TAG                 "RequestTask"
 #define REQUEST_TIMEOUT_MS  150
 
-file_tree_elem_t reprap_dir_elem[MAX_NUM_ELEM_DIR];
+file_tree_elem_t reprap_dir_elem[MAX_NUM_ELEM_DIR];    // put it to the external PSRAM
 
 char rep_addr_resolved[256];
 
@@ -462,24 +462,27 @@ void process_reprap_filelist(char *buffer) {
         }
     } else if (dir_name && strncmp("0:/macros", dir_name->valuestring, 9) == 0) {
         ESP_LOGI(TAG, "Processing macros");
-        cJSON *_folders = cJSON_GetObjectItem(root, "files");
-        cJSON *iterator = NULL;
         for (int i = 0; i < MAX_NUM_ELEM_DIR; i++) {
             reprap_dir_elem[i].type = TREE_EMPTY_ELEM;
         }
-        int pos = 0;
-        cJSON_ArrayForEach(iterator, _folders) {
-            if (cJSON_IsObject(iterator)) {
-                if (pos < MAX_NUM_ELEM_DIR) {
-                    strncpy(reprap_dir_elem[pos].name, cJSON_GetObjectItem(iterator, "name")->valuestring,
-                            MAX_LEN_FILENAME - 1);
-                    strncpy(reprap_dir_elem[pos].dir, dir_name->valuestring, MAX_LEN_DIRNAME - 1);
-                    if (strncmp("f", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0) {
-                        reprap_dir_elem[pos].type = TREE_FILE_ELEM;
-                    } else {
-                        reprap_dir_elem[pos].type = TREE_FOLDER_ELEM;
+        cJSON *_folders = cJSON_GetObjectItem(root, "files");
+        if (_folders) {
+            cJSON *iterator = NULL;
+            int pos = 0;
+            cJSON_ArrayForEach(iterator, _folders) {
+                if (cJSON_IsObject(iterator)) {
+                    if (pos < MAX_NUM_ELEM_DIR) {
+                        strncpy(reprap_dir_elem[pos].name, cJSON_GetObjectItem(iterator, "name")->valuestring,
+                                MAX_LEN_FILENAME - 1);
+                        strncpy(reprap_dir_elem[pos].dir, dir_name->valuestring, MAX_LEN_DIRNAME - 1);
+                        reprap_dir_elem[pos].time_stamp = datestr_2unix(cJSON_GetObjectItem(iterator, "date")->valuestring);
+                        if (strncmp("f", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0) {
+                            reprap_dir_elem[pos].type = TREE_FILE_ELEM;
+                        } else {
+                            reprap_dir_elem[pos].type = TREE_FOLDER_ELEM;
+                        }
+                        pos++;
                     }
-                    pos++;
                 }
             }
         }
@@ -489,24 +492,27 @@ void process_reprap_filelist(char *buffer) {
         }
     } else if (dir_name && strncmp("0:/gcodes", dir_name->valuestring, 9) == 0) {
         ESP_LOGI(TAG, "Processing jobs");
-        cJSON *_folders = cJSON_GetObjectItem(root, "files");
         cJSON *iterator = NULL;
         for (int i = 0; i < MAX_NUM_ELEM_DIR; i++) {  // clear array
             reprap_dir_elem[i].type = TREE_EMPTY_ELEM;
         }
         int pos = 0;
-        cJSON_ArrayForEach(iterator, _folders) {
-            if (cJSON_IsObject(iterator)) {
-                if (pos < MAX_NUM_ELEM_DIR) {
-                    strncpy(reprap_dir_elem[pos].name, cJSON_GetObjectItem(iterator, "name")->valuestring,
-                            MAX_LEN_FILENAME - 1);
-                    strncpy(reprap_dir_elem[pos].dir, dir_name->valuestring, MAX_LEN_DIRNAME - 1);
-                    if (strncmp("f", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0) {
-                        reprap_dir_elem[pos].type = TREE_FILE_ELEM;
-                    } else {
-                        reprap_dir_elem[pos].type = TREE_FOLDER_ELEM;
+        cJSON *_folders = cJSON_GetObjectItem(root, "files");
+        if (_folders) {
+            cJSON_ArrayForEach(iterator, _folders) {
+                if (cJSON_IsObject(iterator)) {
+                    if (pos < MAX_NUM_ELEM_DIR) {
+                        strncpy(reprap_dir_elem[pos].name, cJSON_GetObjectItem(iterator, "name")->valuestring,
+                                MAX_LEN_FILENAME - 1);
+                        strncpy(reprap_dir_elem[pos].dir, dir_name->valuestring, MAX_LEN_DIRNAME - 1);
+                        reprap_dir_elem[pos].time_stamp = datestr_2unix(cJSON_GetObjectItem(iterator, "date")->valuestring);
+                        if (strncmp("f", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0) {
+                            reprap_dir_elem[pos].type = TREE_FILE_ELEM;
+                        } else {
+                            reprap_dir_elem[pos].type = TREE_FOLDER_ELEM;
+                        }
+                        pos++;
                     }
-                    pos++;
                 }
             }
         }

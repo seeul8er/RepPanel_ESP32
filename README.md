@@ -79,33 +79,16 @@ ESP-IDF v4.0 is officially supported.
 ```bash
 git clone --recurse-submodules https://github.com/seeul8er/RepPanel_ESP32
 ```
-LVGL v7 is not supported. Last tested release of `lv_port_esp32` is commit `c1f43bfb090df293059ab52baabbdbdd8df00712`
+LVGL v7 is not supported. Last tested release of `lv_port_esp32` is commit `c1f43bfb090df293059ab52baabbdbdd8df00712`.
+The project is linked against a fork to keep the legacy support and be able to fix bugs.
 
 #### Configure Project
-
-**Update lv_conf.h**  
-Copy file content of `main/lv_conf_back.h` over to `externals/lv_port_esp32/components/lvgl/lv_conf.h`.  
-Or simply add:
-- Set `LV_USE_USER_DATA 1`
-- Add `#define LV_USE_THEME_REP_PANEL_DARK 1`
-- Set `LV_INDEV_DEF_DRAG_THROW 85` to decrease DMA usage and increase stability
-- `CONFIG_LVGL_FONT_ROBOTO16` & `CONFIG_LVGL_FONT_ROBOTO22` must be activated
-- Add 
-```C
-#define LV_FONT_CUSTOM_DECLARE  LV_FONT_DECLARE(reppanel_font_roboto_bold_16) \
-                                       LV_FONT_DECLARE(reppanel_font_roboto_bold_18) \
-                                       LV_FONT_DECLARE(reppanel_font_roboto_bold_24) \
-                                       LV_FONT_DECLARE(reppanel_font_roboto_regular_26) \
-                                       LV_FONT_DECLARE(reppanel_font_roboto_light_26) \
-                                       LV_FONT_DECLARE(reppanel_font_roboto_thin_numeric_160) \
-                                       LV_FONT_DECLARE(reppanel_font_roboto_regular_percent_40)
-```
 
 From its root run:
 ```bash
 idf.py menuconfig
 ```
-**See [LVGL port for the ESP32](https://github.com/lvgl/lv_port_esp32/tree/c1f43bfb090df293059ab52baabbdbdd8df00712) for further and more detailed instructions.**
+**See [Custom LVGL port for the ESP32](https://github.com/seeul8er/lv_port_esp32/tree/c1f43bfb090df293059ab52baabbdbdd8df00712) for further and more detailed instructions.**
 
 #### Compile & Flash
 ```bash
@@ -149,6 +132,24 @@ Pin configuration of ready made images:
 
 ## For Developers
 [Check out the simulator project.](https://github.com/seeul8er/RepPanel_sim) Simulates the RepPanel GUI on Desktop computers for more efficient testing and implementation.
+
+**Custom changes to lv_conf.h**  
+Copy file content of `main/lv_conf_back.h` over to `externals/lv_port_esp32/components/lvgl/lv_conf.h`.  
+Or simply add:
+- Set `LV_USE_USER_DATA 1`
+- Add `#define LV_USE_THEME_REP_PANEL_DARK 1`
+- Set `LV_INDEV_DEF_DRAG_THROW 85` to decrease DMA usage and increase stability
+- `CONFIG_LVGL_FONT_ROBOTO16` & `CONFIG_LVGL_FONT_ROBOTO22` must be activated
+- Add
+```C
+#define LV_FONT_CUSTOM_DECLARE  LV_FONT_DECLARE(reppanel_font_roboto_bold_16) \
+                                       LV_FONT_DECLARE(reppanel_font_roboto_bold_18) \
+                                       LV_FONT_DECLARE(reppanel_font_roboto_bold_24) \
+                                       LV_FONT_DECLARE(reppanel_font_roboto_regular_26) \
+                                       LV_FONT_DECLARE(reppanel_font_roboto_light_26) \
+                                       LV_FONT_DECLARE(reppanel_font_roboto_thin_numeric_160) \
+                                       LV_FONT_DECLARE(reppanel_font_roboto_regular_percent_40)
+```
 
 ## Known Limitations
 - Multiple tools supported but not tested

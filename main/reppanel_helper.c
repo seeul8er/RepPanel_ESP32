@@ -53,7 +53,7 @@ char *url_encode(unsigned char *s, char *enc) {
     return (enc);
 }
 
-bool ends_with(const char* base, char* str) {
+bool ends_with(const char *base, char *str) {
     int blen = strlen(base);
     int slen = strlen(str);
     return (blen >= slen) && (0 == strcmp(base + blen - slen, str));
@@ -69,13 +69,14 @@ void init_reprap_buffers() {
         reprap_dir_elem[i].type = TREE_EMPTY_ELEM;
     }
     for (int i = 0; i < MAX_CONSOLE_ENTRY_COUNT; i++) {
-        console_enties[i] = (console_entry_t) {"",  CONSOLE_TYPE_EMPTY};
+        console_enties[i] = (console_entry_t) {"", CONSOLE_TYPE_EMPTY};
     }
 
     reprap_tool_poss_temps.temps_active[0] = -1;
 
     double bed_temps_hardcoded[] = {0, 30, 40, 60, 80, 100, 105, 110, -1};  // max len 15, last must be <0
-    double tool_temps_hardcoded[] = {0, 160, 180, 185, 190, 200, 210, 250, 265, 280, -1};  // max len 15, last must be <0
+    double tool_temps_hardcoded[] = {0, 160, 180, 185, 190, 200, 210, 250, 265, 280,
+                                     -1};  // max len 15, last must be <0
     memcpy(reprap_bed_poss_temps.temps_standby, bed_temps_hardcoded, sizeof(bed_temps_hardcoded));
     memcpy(reprap_bed_poss_temps.temps_active, bed_temps_hardcoded, sizeof(bed_temps_hardcoded));
     memcpy(reprap_tool_poss_temps.temps_standby, tool_temps_hardcoded, sizeof(tool_temps_hardcoded));
@@ -163,6 +164,36 @@ void duet_show_dialog(char *title, char *msg) {
     static lv_obj_t *btn_close;
     create_button(cont_closer_away, btn_close, "OK", close_msg_box_event);
     lv_obj_align_origo(cont_msg, lv_layer_top(), LV_ALIGN_CENTER, 0, 0);
+}
+
+time_t datestr_2unix(const char *input) {
+    struct tm info;
+    if (sscanf(input, "%d-%d-%dT%d:%d:%d", &info.tm_year, &info.tm_mon, &info.tm_mday, &info.tm_hour, &info.tm_min,
+               &info.tm_sec) != 6) {
+        return -1;
+    } else {
+        info.tm_year = info.tm_year - 1900;
+        info.tm_mon = info.tm_mon - 1;
+        info.tm_isdst = -1;
+        return mktime(&info);
+    }
+}
+
+/**
+ * Compare function for qsort. Compares file_tree_elem_t structures by modification date/time stamp. Most recent element
+ * is first in order (highest number first)
+ * @param a type file_tree_elem_t
+ * @param b type file_tree_elem_t
+ * @return see qsort docs
+ */
+int compare_tree_element_timestamp(const void *a, const void *b) {
+    file_tree_elem_t *tree_elemA = (file_tree_elem_t *) a;
+    file_tree_elem_t *tree_elemB = (file_tree_elem_t *) b;
+    if (tree_elemA->time_stamp - tree_elemB->time_stamp < 0)
+        return 1;
+    if (tree_elemA->time_stamp - tree_elemB->time_stamp > 0)
+        return -1;
+    return 0;
 }
 
 void RepPanelLogE(char *tag, char *msg) {
