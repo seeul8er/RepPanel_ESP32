@@ -94,6 +94,7 @@ extern double reprap_job_duration;
 extern int reprap_job_curr_layer;
 extern int reprap_job_time_file;
 extern int reprap_job_time_sim;
+extern int reprap_job_time_slicer;
 extern double reprap_job_first_layer_height;
 extern double reprap_job_layer_height;
 extern double reprap_job_height;

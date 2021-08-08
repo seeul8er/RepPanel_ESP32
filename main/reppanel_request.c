@@ -20,6 +20,7 @@
 #include "reppanel_machine.h"
 #include "esp32_uart.h"
 #include "esp32_wifi.h"
+#include "rrf3_object_model_parser.h"
 
 #define TAG                 "RequestTask"
 #define REQUEST_TIMEOUT_MS  150
@@ -362,18 +363,10 @@ void process_reprap3_status(char *buff) {
         cJSON_Delete(root);
         return;
     }
-    cJSON *boards = cJSON_GetObjectItemCaseSensitive(result, "boards");
-    cJSON *board_temps = cJSON_GetArrayItem(boards, 0);
-    if (board_temps) {
-        cJSON *mcu_temp = cJSON_GetObjectItemCaseSensitive(board_temps, "mcuTemp");
-        reprap_mcu_temp = cJSON_GetObjectItemCaseSensitive(mcu_temp, "current")->valuedouble;
-    }
-
-    cJSON *fans = cJSON_GetObjectItemCaseSensitive(result, "fans");
-    cJSON *fan_zero = cJSON_GetArrayItem(boards, 0);
-    if (fan_zero) {
-        reprap_params.fan = (int) cJSON_GetObjectItemCaseSensitive(fan_zero, "actualValue")->valuedouble * 100;
-    }
+    reppanel_parse_rrf_boards(result);
+    reppanel_parse_rrf_fans(result);
+    reppanel_parse_rrf_heaters(result, heater_states);
+    reppanel_parse_rrf_job(result);
 }
 
 void process_reprap_status(char *buff) {

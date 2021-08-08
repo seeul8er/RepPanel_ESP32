@@ -20,6 +20,7 @@ int reprap_job_curr_layer;
 char current_job_name[MAX_LEN_FILENAME];
 int reprap_job_time_file = 0;
 int reprap_job_time_sim = 0;
+int reprap_job_time_slicer = 0;
 double reprap_job_first_layer_height = 0;
 double reprap_job_layer_height = 0;
 double reprap_job_height = 0;

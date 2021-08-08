@@ -1,0 +1,34 @@
+{
+  "key": "job",
+  "flags": "d99vn",
+  "result": {
+    "build": null,
+    "duration": null,
+    "file": {
+      "filament": [],
+      "fileName": null,
+      "firstLayerHeight": 0,
+      "generatedBy": null,
+      "height": 0,
+      "lastModified": null,
+      "layerHeight": 0,
+      "numLayers": 0,
+      "printTime": null,
+      "simulatedTime": null,
+      "size": 0
+    },
+    "filePosition": 0,
+    "lastDuration": 0,
+    "lastFileName": null,
+    "layer": null,
+    "layerTime": null,
+    "pauseDuration": null,
+    "rawExtrusion": null,
+    "timesLeft": {
+      "filament": null,
+      "file": null,
+      "slicer": null
+    },
+    "warmUpDuration": null
+  }
+}
