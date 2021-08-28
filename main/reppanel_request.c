@@ -363,10 +363,21 @@ void process_reprap3_status(char *buff) {
         cJSON_Delete(root);
         return;
     }
-    reppanel_parse_rrf_boards(result);
-    reppanel_parse_rrf_fans(result);
-    reppanel_parse_rrf_heaters(result, heater_states);
-    reppanel_parse_rrf_job(result);
+    cJSON *sub_object_result;
+    sub_object_result = cJSON_GetObjectItem(result, "boards");
+    if (sub_object_result) reppanel_parse_rrf_boards(sub_object_result);
+
+    sub_object_result = cJSON_GetObjectItem(result, "fans");
+    if (sub_object_result) reppanel_parse_rrf_fans(sub_object_result);
+
+    sub_object_result = cJSON_GetObjectItem(result, "heat");
+    if (sub_object_result) reppanel_parse_rrf_heaters(sub_object_result, heater_states);
+
+    sub_object_result = cJSON_GetObjectItem(result, "job");
+    if (sub_object_result) reppanel_parse_rrf_job(sub_object_result);
+
+    sub_object_result = cJSON_GetObjectItem(result, "move");
+    if (sub_object_result) reppanel_parse_rrf_move(sub_object_result);
 }
 
 void process_reprap_status(char *buff) {
@@ -593,7 +604,7 @@ void process_reprap_fileinfo(char *data_buff) {
 
     cJSON *job_name = cJSON_GetObjectItem(root, "fileName");
     if (job_name && cJSON_IsString(job_name)) {
-        strncpy(current_job_name, &job_name->valuestring[10], MAX_LEN_FILENAME);
+        strncpy(reprap_job_name, &job_name->valuestring[10], MAX_LEN_FILENAME);
     }
 
     cJSON *job_height = cJSON_GetObjectItem(root, "height");

@@ -5,138 +5,138 @@
     "boards": [
       {
         "mcuTemp": {
-          "current": 51.5
+          "current": 41.2
         },
         "vIn": {
-          "current": 23.9
+          "current": 24
         }
       }
     ],
     "fans": [
       {
-        "actualValue": 0.30,
-        "requestedValue": 0.30,
+        "actualValue": 0.9,
+        "requestedValue": 0.9,
         "rpm": -1
       },
       {
-        "actualValue": 0.50,
-        "requestedValue": 0.30,
+        "actualValue": 0.5,
+        "requestedValue": 0.3,
         "rpm": -1
       }
     ],
     "heat": {
       "heaters": [
         {
-          "active": 64.0,
-          "current": 64.1,
+          "active": 53,
+          "current": 53.2,
           "standby": 0,
           "state": "active"
         },
         {
-          "active": 195.0,
-          "current": 195.1,
-          "standby": 195.0,
+          "active": 205,
+          "current": 204.9,
+          "standby": 195,
           "state": "active"
         }
       ]
     },
     "inputs": [
       {
-        "feedRate": 50.0,
-        "lineNumber": 12,
+        "feedRate": 50,
+        "lineNumber": 42,
         "state": "idle"
       },
       {
-        "feedRate": 50.0,
+        "feedRate": 50,
         "lineNumber": 0,
         "state": "idle"
       },
       {
-        "feedRate": 50.0,
-        "lineNumber": 122691,
+        "feedRate": 45,
+        "lineNumber": 107615,
         "state": "waiting"
       },
       {
-        "feedRate": 50.0,
+        "feedRate": 50,
         "lineNumber": 0,
         "state": "idle"
       },
       {
-        "feedRate": 50.0,
+        "feedRate": 50,
         "lineNumber": 0,
         "state": "idle"
       },
       {
-        "feedRate": 50.0,
+        "feedRate": 50,
         "lineNumber": 0,
         "state": "idle"
       },
       {
-        "feedRate": 50.0,
-        "lineNumber": 5,
+        "feedRate": 50,
+        "lineNumber": 17,
         "state": "idle"
       },
       {
-        "feedRate": 50.0,
-        "lineNumber": 0,
-        "state": "idle"
-      },
-      null,
-      {
-        "feedRate": 50.0,
+        "feedRate": 50,
         "lineNumber": 0,
         "state": "idle"
       },
       null,
       {
-        "feedRate": 50.0,
+        "feedRate": 50,
+        "lineNumber": 0,
+        "state": "idle"
+      },
+      null,
+      {
+        "feedRate": 50,
         "lineNumber": 0,
         "state": "idle"
       }
     ],
     "job": {
       "build": {
-        "currentObject": 0
+        "currentObject": -1
       },
-      "duration": 20088,
-      "filePosition": 1708405,
-      "layer": 99,
-      "layerTime": 118.0,
+      "duration": 6047,
+      "filePosition": 1535722,
+      "layer": 54,
+      "layerTime": 42.7,
       "pauseDuration": 0,
-      "rawExtrusion": 65308.8,
+      "rawExtrusion": 14906.5,
       "timesLeft": {
         "filament": null,
-        "file": 160354,
-        "slicer": 40293
+        "file": 55524,
+        "slicer": 62166
       },
       "warmUpDuration": 0
     },
     "move": {
       "axes": [
         {
-          "machinePosition": 123.471,
-          "userPosition": 112.177
+          "machinePosition": 91.2,
+          "userPosition": 82.514
         },
         {
-          "machinePosition": 127.572,
-          "userPosition": 169.830
+          "machinePosition": 182.119,
+          "userPosition": 179.119
         },
         {
-          "machinePosition": 19.800,
-          "userPosition": 19.800
+          "machinePosition": 10.78,
+          "userPosition": 10.8
         }
       ],
       "currentMove": {
-        "acceleration": 764.5,
-        "deceleration": 764.5,
+        "acceleration": 713.5,
+        "deceleration": 713.5,
         "laserPwm": null,
-        "requestedSpeed": 50.0,
-        "topSpeed": 50.0
+        "requestedSpeed": 45,
+        "topSpeed": 45
       },
       "extruders": [
         {
-          "position": 60723.9,
-          "rawPosition": 65308.8
+          "position": 13927.4,
+          "rawPosition": 14906.5
         }
       ],
       "virtualEPos": 0
@@ -144,10 +144,10 @@
     "sensors": {
       "analog": [
         {
-          "lastReading": 64.1
+          "lastReading": 53.2
         },
         {
-          "lastReading": 195.1
+          "lastReading": 204.9
         }
       ],
       "endstops": [
@@ -177,21 +177,21 @@
       "fans": 4,
       "global": 0,
       "heat": 10,
-      "inputs": 20,
-      "job": 47,
-      "move": 58,
+      "inputs": 48,
+      "job": 153,
+      "move": 102,
       "network": 7,
-      "reply": 118,
+      "reply": 44,
       "scanner": 1,
       "sensors": 3,
       "spindles": 0,
-      "state": 1,
-      "tools": 7,
+      "state": 15,
+      "tools": 9,
       "volChanges": [
-        2,
+        5,
         0
       ],
-      "volumes": 54
+      "volumes": 226
     },
     "spindles": [
       {
@@ -216,20 +216,20 @@
       "currentTool": 0,
       "gpOut": [],
       "laserPwm": null,
-      "msUpTime": 922,
+      "msUpTime": 32,
       "nextTool": 0,
       "previousTool": -1,
       "status": "processing",
-      "time": "2021-08-07T18:54:54",
-      "upTime": 21708
+      "time": "2021-08-28T11:55:40",
+      "upTime": 8401
     },
     "tools": [
       {
         "active": [
-          195.0
+          205
         ],
         "standby": [
-          195.0
+          195
         ],
         "state": "active"
       }

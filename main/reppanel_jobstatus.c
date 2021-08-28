@@ -17,13 +17,14 @@ double reprap_job_percent;
 int reprap_job_file_pos;
 double reprap_job_duration;
 int reprap_job_curr_layer;
-char current_job_name[MAX_LEN_FILENAME];
+char reprap_job_name[MAX_LEN_FILENAME];
 int reprap_job_time_file = 0;
 int reprap_job_time_sim = 0;
 int reprap_job_time_slicer = 0;
 double reprap_job_first_layer_height = 0;
 double reprap_job_layer_height = 0;
 double reprap_job_height = 0;
+int reprap_job_numlayers = 0;
 
 lv_obj_t *cont_percent;
 lv_obj_t *label_job_progress_percent;
@@ -90,8 +91,8 @@ void update_print_job_status_ui() {
 
     if (label_job_filename) {
         // only update when changed. Otherwise label will not scroll
-        if (strcmp(lv_label_get_text(label_job_filename), current_job_name) != 0) {
-            lv_label_set_text(label_job_filename, current_job_name);
+        if (strcmp(lv_label_get_text(label_job_filename), reprap_job_name) != 0) {
+            lv_label_set_text(label_job_filename, reprap_job_name);
         }
     }
 

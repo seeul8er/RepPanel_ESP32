@@ -47,6 +47,7 @@ extern "C" {
 #define MAX_TOOL_NAME_LEN   12
 #define MAX_LEN_STR_FILAMENT_LIST   MAX_FILA_NAME_LEN*32
 #define MAX_NUM_ELEM_DIR    16      // Max number of elements per directory that can be listed
+#define REPPANEL_RRF_MAX_AXES   5
 
 #define MAX_LEN_FILENAME    64
 #define MAX_LEN_DIRNAME     128
@@ -98,18 +99,23 @@ extern int reprap_job_time_slicer;
 extern double reprap_job_first_layer_height;
 extern double reprap_job_layer_height;
 extern double reprap_job_height;
-extern char current_job_name[MAX_LEN_FILENAME];
+extern int reprap_job_numlayers;
+extern char reprap_job_name[MAX_LEN_FILENAME];
 extern char reprap_firmware_name[32];
 extern char reprap_firmware_version[5];
 
 typedef struct {
-    double x;
-    double y;
-    double z;
-    bool x_homed;
-    bool y_homed;
-    bool z_homed;
+    double axes[REPPANEL_RRF_MAX_AXES]; // machine pos - X,Y,Z,A,B
+    bool homed[REPPANEL_RRF_MAX_AXES];
+    char letter[REPPANEL_RRF_MAX_AXES];
+    double min[REPPANEL_RRF_MAX_AXES];
+    double max[REPPANEL_RRF_MAX_AXES];
+    double babystep[REPPANEL_RRF_MAX_AXES];
 } reprap_axes_t;
+
+typedef struct {
+    int reply;
+} reprap_seqs_t;
 
 typedef struct {
     bool power;
@@ -163,6 +169,7 @@ extern int num_tools;     // max is MAX_NUM_TOOLS
 extern int current_visible_tool_indx;   // current indx of tool where temp data is displayed on process screen
 
 extern reprap_axes_t reprap_axes;
+extern reprap_seqs_t reprap_seqs;
 extern reprap_params_t reprap_params;
 extern reprap_tool_t reprap_tools[MAX_NUM_TOOLS];
 extern reprap_bed_t reprap_bed;
