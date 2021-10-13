@@ -113,15 +113,15 @@ void process_reprap2_status(char *buff) {
     if (coords) {
         cJSON *axesHomed = cJSON_GetObjectItem(coords, "axesHomed");
         if (axesHomed && cJSON_IsArray(axesHomed)) {
-            reprap_axes.x_homed = cJSON_GetArrayItem(axesHomed, 0)->valueint == 1;
-            reprap_axes.y_homed = cJSON_GetArrayItem(axesHomed, 1)->valueint == 1;
-            reprap_axes.z_homed = cJSON_GetArrayItem(axesHomed, 2)->valueint == 1;
+            reprap_axes.homed[0] = cJSON_GetArrayItem(axesHomed, 0)->valueint == 1;
+            reprap_axes.homed[1] = cJSON_GetArrayItem(axesHomed, 1)->valueint == 1;
+            reprap_axes.homed[2] = cJSON_GetArrayItem(axesHomed, 2)->valueint == 1;
         }
         cJSON *xyz = cJSON_GetObjectItem(coords, "xyz");
         if (xyz && cJSON_IsArray(xyz)) {
-            reprap_axes.x = cJSON_GetArrayItem(xyz, 0)->valuedouble;
-            reprap_axes.y = cJSON_GetArrayItem(xyz, 1)->valuedouble;
-            reprap_axes.z = cJSON_GetArrayItem(xyz, 2)->valuedouble;
+            reprap_axes.axes[0] = cJSON_GetArrayItem(xyz, 0)->valuedouble;
+            reprap_axes.axes[1] = cJSON_GetArrayItem(xyz, 1)->valuedouble;
+            reprap_axes.axes[2] = cJSON_GetArrayItem(xyz, 2)->valuedouble;
         }
     }
 

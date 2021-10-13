@@ -181,7 +181,7 @@ void show_height_adjust_dialog() {
     lv_obj_set_width(btnm_height, 350);
 
     label_z_pos_cali = lv_label_create(cont_heigh_adj_diag, NULL);
-    lv_label_set_text_fmt(label_z_pos_cali, "%.02f mm", reprap_axes.z);
+    lv_label_set_text_fmt(label_z_pos_cali, "%.02f mm", reprap_axes.axes[2]);
 
     lv_obj_t *cont_closer_away = lv_cont_create(cont_heigh_adj_diag, NULL);
     lv_cont_set_layout(cont_closer_away, LV_LAYOUT_ROW_M);
@@ -238,26 +238,26 @@ static void start_cali_event(lv_obj_t *obj, lv_event_t event) {
 void update_ui_machine() {
     portMUX_TYPE mutex = portMUX_INITIALIZER_UNLOCKED;
     portENTER_CRITICAL(&mutex); // not sure this really helps?!
-    if (label_z_pos_cali) lv_label_set_text_fmt(label_z_pos_cali, "%.02f mm", reprap_axes.z);
+    if (label_z_pos_cali) lv_label_set_text_fmt(label_z_pos_cali, "%.02f mm", reprap_axes.axes[2]);
     portEXIT_CRITICAL(&mutex);
     
     if (btn_home_x) {
-        if (reprap_axes.x_homed)
+        if (reprap_axes.homed[0])
             lv_btn_set_style(btn_home_x, LV_BTN_STYLE_REL, &homed_style);
         else
             lv_btn_set_style(btn_home_x, LV_BTN_STYLE_REL, &not_homed_style);
 
-        if (reprap_axes.y_homed)
+        if (reprap_axes.homed[1])
             lv_btn_set_style(btn_home_y, LV_BTN_STYLE_REL, &homed_style);
         else
             lv_btn_set_style(btn_home_y, LV_BTN_STYLE_REL, &not_homed_style);
 
-        if (reprap_axes.z_homed)
+        if (reprap_axes.homed[2])
             lv_btn_set_style(btn_home_z, LV_BTN_STYLE_REL, &homed_style);
         else
             lv_btn_set_style(btn_home_z, LV_BTN_STYLE_REL, &not_homed_style);
 
-        if (reprap_axes.x_homed && reprap_axes.y_homed && reprap_axes.z_homed)
+        if (reprap_axes.homed[0] && reprap_axes.homed[1] && reprap_axes.homed[2])
             lv_btn_set_style(btn_home_all, LV_BTN_STYLE_REL, &homed_style);
         else
             lv_btn_set_style(btn_home_all, LV_BTN_STYLE_REL, &not_homed_style);

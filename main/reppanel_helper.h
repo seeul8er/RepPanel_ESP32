@@ -6,6 +6,7 @@
 #define LVGL_REPPANEL_HELPER_H
 
 #include <lvgl/src/lv_core/lv_obj.h>
+#include <time.h>
 
 LV_FONT_DECLARE(reppanel_font_roboto_light_36)
 LV_FONT_DECLARE(reppanel_font_roboto_bold_22)

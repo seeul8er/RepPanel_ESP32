@@ -33,3 +33,7 @@ cmake-build-release-xtensa-2020r2/
 cmake-build-release-xtensa-2020r3/
 
 cmake-build-debug-mingw/
+
+cmake-build-release-xtensa/
+
+cmake-build-debug-xtensa/
