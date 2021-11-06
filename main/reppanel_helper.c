@@ -74,7 +74,7 @@ void init_reprap_buffers() {
 
     reprap_tool_poss_temps.temps_active[0] = -1;
 
-    double bed_temps_hardcoded[] = {0, 30, 40, 60, 80, 100, 105, 110, -1};  // max len 15, last must be <0
+    double bed_temps_hardcoded[] = {0, 50, 53, 55, 60, 65, 70, 100, -1};  // max len 15, last must be <0
     double tool_temps_hardcoded[] = {0, 160, 180, 185, 190, 200, 210, 250, 265, 280,
                                      -1};  // max len 15, last must be <0
     memcpy(reprap_bed_poss_temps.temps_standby, bed_temps_hardcoded, sizeof(bed_temps_hardcoded));
