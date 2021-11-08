@@ -10,6 +10,7 @@
 
 #endif //REPPANEL_ESP32_RRF3_OBJECT_MODEL_PARSER_H
 
+void reppanel_parse_rr_connect(cJSON *connect_result);
 void reppanel_parse_rrf_boards(cJSON *boards_result);
 void reppanel_parse_rrf_fans(cJSON *fans_result);
 void reppanel_parse_rrf_heaters(cJSON *heaters_result, int _heater_states[MAX_NUM_TOOLS]);

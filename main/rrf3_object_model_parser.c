@@ -5,9 +5,14 @@
 #include <cJSON.h>
 #include "rrf3_object_model_parser.h"
 #include "reppanel.h"
+#include "rrf_objects.h"
 
-void inline reprap_calc_job_percent() {
+void reprap_calc_job_percent() {
     reprap_job_percent = (reprap_job_time_sim/reprap_job_duration) * 100;
+}
+
+void reppanel_parse_rr_connect(cJSON *connect_result) {
+        reprap_model.api_level = cJSON_GetObjectItemCaseSensitive(connect_result, "apiLevel")->valueint;
 }
 
 void reppanel_parse_rrf_boards(cJSON *boards_result) {

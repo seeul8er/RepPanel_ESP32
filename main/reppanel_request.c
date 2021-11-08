@@ -214,7 +214,7 @@ void process_reprap2_status(char *buff) {
             // When connected via UART the reply is already part of the msg
             cJSON *duet_resp = cJSON_GetObjectItem(root, "resp");
             if (duet_resp && strlen(duet_resp->valuestring) > 0 && duet_resp->valuestring[0] != '\n') {      // sometimes it's just a new line char
-                ESP_LOGI(TAG, "Length MSG: %llu - %s", strlen(duet_resp->valuestring), duet_resp->valuestring);
+                //ESP_LOGI(TAG, "Length MSG: %llu - %s", strlen(duet_resp->valuestring), duet_resp->valuestring);
                 disp_msg = true;
                 strncpy(msg_txt, duet_resp->valuestring, 384);
             }
@@ -722,19 +722,39 @@ esp_err_t http_event_handle(esp_http_client_event_t *evt) {
     return ESP_OK;
 }
 
-void wifi_duet_authorise(wifi_response_buff_t *buffer, bool get_d2wc_config) {
+void wifi_duet_authorise(wifi_response_buff_t *resp_buff, bool get_d2wc_config) {
     char printer_url[MAX_REQ_ADDR_LENGTH];
     sprintf(printer_url, "%s/rr_connect?password=%s", rep_addr_resolved, rep_pass);
     esp_http_client_config_t config = {
             .url = printer_url,
             .timeout_ms = REQUEST_TIMEOUT_MS,
             .event_handler = http_event_handle,
-            .user_data = buffer
+            .user_data = resp_buff
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
+        switch (esp_http_client_get_status_code(client)) {
+            case 200:
+                status_request_err_cnt = 0;
+                if (rp_conn_stat != REPPANEL_UART_CONNECTED)
+                    rp_conn_stat = REPPANEL_WIFI_CONNECTED;
+                process_reprap_status(resp_buff->buffer);
+                break;
+            case 500:
+                ESP_LOGE(TAG, "Generic error authorising DUET");
+                break;
+            case 502:
+                ESP_LOGE(TAG, "Incompatible DCS version");
+                break;
+            case 503:
+                ESP_LOGE(TAG, "DCS is unavailable");
+                duet_sbc_mode = false;
+                break;
+            default:
+                break;
+        }
     }
     esp_http_client_cleanup(client);
 }
@@ -859,9 +879,7 @@ bool reprap_wifi_send_gcode(char *gcode) {
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
-        ESP_LOGI(TAG, "Status = %d, content_length = %d",
-                 esp_http_client_get_status_code(client),
-                 esp_http_client_get_content_length(client));
+        ESP_LOGI(TAG, "Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
         switch (esp_http_client_get_status_code(client)) {
             case 200:
                 success = true;
@@ -870,7 +888,7 @@ bool reprap_wifi_send_gcode(char *gcode) {
                 }
                 break;
             case 401:
-                ESP_LOGI(TAG, "Authorising with Duet");
+                //ESP_LOGI(TAG, "Authorising with Duet");
                 wifi_duet_authorise(&resp_buff_gui_task, false);
                 break;
             case 500:
@@ -914,15 +932,14 @@ void reprap_wifi_get_filelist(wifi_response_buff_t *resp_buffer, char *directory
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
-        ESP_LOGI(TAG, "Got file list via WiFi %d",
-                 esp_http_client_get_content_length(client));
+        ESP_LOGI(TAG, "Got file list via WiFi %d", esp_http_client_get_content_length(client));
 
         switch (esp_http_client_get_status_code(client)) {
             case 200:
                 process_reprap_filelist(resp_buffer->buffer);
                 break;
             case 401:
-                ESP_LOGI(TAG, "Authorising with Duet");
+                //ESP_LOGI(TAG, "Authorising with Duet");
                 wifi_duet_authorise(resp_buffer, false);
                 break;
             case 500:
@@ -971,16 +988,14 @@ void reprap_wifi_get_filelist_task(void *params) {
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
-        ESP_LOGI(TAG, "Status = %d, content_length = %d",
-                 esp_http_client_get_status_code(client),
-                 esp_http_client_get_content_length(client));
+        //ESP_LOGI(TAG, "Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
 
         switch (esp_http_client_get_status_code(client)) {
             case 200:
                 process_reprap_filelist(resp_buff_filelist_task.buffer);
                 break;
             case 401:
-                ESP_LOGI(TAG, "Authorising with Duet");
+                //ESP_LOGI(TAG, "Authorising with Duet");
                 wifi_duet_authorise(&resp_buff_filelist_task, false);
                 break;
             case 500:
@@ -1036,7 +1051,7 @@ void reprap_wifi_get_fileinfo(wifi_response_buff_t *resp_data, char *filename) {
                 process_reprap_fileinfo(resp_data->buffer);
                 break;
             case 401:
-                ESP_LOGI(TAG, "Authorising with Duet");
+                //ESP_LOGI(TAG, "Authorising with Duet");
                 wifi_duet_authorise(resp_data, false);
                 break;
             case 500:
@@ -1072,16 +1087,14 @@ void reprap_wifi_get_config() {
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
-        ESP_LOGI(TAG, "Status = %d, content_length = %d",
-                 esp_http_client_get_status_code(client),
-                 esp_http_client_get_content_length(client));
+        //ESP_LOGI(TAG, "Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
     }
     switch (esp_http_client_get_status_code(client)) {
         case 200:
             // TODO process_reprap_config();
             break;
         case 401:
-            ESP_LOGI(TAG, "Authorising with Duet");
+            //ESP_LOGI(TAG, "Authorising with Duet");
             wifi_duet_authorise(&resp_buff_gui_task, false);
             break;
         default:
@@ -1092,7 +1105,7 @@ void reprap_wifi_get_config() {
 
 
 void reprap_wifi_download(wifi_response_buff_t *response_buffer, char *file) {
-    ESP_LOGI(TAG, "Downloading %s", file);
+    //ESP_LOGI(TAG, "Downloading %s", file);
     char request_addr[MAX_REQ_ADDR_LENGTH];
     if (duet_sbc_mode) {
         sprintf(request_addr, "%s/machine/file/%s", rep_addr_resolved, file);
@@ -1110,9 +1123,7 @@ void reprap_wifi_download(wifi_response_buff_t *response_buffer, char *file) {
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
-        ESP_LOGI(TAG, "Status = %d, content_length = %d",
-                 esp_http_client_get_status_code(client),
-                 esp_http_client_get_content_length(client));
+        //ESP_LOGI(TAG, "Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
 
         switch (esp_http_client_get_status_code(client)) {
             case 200:
@@ -1122,7 +1133,7 @@ void reprap_wifi_download(wifi_response_buff_t *response_buffer, char *file) {
                 }
                 break;
             case 401:
-                ESP_LOGI(TAG, "Authorising with Duet");
+                //ESP_LOGI(TAG, "Authorising with Duet");
                 wifi_duet_authorise(response_buffer, false);
                 break;
             case 500:

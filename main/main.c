@@ -23,6 +23,7 @@
 #include "reppanel_request.h"
 #include "lvgl_driver.h"
 #include "esp32_uart.h"
+#include "rrf_objects.h"
 
 
 #ifdef CONFIG_LVGL_TFT_DISPLAY_MONOCHROME
@@ -117,6 +118,7 @@ void guiTask() {
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+    init_reprap_model();
     read_settings_nvs();
     rep_panel_ui_create();
 
