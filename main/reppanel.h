@@ -114,10 +114,6 @@ typedef struct {
 } reprap_axes_t;
 
 typedef struct {
-    int reply;
-} reprap_seqs_t;
-
-typedef struct {
     bool power;
     int fan;
 } reprap_params_t;
@@ -169,7 +165,6 @@ extern int num_tools;     // max is MAX_NUM_TOOLS
 extern int current_visible_tool_indx;   // current indx of tool where temp data is displayed on process screen
 
 extern reprap_axes_t reprap_axes;
-extern reprap_seqs_t reprap_seqs;
 extern reprap_params_t reprap_params;
 extern reprap_tool_t reprap_tools[MAX_NUM_TOOLS];
 extern reprap_bed_t reprap_bed;

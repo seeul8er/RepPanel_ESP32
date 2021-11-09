@@ -5,8 +5,14 @@
 #ifndef REPPANEL_ESP32_RRF_OBJECTS_H
 #define REPPANEL_ESP32_RRF_OBJECTS_H
 
+
+typedef struct {
+    int reply;
+} reprap_seqs_t;
+
 typedef struct {
     int api_level;
+    reprap_seqs_t reprap_seqs;
 } reprap_model_t;
 
 extern reprap_model_t reprap_model;

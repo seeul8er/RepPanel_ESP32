@@ -145,10 +145,10 @@ void reppanel_parse_rrf_state(cJSON *state_result) {
 bool reppanel_parse_rrf_seqs(cJSON *seqs_result) {
     cJSON *reply = cJSON_GetObjectItemCaseSensitive(seqs_result, "reply");
     if (reply && cJSON_IsNumber(reply)) {
-        if (reprap_seqs.reply != reply->valueint) {
+        if (reprap_model.reprap_seqs.reply != reply->valueint) {
             return true;
         }
-        reprap_seqs.reply = reply->valueint;
+        reprap_model.reprap_seqs.reply = reply->valueint;
     }
     return false;
 }

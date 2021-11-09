@@ -767,7 +767,14 @@ void wifi_duet_authorise(wifi_response_buff_t *resp_buff, bool get_d2wc_config) 
                 status_request_err_cnt = 0;
                 if (rp_conn_stat != REPPANEL_UART_CONNECTED)
                     rp_conn_stat = REPPANEL_WIFI_CONNECTED;
-                process_reprap_status(resp_buff->buffer);
+                cJSON *root = cJSON_Parse(resp_buff->buffer);   // get JSON response to read API level
+                if (root == NULL) {
+                    ESP_LOGE(TAG, "Error parsing authorisation response");
+                    cJSON_Delete(root);
+                    return;
+                }
+                reppanel_parse_rr_connect(root);
+                cJSON_Delete(root);
                 break;
             case 500:
                 ESP_LOGE(TAG, "Generic error authorising DUET");

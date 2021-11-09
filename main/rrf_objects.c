@@ -13,4 +13,5 @@ reprap_model_t reprap_model;
  */
 reprap_model_t init_reprap_model() {
     memset(&reprap_model, 0, sizeof(reprap_model_t));
+    return reprap_model;
 }
