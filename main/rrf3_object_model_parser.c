@@ -137,11 +137,16 @@ void reppanel_parse_rrf_state(cJSON *state_result) {
     if (status) strncpy(reppanel_status, cJSON_GetStringValue(status), MAX_REPRAP_STATUS_LEN);
 }
 
+/**
+ * Check if a new reply is available
+ * @param seqs_result
+ * @return true if a new msg. can be displayed
+ */
 bool reppanel_parse_rrf_seqs(cJSON *seqs_result) {
     cJSON *reply = cJSON_GetObjectItemCaseSensitive(seqs_result, "reply");
     if (reply && cJSON_IsNumber(reply)) {
         if (reprap_seqs.reply != reply->valueint) {
-            // TODO: show reply msg box
+            return true;
         }
         reprap_seqs.reply = reply->valueint;
     }

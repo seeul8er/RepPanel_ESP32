@@ -3,11 +3,11 @@
 // Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
 #include <lvgl/src/lv_misc/lv_task.h>
-#include <esp_log.h>
 #include <lwip/ip4_addr.h>
 #include <esp_http_client.h>
 #include <cJSON.h>
 #include <lvgl/lvgl.h>
+#include <esp_log.h>
 #include "duet_status_json.h"
 #include "reppanel.h"
 #include "reppanel_request.h"
@@ -378,6 +378,33 @@ void process_reprap3_status(char *buff) {
 
     sub_object_result = cJSON_GetObjectItem(result, "move");
     if (sub_object_result) reppanel_parse_rrf_move(sub_object_result);
+
+    sub_object_result = cJSON_GetObjectItem(result, "seqs");
+    if (sub_object_result) {
+        if (reppanel_parse_rrf_seqs(sub_object_result)) {
+            // TODO request msg
+        }
+    }
+    cJSON_Delete(sub_object_result);
+    cJSON_Delete(result);
+    cJSON_Delete(root);
+
+    if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
+        if (label_status != NULL) lv_label_set_text(label_status, reppanel_status);
+        update_ui_machine();
+        update_bed_temps_ui();  // update UI with new values
+        update_heater_status_ui(heater_states, num_heaters);  // update UI with new values
+        update_current_tool_temps_ui();     // update UI with new values
+        if (got_extended_status && label_extruder_name != NULL) {
+            lv_label_set_text(label_extruder_name, reprap_tools[current_visible_tool_indx].name);
+        }
+//        if (got_printjob_status) update_print_job_status_ui();
+//        if (disp_msg) reppanel_disp_msg(msg_txt);
+//        if (disp_h_msgbox) show_height_adjust_dialog();
+//        if (disp_msgbox) duet_show_dialog(msg_title, msg_msg);
+        update_rep_panel_conn_status();
+        xSemaphoreGive(xGuiSemaphore);
+    }
 }
 
 void process_reprap_status(char *buff) {
