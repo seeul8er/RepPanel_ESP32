@@ -8,6 +8,7 @@
 #include "reppanel_process.h"
 #include "reppanel.h"
 #include "reppanel_request.h"
+#include "rrf_objects.h"
 
 #define TAG     "Process"
 
@@ -35,7 +36,7 @@ lv_obj_t *popup_page;
 lv_obj_t *ddlist_selected_filament;
 static lv_obj_t *cont_filament;
 
-int num_tools = 1;
+//int num_tools = 1;
 reprap_tool_t reprap_tools[MAX_NUM_TOOLS];
 reprap_bed_t reprap_bed;
 reprap_tool_poss_temps_t reprap_tool_poss_temps;
@@ -123,7 +124,7 @@ void update_current_tool_temps_ui() {
 }
 
 void update_next_tool_button_visibility() {
-    if (current_visible_tool_indx == (num_tools - 1))
+    if (current_visible_tool_indx == (reprap_model.num_tools - 1))
         lv_obj_set_hidden(next_extruder_label, true);
     else
         lv_obj_set_hidden(next_extruder_label, false);
@@ -142,7 +143,7 @@ static void choose_prev_tool_event_handler(lv_obj_t *obj, lv_event_t event) {
 
 static void choose_next_tool_event_handler(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
-        if (current_visible_tool_indx < (num_tools - 1)) current_visible_tool_indx++;
+        if (current_visible_tool_indx < (reprap_model.num_tools - 1)) current_visible_tool_indx++;
         update_next_tool_button_visibility();
     }
 }

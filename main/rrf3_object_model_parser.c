@@ -3,6 +3,7 @@
 // Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
 #include <cJSON.h>
+#include <esp_log.h>
 #include "rrf3_object_model_parser.h"
 #include "reppanel.h"
 #include "rrf_objects.h"
@@ -33,26 +34,62 @@ void reppanel_parse_rrf_fans(cJSON *fans_result) {
 void reppanel_parse_rrf_heaters(cJSON *heat_result, int *_heater_states) {
     cJSON *bedHeaters = cJSON_GetObjectItemCaseSensitive(heat_result, "bedHeaters");
     if (bedHeaters)
-        reprap_bed.heater_indx = cJSON_GetArrayItem(bedHeaters, 0)->valueint;
+        reprap_bed.heater_indx = cJSON_GetArrayItem(bedHeaters, 0)->valueint;  // only support one heater per bed
     cJSON *heaters = cJSON_GetObjectItem(heat_result, "heaters");
-    cJSON *bed_heater = cJSON_GetArrayItem(heaters, reprap_bed.heater_indx);
-    reprap_bed.active_temp = cJSON_GetObjectItemCaseSensitive(bed_heater, "active")->valuedouble;
-    reprap_bed.standby_temp = cJSON_GetObjectItemCaseSensitive(bed_heater, "standby")->valuedouble;
+    reprap_model.num_heaters = cJSON_GetArraySize(heaters);
+    if (reprap_model.num_heaters == 0)
+        return;
+    cJSON *heater = cJSON_GetArrayItem(heaters, reprap_bed.heater_indx);
+    reprap_bed.active_temp = cJSON_GetObjectItemCaseSensitive(heater, "active")->valuedouble;
+    reprap_bed.standby_temp = cJSON_GetObjectItemCaseSensitive(heater, "standby")->valuedouble;
     if (reprap_bed.temp_hist_curr_pos < (NUM_TEMPS_BUFF - 1)) {
         reprap_bed.temp_hist_curr_pos++;
     } else {
         reprap_bed.temp_hist_curr_pos = 0;
     }
-    reprap_bed.temp_buff[reprap_bed.temp_hist_curr_pos] = cJSON_GetObjectItemCaseSensitive(bed_heater, "current")->valuedouble;
-    cJSON *bed_heater_state = cJSON_GetObjectItemCaseSensitive(bed_heater, "state");
-    if (bed_heater_state->string[0] == 'o') {
+    reprap_bed.temp_buff[reprap_bed.temp_hist_curr_pos] = cJSON_GetObjectItemCaseSensitive(heater, "current")->valuedouble;
+    cJSON *heater_state = cJSON_GetObjectItemCaseSensitive(heater, "state");
+    if (heater_state->valuestring[0] == 'o') {
         _heater_states[0] = HEATER_OFF; // bed heater is always on index 0
-    } else if (bed_heater_state->string[0] == 'a') {
+    } else if (heater_state->valuestring[0] == 'a') {
         _heater_states[0] = HEATER_ACTIVE; // bed heater is always on index 0
-    } else if (bed_heater_state->string[0] == 's') {
+    } else if (heater_state->valuestring[0] == 's') {
         _heater_states[0] = HEATER_STDBY; // bed heater is always on index 0
     } else {
         _heater_states[0] = HEATER_FAULT; // bed heater is always on index 0
+    }
+}
+
+void reppanel_parse_rrf_tools(cJSON *tools_result, int *_heater_states) {
+    if (!cJSON_IsArray(tools_result))
+        return;
+    reprap_model.num_tools = cJSON_GetArraySize(tools_result);
+    // Get tool temperatures
+    for (int i = 0; i < reprap_model.num_tools; i++) {
+        cJSON *tool = cJSON_GetArrayItem(tools_result, i);
+        cJSON *heaters = cJSON_GetObjectItemCaseSensitive(tool, "heaters");
+        if (heaters && cJSON_GetArraySize(tool) > 0) {
+            cJSON *v = cJSON_GetArrayItem(heaters, 0);
+            reprap_tools->heater_indx = v->valueint;
+        }
+
+        cJSON *val = cJSON_GetObjectItemCaseSensitive(tool, "name");
+        if (val) strncpy(reprap_tools[i].name, val->valuestring, MAX_TOOL_NAME_LEN);
+        val = cJSON_GetObjectItemCaseSensitive(tool, "number");
+        if (val) reprap_tools[i].number = val->valueint;
+        reprap_tools[i].active_temp = cJSON_GetObjectItemCaseSensitive(tool, "active")->valuedouble;
+        reprap_tools[i].standby_temp = cJSON_GetObjectItemCaseSensitive(tool, "standby")->valuedouble;
+        cJSON *heater_state = cJSON_GetObjectItemCaseSensitive(tool, "state");
+        ESP_LOGI("RepRapParser", "Tool heater state: %s Tool heater value: %f", heater_state->valuestring, reprap_tools[i].temp_buff[reprap_tools[i].temp_hist_curr_pos]);
+        if (heater_state->valuestring[0] == 'o') {
+            _heater_states[i+1] = HEATER_OFF; // bed heater is always on index 0
+        } else if (heater_state->valuestring[0] == 'a') {
+            _heater_states[i+1] = HEATER_ACTIVE; // bed heater is always on index 0
+        } else if (heater_state->valuestring[0] == 's') {
+            _heater_states[i+1] = HEATER_STDBY; // bed heater is always on index 0
+        } else {
+            _heater_states[i+1] = HEATER_FAULT; // bed heater is always on index 0
+        }
     }
 }
 

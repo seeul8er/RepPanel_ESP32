@@ -5,6 +5,7 @@
 #ifndef REPPANEL_ESP32_RRF_OBJECTS_H
 #define REPPANEL_ESP32_RRF_OBJECTS_H
 
+#include "stdint.h"
 
 typedef struct {
     int reply;
@@ -12,6 +13,8 @@ typedef struct {
 
 typedef struct {
     int api_level;
+    uint8_t num_heaters;
+    uint8_t num_tools;
     reprap_seqs_t reprap_seqs;
 } reprap_model_t;
 

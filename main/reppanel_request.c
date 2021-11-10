@@ -21,6 +21,7 @@
 #include "esp32_uart.h"
 #include "esp32_wifi.h"
 #include "rrf3_object_model_parser.h"
+#include "rrf_objects.h"
 
 #define TAG                 "RequestTask"
 #define REQUEST_TIMEOUT_MS  150
@@ -234,7 +235,7 @@ void process_reprap2_status(char *buff) {
             pos++;
         }
     }
-    num_heaters = pos;
+    reprap_model.num_heaters = pos;
 
     // Get tool information
     pos = 0;
@@ -260,7 +261,7 @@ void process_reprap2_status(char *buff) {
             }
         }
         got_extended_status = true;
-        num_tools = pos;    // update number of tools
+        reprap_model.num_tools = pos;    // update number of tools
     }
 
     // Get firmware information
@@ -277,7 +278,7 @@ void process_reprap2_status(char *buff) {
     // Get current tool temperatures
     cJSON *duet_temps_current = cJSON_GetObjectItem(duet_temps, DUET_TEMPS_CURRENT);
     if (duet_temps_current) {
-        for (int i = 0; i < num_tools; i++) {
+        for (int i = 0; i < reprap_model.num_tools; i++) {
             if (reprap_tools[i].temp_hist_curr_pos < (NUM_TEMPS_BUFF - 1)) {
                 reprap_tools[i].temp_hist_curr_pos++;
             } else {
@@ -293,7 +294,7 @@ void process_reprap2_status(char *buff) {
     cJSON *duet_temps_tools_standby = cJSON_GetObjectItem(duet_temps_tools, DUET_TEMPS_STANDBY);
     if (duet_temps_tools_active && cJSON_IsArray(duet_temps_tools_active) && duet_temps_tools_standby &&
     cJSON_IsArray(duet_temps_tools_standby)) {
-        for (int i = 0; i < num_tools; i++) {
+        for (int i = 0; i < reprap_model.num_tools; i++) {
             cJSON *tool_active_temps_arr = cJSON_GetArrayItem(duet_temps_tools_active,
                                                               reprap_tools[i].number);
             cJSON *tool_standby_temps_arr = cJSON_GetArrayItem(duet_temps_tools_standby,
@@ -327,7 +328,7 @@ void process_reprap2_status(char *buff) {
         if (label_status != NULL) lv_label_set_text(label_status, reppanel_status);
         update_ui_machine();
         update_bed_temps_ui();  // update UI with new values
-        update_heater_status_ui(_heater_states, num_heaters);  // update UI with new values
+        update_heater_status_ui(_heater_states, reprap_model.num_heaters);  // update UI with new values
         update_current_tool_temps_ui();     // update UI with new values
         if (got_extended_status && label_extruder_name != NULL) {
             lv_label_set_text(label_extruder_name, reprap_tools[current_visible_tool_indx].name);
@@ -373,27 +374,31 @@ void process_reprap3_status(char *buff) {
     sub_object_result = cJSON_GetObjectItem(result, "heat");
     if (sub_object_result) reppanel_parse_rrf_heaters(sub_object_result, heater_states);
 
+    sub_object_result = cJSON_GetObjectItem(result, "tools");
+    if (sub_object_result) reppanel_parse_rrf_tools(sub_object_result, heater_states);
+
     sub_object_result = cJSON_GetObjectItem(result, "job");
     if (sub_object_result) reppanel_parse_rrf_job(sub_object_result);
 
     sub_object_result = cJSON_GetObjectItem(result, "move");
     if (sub_object_result) reppanel_parse_rrf_move(sub_object_result);
 
-    sub_object_result = cJSON_GetObjectItem(result, "seqs");
-    if (sub_object_result) {
-        if (reppanel_parse_rrf_seqs(sub_object_result)) {
-            // TODO request msg
-        }
-    }
-    cJSON_Delete(sub_object_result);
-    cJSON_Delete(result);
+    sub_object_result = cJSON_GetObjectItem(result, "state");
+    if (sub_object_result) reppanel_parse_rrf_state(sub_object_result);
+
+//    sub_object_result = cJSON_GetObjectItem(result, "seqs");
+//    if (sub_object_result) {
+//        if (reppanel_parse_rrf_seqs(sub_object_result)) {
+//            // TODO request msg
+//        }
+//    }
     cJSON_Delete(root);
 
     if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
         if (label_status != NULL) lv_label_set_text(label_status, reppanel_status);
         update_ui_machine();
         update_bed_temps_ui();  // update UI with new values
-        update_heater_status_ui(heater_states, num_heaters);  // update UI with new values
+        update_heater_status_ui(heater_states, reprap_model.num_heaters);  // update UI with new values
         update_current_tool_temps_ui();     // update UI with new values
         if (got_extended_status && label_extruder_name != NULL) {
             lv_label_set_text(label_extruder_name, reprap_tools[current_visible_tool_indx].name);
@@ -408,7 +413,7 @@ void process_reprap3_status(char *buff) {
 }
 
 void process_reprap_status(char *buff) {
-    if (reprap_firmware_version[0 == '2'])
+    if (reprap_model.api_level < 1)
         process_reprap2_status(buff);
     else
         process_reprap3_status(buff);
@@ -667,7 +672,7 @@ void reprap_uart_send_gcode(char *gcode) {
 void reprap_uart_get_status(uart_response_buff_t *receive_buff, int type, char *key, char *flags) {
     ESP_LOGI(TAG, "Getting status (UART) %i", type);
     char buff[32];
-    if (reprap_firmware_version[0] == '2') {
+    if (reprap_model.api_level < 1) {
         sprintf(buff, "M408 S%i", type);
     } else {
         sprintf(buff, "M409 K\"%s\" F\"%s\"", key, flags);
@@ -775,6 +780,7 @@ void wifi_duet_authorise(wifi_response_buff_t *resp_buff, bool get_d2wc_config) 
                 }
                 reppanel_parse_rr_connect(root);
                 cJSON_Delete(root);
+                ESP_LOGI(TAG, "Detected API Level %i", reprap_model.api_level);
                 break;
             case 500:
                 ESP_LOGE(TAG, "Generic error authorising DUET");
@@ -783,7 +789,7 @@ void wifi_duet_authorise(wifi_response_buff_t *resp_buff, bool get_d2wc_config) 
                 ESP_LOGE(TAG, "Incompatible DCS version");
                 break;
             case 503:
-                ESP_LOGE(TAG, "DCS is unavailable");
+                ESP_LOGE(TAG, "Authorize: DCS is unavailable");
                 duet_sbc_mode = false;
                 break;
             default:
@@ -799,10 +805,14 @@ void reprap_wifi_get_status(wifi_response_buff_t *resp_buff, int type, char *key
     if (duet_sbc_mode)
         sprintf(request_addr, "%s/machine/status", rep_addr_resolved);
     else {
-        if (reprap_firmware_version[0] == '2') {
+        if (reprap_model.api_level < 1) {
             sprintf(request_addr, "%s/rr_status?type=%i", rep_addr_resolved, type);
         } else {
-            sprintf(request_addr, "%s/rr_model?key=%s&flags=%s", rep_addr_resolved, key, flags);
+            if (strlen(key) > 0) {
+                sprintf(request_addr, "%s/rr_model?key=%s&flags=%s", rep_addr_resolved, key, flags);
+            } else {
+                sprintf(request_addr, "%s/rr_model?flags=%s", rep_addr_resolved, flags);
+            }
         }
     }
     esp_http_client_config_t config = {
@@ -811,6 +821,7 @@ void reprap_wifi_get_status(wifi_response_buff_t *resp_buff, int type, char *key
             .event_handler = http_event_handle,
             .user_data = resp_buff,
     };
+    ESP_LOGI(TAG, "Requesting: %s", request_addr);
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
 
@@ -833,7 +844,7 @@ void reprap_wifi_get_status(wifi_response_buff_t *resp_buff, int type, char *key
                 ESP_LOGE(TAG, "Incompatible DCS version");
                 break;
             case 503:
-                ESP_LOGE(TAG, "DCS is unavailable");
+                ESP_LOGE(TAG, "Get Status: DCS is unavailable %i %s %s", type, key, flags);
                 duet_sbc_mode = false;
                 break;
             default:
@@ -932,7 +943,7 @@ bool reprap_wifi_send_gcode(char *gcode) {
                 ESP_LOGE(TAG, "Incompatible DCS version");
                 break;
             case 503:
-                ESP_LOGE(TAG, "DCS is unavailable");
+                ESP_LOGE(TAG, "Send GCode: DCS is unavailable");
                 duet_sbc_mode = false;
                 break;
             default:
@@ -983,7 +994,7 @@ void reprap_wifi_get_filelist(wifi_response_buff_t *resp_buffer, char *directory
                 ESP_LOGE(TAG, "Incompatible DCS version");
                 break;
             case 503:
-                ESP_LOGE(TAG, "DCS is unavailable");
+                ESP_LOGE(TAG, "Get filelist: DCS is unavailable");
                 duet_sbc_mode = false;
                 break;
             default:
@@ -1039,7 +1050,7 @@ void reprap_wifi_get_filelist_task(void *params) {
                 ESP_LOGE(TAG, "Incompatible DCS version");
                 break;
             case 503:
-                ESP_LOGE(TAG, "DCS is unavailable");
+                ESP_LOGE(TAG, "Get filelist: DCS is unavailable");
                 duet_sbc_mode = false;
                 break;
             default:
@@ -1095,7 +1106,7 @@ void reprap_wifi_get_fileinfo(wifi_response_buff_t *resp_data, char *filename) {
                 ESP_LOGE(TAG, "Incompatible DCS version");
                 break;
             case 503:
-                ESP_LOGE(TAG, "DCS is unavailable");
+                ESP_LOGE(TAG, "Fileinfo: DCS is unavailable");
                 duet_sbc_mode = false;
                 break;
             default:
@@ -1177,7 +1188,7 @@ void reprap_wifi_download(wifi_response_buff_t *response_buffer, char *file) {
                 ESP_LOGE(TAG, "Incompatible DCS version");
                 break;
             case 503:
-                ESP_LOGE(TAG, "DCS is unavailable");
+                ESP_LOGE(TAG, "Wifi download: DCS is unavailable");
                 duet_sbc_mode = false;
                 break;
             default:
@@ -1319,8 +1330,7 @@ void request_reprap_status_updates(void *params) {
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
         if (rp_conn_stat == REPPANEL_UART_CONNECTED) {
             if (!got_duet_settings) {
-                // TODO: detect firmware version
-                if (reprap_firmware_version[0] == '2') {  // RRF2
+                if (reprap_model.api_level < 1) {  // RRF2
                     reprap_uart_download(&uart_receive_buff, "0:/sys/dwc2settings.json");   // get dummy values
                 } else {
                     reprap_uart_download(&uart_receive_buff, "0:/sys/dwc-settings.json");   // get dummy values
@@ -1348,16 +1358,22 @@ void request_reprap_status_updates(void *params) {
         } else if (rp_conn_stat == REPPANEL_WIFI_CONNECTED ||
                    rp_conn_stat == REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED) {
             if (init_printer_addr_updated) {
-                // TODO: detect firmware version
                 if (!got_duet_settings) {
-                    if (reprap_firmware_version[0] == '2') {  // RRF2
+                    if (reprap_model.api_level < 1) {  // RRF2
                         reprap_wifi_download(&resp_buff_status_update_task, "0%3A%2Fsys%2Fdwc2settings.json");
                     } else {
                         reprap_wifi_download(&resp_buff_status_update_task, "0%3A%2Fsys%2Fdwc-settings.json");
+                        reprap_wifi_get_status(&resp_buff_status_update_task, 2, "tools", "d99vn");
+                        reprap_wifi_get_status(&resp_buff_status_update_task, 2, "heat", "d99vn");
+                        reprap_wifi_get_status(&resp_buff_status_update_task, 2, "boards", "d99vn");
+                        reprap_wifi_get_status(&resp_buff_status_update_task, 2, "fans", "d99vn");
+                        reprap_wifi_get_status(&resp_buff_status_update_task, 2, "move", "d99vn");
                     }
                 }
                 if (!got_filaments) reprap_wifi_get_filelist(&resp_buff_status_update_task, "0:/filaments&first=0");
-                if (!got_extended_status) reprap_wifi_get_status(&resp_buff_status_update_task, 2, "", "d99vn");
+                if (reprap_model.api_level < 1) {  // RRF2
+                    if (!got_extended_status) reprap_wifi_get_status(&resp_buff_status_update_task, 2, "", "d99fn");
+                }
                 if (duet_request_reply) reprap_wifi_get_rreply(&resp_buff_status_update_task);
                 // for synchron request of jobs
                 if (duet_request_jobs) {
@@ -1374,7 +1390,7 @@ void request_reprap_status_updates(void *params) {
                 else
                     reprap_wifi_get_status(&resp_buff_status_update_task, 3, "", "d99fn");
                 if (i == 20) {
-                    reprap_wifi_get_status(&resp_buff_status_update_task, 2, "", "d99vn");
+                    reprap_wifi_get_status(&resp_buff_status_update_task, 2, "", "d99fn");
 
                     // Check if we got a UART connection
                     if (reppanel_is_uart_connected()) {
