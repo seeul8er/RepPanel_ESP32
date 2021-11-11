@@ -364,27 +364,50 @@ void process_reprap3_status(char *buff) {
         cJSON_Delete(root);
         return;
     }
+    cJSON *key = cJSON_GetObjectItem(root, "key");
     cJSON *sub_object_result;
     sub_object_result = cJSON_GetObjectItem(result, "boards");
-    if (sub_object_result) reppanel_parse_rrf_boards(sub_object_result);
+    if (sub_object_result)
+        reppanel_parse_rrf_boards(sub_object_result);
+    else if (strcmp(key->valuestring, "boards") == 0)
+        reppanel_parse_rrf_boards(result);
 
     sub_object_result = cJSON_GetObjectItem(result, "fans");
-    if (sub_object_result) reppanel_parse_rrf_fans(sub_object_result);
+    if (sub_object_result)
+        reppanel_parse_rrf_fans(sub_object_result);
+    else if (strcmp(key->valuestring, "fans") == 0)
+        reppanel_parse_rrf_fans(result);
 
     sub_object_result = cJSON_GetObjectItem(result, "heat");
-    if (sub_object_result) reppanel_parse_rrf_heaters(sub_object_result, heater_states);
+    if (sub_object_result)
+        reppanel_parse_rrf_heaters(sub_object_result, heater_states);
+    else if (strcmp(key->valuestring, "heat") == 0)
+        reppanel_parse_rrf_heaters(result, heater_states);
 
     sub_object_result = cJSON_GetObjectItem(result, "tools");
-    if (sub_object_result) reppanel_parse_rrf_tools(sub_object_result, heater_states);
+    if (sub_object_result)
+        reppanel_parse_rrf_tools(sub_object_result, heater_states);
+    else if (strcmp(key->valuestring, "tools") == 0)
+        reppanel_parse_rrf_tools(result, heater_states);
 
+    bool got_printjob_status = false;
     sub_object_result = cJSON_GetObjectItem(result, "job");
-    if (sub_object_result) reppanel_parse_rrf_job(sub_object_result);
+    if (sub_object_result)
+        got_printjob_status = reppanel_parse_rrf_job(sub_object_result);
+    else if (strcmp(key->valuestring, "job") == 0)
+        got_printjob_status = reppanel_parse_rrf_job(result);
 
     sub_object_result = cJSON_GetObjectItem(result, "move");
-    if (sub_object_result) reppanel_parse_rrf_move(sub_object_result);
+    if (sub_object_result)
+        reppanel_parse_rrf_move(sub_object_result);
+    else if (strcmp(key->valuestring, "move") == 0)
+        reppanel_parse_rrf_move(result);
 
     sub_object_result = cJSON_GetObjectItem(result, "state");
-    if (sub_object_result) reppanel_parse_rrf_state(sub_object_result);
+    if (sub_object_result)
+        reppanel_parse_rrf_state(sub_object_result);
+    else if (strcmp(key->valuestring, "state") == 0)
+        reppanel_parse_rrf_state(result);
 
 //    sub_object_result = cJSON_GetObjectItem(result, "seqs");
 //    if (sub_object_result) {
@@ -403,7 +426,7 @@ void process_reprap3_status(char *buff) {
         if (got_extended_status && label_extruder_name != NULL) {
             lv_label_set_text(label_extruder_name, reprap_tools[current_visible_tool_indx].name);
         }
-//        if (got_printjob_status) update_print_job_status_ui();
+        if (got_printjob_status) update_print_job_status_ui();
 //        if (disp_msg) reppanel_disp_msg(msg_txt);
 //        if (disp_h_msgbox) show_height_adjust_dialog();
 //        if (disp_msgbox) duet_show_dialog(msg_title, msg_msg);
@@ -1353,6 +1376,7 @@ void request_reprap_status_updates(void *params) {
                 reprap_uart_get_status(&uart_receive_buff, 4, "", "d99fn");
             if (i == 20) {
                 reprap_uart_get_status(&uart_receive_buff, 3, "", "d99fn");
+                reprap_wifi_get_status(&resp_buff_status_update_task, 2, "tools", "d99vn");
                 i = 0;
             } else { i++; }
         } else if (rp_conn_stat == REPPANEL_WIFI_CONNECTED ||
@@ -1390,7 +1414,7 @@ void request_reprap_status_updates(void *params) {
                 else
                     reprap_wifi_get_status(&resp_buff_status_update_task, 3, "", "d99fn");
                 if (i == 20) {
-                    reprap_wifi_get_status(&resp_buff_status_update_task, 2, "", "d99fn");
+                    reprap_wifi_get_status(&resp_buff_status_update_task, 2, "tools", "d99vn");
 
                     // Check if we got a UART connection
                     if (reppanel_is_uart_connected()) {
