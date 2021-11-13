@@ -14,7 +14,6 @@
 extern "C" {
 #endif
 
-#define MAX_REPRAP_STATUS_LEN   15
 #define MAX_PREPANEL_TEMP_LEN   8
 
 #define BTN_BED_TMP_ACTIVE 0
@@ -77,8 +76,6 @@ extern lv_obj_t *button_tool_filament;
 extern lv_obj_t *ddlist_selected_filament;
 extern lv_obj_t *label_connection_status;
 
-// Temp variable for writing to label. Contains current temp + °C or °F
-extern char reppanel_status[MAX_REPRAP_STATUS_LEN];
 
 extern int reprap_chamber_temp_curr_pos;
 extern double reprap_chamber_temp_buff[NUM_TEMPS_BUFF];
@@ -89,18 +86,9 @@ extern double reprap_extruder_amounts[NUM_TEMPS_BUFF];
 extern double reprap_extruder_feedrates[NUM_TEMPS_BUFF];
 extern double reprap_move_feedrate;
 extern double reprap_mcu_temp;
-extern double reprap_job_percent;
-extern int reprap_job_file_pos;
-extern double reprap_job_duration;
-extern int reprap_job_curr_layer;
-extern int reprap_job_time_file;
-extern int reprap_job_time_sim;
-extern int reprap_job_time_slicer;
+extern float reprap_job_percent;
 extern double reprap_job_first_layer_height;
 extern double reprap_job_layer_height;
-extern double reprap_job_height;
-extern int reprap_job_numlayers;
-extern char reprap_job_name[MAX_LEN_FILENAME];
 extern char reprap_firmware_name[32];
 extern char reprap_firmware_version[5];
 

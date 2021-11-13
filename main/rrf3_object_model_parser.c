@@ -7,12 +7,8 @@
 #include "reppanel.h"
 #include "rrf_objects.h"
 
-void reprap_calc_job_percent() {
-    reprap_job_percent = (reprap_job_time_sim/reprap_job_duration) * 100;
-}
-
-void reppanel_parse_rr_connect(cJSON *connect_result) {
-        reprap_model.api_level = cJSON_GetObjectItemCaseSensitive(connect_result, "apiLevel")->valueint;
+void reppanel_parse_rr_connect(cJSON *connect_result, reprap_model_t *_reprap_model) {
+        _reprap_model->api_level = cJSON_GetObjectItemCaseSensitive(connect_result, "apiLevel")->valueint;
 }
 
 void reppanel_parse_rrf_boards(cJSON *boards_result) {
@@ -96,7 +92,7 @@ void reppanel_parse_rrf_tools(cJSON *tools_result, int *_heater_states) {
         }
 
         cJSON *val = cJSON_GetObjectItemCaseSensitive(tool, "name");
-        if (val) {
+        if (val && cJSON_IsString(val) && (val->valuestring != NULL)) {
             strncpy(reprap_tools[i].name, val->valuestring, MAX_TOOL_NAME_LEN);
         }
         val = cJSON_GetObjectItemCaseSensitive(tool, "number");
@@ -118,52 +114,48 @@ void reppanel_parse_rrf_tools(cJSON *tools_result, int *_heater_states) {
  * (job request)
  * @return If a job is currently running
  */
-void reppanel_parse_rrf_job(cJSON *job_result) {
-    reprap_job_duration = cJSON_GetObjectItemCaseSensitive(job_result, "duration")->valuedouble;
-    reprap_job_curr_layer = cJSON_GetObjectItemCaseSensitive(job_result, "layer")->valueint;
+void reppanel_parse_rrf_job(cJSON *job_result, reprap_model_t *_reprap_model) {
+    _reprap_model->reprap_job.duration = cJSON_GetObjectItemCaseSensitive(job_result, "duration")->valueint;
+    _reprap_model->reprap_job.layer = cJSON_GetObjectItemCaseSensitive(job_result, "layer")->valueint;
+    _reprap_model->reprap_job.filePosition = cJSON_GetObjectItemCaseSensitive(job_result, "filePosition")->valueint;
     cJSON *times_left = cJSON_GetObjectItem(job_result, "timesLeft");
     if (times_left) {
         cJSON *sim_time = cJSON_GetObjectItemCaseSensitive(times_left, "simulation");
         // Not so beautiful code I know
         if (sim_time && cJSON_IsNumber(sim_time)) { // remove -> simulatedTime
-            reprap_job_time_sim = sim_time->valueint;
-            reprap_calc_job_percent();
+            _reprap_model->reprap_job.timesLeft.simulation = sim_time->valueint;
         } else {
-            cJSON *time_slicer = cJSON_GetObjectItem(times_left, "slicer");
+            cJSON *time_slicer = cJSON_GetObjectItemCaseSensitive(times_left, "slicer");
             if (time_slicer && cJSON_IsNumber(time_slicer)) {
-                reprap_job_time_slicer = time_slicer->valueint;
-                reprap_job_percent = (reprap_job_time_slicer/reprap_job_duration) * 100;
+                _reprap_model->reprap_job.timesLeft.slicer = time_slicer->valueint;
             } else {
-                cJSON *time_file = cJSON_GetObjectItem(times_left, "file");
+                cJSON *time_file = cJSON_GetObjectItemCaseSensitive(times_left, "file");
                 if (time_file && cJSON_IsNumber(time_file)) {
-                    reprap_job_time_file = time_file->valueint;
-                    reprap_job_percent = (reprap_job_time_file/reprap_job_duration) * 100;
+                    _reprap_model->reprap_job.timesLeft.file = time_file->valueint;
                 }
             }
         }
     }
-    cJSON *file = cJSON_GetObjectItem(job_result, "file");
+    cJSON *file = cJSON_GetObjectItemCaseSensitive(job_result, "file");
     if (file) {
-        cJSON *numLayers = cJSON_GetObjectItem(file, "numLayers");
-        if (numLayers) reprap_job_numlayers = numLayers->valueint;
-        cJSON *height = cJSON_GetObjectItem(file, "height");
-        if (height) reprap_job_height = height->valuedouble;
-        cJSON *firstLayerHeight = cJSON_GetObjectItem(file, "firstLayerHeight");
-        if (firstLayerHeight) reprap_job_first_layer_height = firstLayerHeight->valuedouble;
-        cJSON *layerHeight = cJSON_GetObjectItem(file, "layerHeight");
-        if (layerHeight) reprap_job_layer_height = layerHeight->valuedouble;
-        cJSON *fileName = cJSON_GetObjectItem(file, "fileName");
-        if (fileName) strncpy(reprap_job_name, fileName->string, MAX_LEN_FILENAME);
-        cJSON *simulatedTime = cJSON_GetObjectItemCaseSensitive(file, "simulatedTime");
-        if (simulatedTime && cJSON_IsNumber(simulatedTime)) {
-            reprap_job_time_sim = simulatedTime->valueint;
-            reprap_calc_job_percent();
+        cJSON *val = cJSON_GetObjectItemCaseSensitive(file, "size");
+        if (val && cJSON_IsNumber(val)) _reprap_model->reprap_job.file.size = val->valueint;
+        val = cJSON_GetObjectItemCaseSensitive(file, "numLayers");
+        if (val && cJSON_IsNumber(val)) _reprap_model->reprap_job.file.numLayers = val->valueint;
+        val = cJSON_GetObjectItemCaseSensitive(file, "height");
+        if (val && cJSON_IsNumber(val)) _reprap_model->reprap_job.file.height = (float) val->valuedouble;
+        val = cJSON_GetObjectItemCaseSensitive(file, "firstLayerHeight");
+        if (val && cJSON_IsNumber(val)) reprap_job_first_layer_height = val->valuedouble;
+        val = cJSON_GetObjectItemCaseSensitive(file, "layerHeight");
+        if (val && cJSON_IsNumber(val)) reprap_job_layer_height = val->valuedouble;
+        val = cJSON_GetObjectItemCaseSensitive(file, "fileName");
+        if (cJSON_IsString(val) && (val->valuestring != NULL)) strncpy(_reprap_model->reprap_job.file.fileName, &val->valuestring[9], MAX_LEN_FILENAME);
+        val = cJSON_GetObjectItemCaseSensitive(file, "simulatedTime");
+        if (val && cJSON_IsNumber(val)) {
+            _reprap_model->reprap_job.file.simulatedTime = val->valueint;
         }
-        cJSON *duration = cJSON_GetObjectItem(file, "duration");
-        if (duration) reprap_job_duration = duration->valuedouble;
-        cJSON *layer = cJSON_GetObjectItem(file, "layer");
-        if (layer) reprap_job_curr_layer = layer->valueint;
     }
+    reprap_job_percent = ((float) _reprap_model->reprap_job.file.size/ (float) _reprap_model->reprap_job.filePosition) * 100.0f;
 }
 
 void reppanel_parse_rrf_move(cJSON *move_result) {
@@ -172,40 +164,129 @@ void reppanel_parse_rrf_move(cJSON *move_result) {
     int i = 0;
     cJSON_ArrayForEach(axis, axes) {
         if (i < REPPANEL_RRF_MAX_AXES) {
-            cJSON *queried_obj = cJSON_GetObjectItem(axis, "machinePosition");
-            if (queried_obj) reprap_axes.axes[i] = queried_obj->valuedouble;
+            cJSON *queried_obj = cJSON_GetObjectItemCaseSensitive(axis, "machinePosition");
+            if (queried_obj && cJSON_IsNumber(queried_obj)) reprap_axes.axes[i] = queried_obj->valuedouble;
             queried_obj = cJSON_GetObjectItem(axis, "homed");
             if (queried_obj) reprap_axes.homed[i] = cJSON_IsTrue(queried_obj);
-            queried_obj = cJSON_GetObjectItem(axis, "letter");
-            if (queried_obj) reprap_axes.letter[i] = queried_obj->valuestring[0];
-            queried_obj = cJSON_GetObjectItem(axis, "min");
-            if (queried_obj) reprap_axes.min[i] = queried_obj->valuedouble;
-            queried_obj = cJSON_GetObjectItem(axis, "max");
-            if (queried_obj) reprap_axes.max[i] = queried_obj->valuedouble;
-            queried_obj = cJSON_GetObjectItem(axis, "babystep");
-            if (queried_obj) reprap_axes.babystep[i] = queried_obj->valuedouble;
+            queried_obj = cJSON_GetObjectItemCaseSensitive(axis, "letter");
+            if (queried_obj && cJSON_IsString(queried_obj) && (queried_obj->valuestring != NULL)) reprap_axes.letter[i] = queried_obj->valuestring[0];
+            queried_obj = cJSON_GetObjectItemCaseSensitive(axis, "min");
+            if (queried_obj && cJSON_IsNumber(queried_obj)) reprap_axes.min[i] = queried_obj->valuedouble;
+            queried_obj = cJSON_GetObjectItemCaseSensitive(axis, "max");
+            if (queried_obj && cJSON_IsNumber(queried_obj)) reprap_axes.max[i] = queried_obj->valuedouble;
+            queried_obj = cJSON_GetObjectItemCaseSensitive(axis, "babystep");
+            if (queried_obj && cJSON_IsNumber(queried_obj)) reprap_axes.babystep[i] = queried_obj->valuedouble;
         }
         i++;
     }
 }
 
-void reppanel_parse_rrf_state(cJSON *state_result) {
-    cJSON *status = cJSON_GetObjectItemCaseSensitive(state_result, "status");
-    if (status) strncpy(reppanel_status, cJSON_GetStringValue(status), MAX_REPRAP_STATUS_LEN);
+void reppanel_parse_rrf_state(cJSON *state_result, reprap_model_t *_reprap_model) {
+    cJSON *val = cJSON_GetObjectItemCaseSensitive(state_result, "status");
+    if (val && cJSON_IsString(val) && (val->valuestring != NULL))
+        strncpy(_reprap_model->reprap_state.status, val->valuestring, REPRAP_MAX_STATUS_LEN);
+
+    val = cJSON_GetObjectItemCaseSensitive(state_result, "displayMessage");
+    if (val && cJSON_IsString(val) && (val->valuestring != NULL)) {
+        strncpy(_reprap_model->reprap_state.disp_msg, val->valuestring, REPRAP_MAX_DISPLAY_MSG_LEN);
+    }
 }
 
 /**
- * Check if a new reply is available
+ * Check if the sequence numbers changed and update them. If they changed you need to request the new information
  * @param seqs_result
  * @return true if a new msg. can be displayed
  */
-bool reppanel_parse_rrf_seqs(cJSON *seqs_result) {
-    cJSON *reply = cJSON_GetObjectItemCaseSensitive(seqs_result, "reply");
-    if (reply && cJSON_IsNumber(reply)) {
-        if (reprap_model.reprap_seqs.reply != reply->valueint) {
-            return true;
+void reppanel_parse_rrf_seqs(cJSON *seqs_result, reprap_model_t *_reprap_model) {
+    cJSON *seq = cJSON_GetObjectItemCaseSensitive(seqs_result, "boards");
+    if (seq && cJSON_IsNumber(seq)) {
+        if (_reprap_model->reprap_seqs.boards != seq->valueint) {
+            _reprap_model->reprap_seqs.boards = seq->valueint;
+            _reprap_model->reprap_seqs_changed.boards_changed = 1;
         }
-        reprap_model.reprap_seqs.reply = reply->valueint;
     }
-    return false;
+    seq = cJSON_GetObjectItemCaseSensitive(seqs_result, "directories");
+    if (seq && cJSON_IsNumber(seq)) {
+        if (_reprap_model->reprap_seqs.directories != seq->valueint) {
+            _reprap_model->reprap_seqs.directories = seq->valueint;
+            _reprap_model->reprap_seqs_changed.directories_changed = 1;
+        }
+    }
+    seq = cJSON_GetObjectItemCaseSensitive(seqs_result, "fans");
+    if (seq && cJSON_IsNumber(seq)) {
+        if (_reprap_model->reprap_seqs.fans != seq->valueint) {
+            _reprap_model->reprap_seqs.fans = seq->valueint;
+            _reprap_model->reprap_seqs_changed.fans_changed = 1;
+        }
+    }
+    seq = cJSON_GetObjectItemCaseSensitive(seqs_result, "global");
+    if (seq && cJSON_IsNumber(seq)) {
+        if (_reprap_model->reprap_seqs.global != seq->valueint) {
+            _reprap_model->reprap_seqs.global = seq->valueint;
+            _reprap_model->reprap_seqs_changed.global_changed = 1;
+        }
+    }
+    seq = cJSON_GetObjectItemCaseSensitive(seqs_result, "heat");
+    if (seq && cJSON_IsNumber(seq)) {
+        if (_reprap_model->reprap_seqs.heat != seq->valueint) {
+            _reprap_model->reprap_seqs.heat = seq->valueint;
+            _reprap_model->reprap_seqs_changed.heat_changed = 1;
+        }
+    }
+    seq = cJSON_GetObjectItemCaseSensitive(seqs_result, "inputs");
+    if (seq && cJSON_IsNumber(seq)) {
+        if (_reprap_model->reprap_seqs.inputs != seq->valueint) {
+            _reprap_model->reprap_seqs.inputs = seq->valueint;
+            _reprap_model->reprap_seqs_changed.inputs_changed = 1;
+        }
+    }
+    seq = cJSON_GetObjectItemCaseSensitive(seqs_result, "job");
+    if (seq && cJSON_IsNumber(seq)) {
+        if (_reprap_model->reprap_seqs.job != seq->valueint) {
+            _reprap_model->reprap_seqs.job = seq->valueint;
+            _reprap_model->reprap_seqs_changed.job_changed = 1;
+        }
+    }
+    seq = cJSON_GetObjectItemCaseSensitive(seqs_result, "move");
+    if (seq && cJSON_IsNumber(seq)) {
+        if (_reprap_model->reprap_seqs.move != seq->valueint) {
+            _reprap_model->reprap_seqs.move = seq->valueint;
+            _reprap_model->reprap_seqs_changed.move_changed = 1;
+        }
+    }
+    seq = cJSON_GetObjectItemCaseSensitive(seqs_result, "network");
+    if (seq && cJSON_IsNumber(seq)) {
+        if (_reprap_model->reprap_seqs.network != seq->valueint) {
+            _reprap_model->reprap_seqs.network = seq->valueint;
+            _reprap_model->reprap_seqs_changed.network_changed = 1;
+        }
+    }
+    seq = cJSON_GetObjectItemCaseSensitive(seqs_result, "reply");
+    if (seq && cJSON_IsNumber(seq)) {
+        if (_reprap_model->reprap_seqs.reply != seq->valueint) {
+            _reprap_model->reprap_seqs.reply = seq->valueint;
+            _reprap_model->reprap_seqs_changed.reply_changed = 1;
+        }
+    }
+    seq = cJSON_GetObjectItemCaseSensitive(seqs_result, "sensors");
+    if (seq && cJSON_IsNumber(seq)) {
+        if (_reprap_model->reprap_seqs.sensors != seq->valueint) {
+            _reprap_model->reprap_seqs.sensors = seq->valueint;
+            _reprap_model->reprap_seqs_changed.sensors_changed = 1;
+        }
+    }
+    seq = cJSON_GetObjectItemCaseSensitive(seqs_result, "state");
+    if (seq && cJSON_IsNumber(seq)) {
+        if (_reprap_model->reprap_seqs.state != seq->valueint) {
+            _reprap_model->reprap_seqs.state = seq->valueint;
+            _reprap_model->reprap_seqs_changed.state_changed = 1;
+        }
+    }
+    seq = cJSON_GetObjectItemCaseSensitive(seqs_result, "tools");
+    if (seq && cJSON_IsNumber(seq)) {
+        if (_reprap_model->reprap_seqs.tools != seq->valueint) {
+            _reprap_model->reprap_seqs.tools = seq->valueint;
+            _reprap_model->reprap_seqs_changed.tools_changed = 1;
+        }
+    }
 }
