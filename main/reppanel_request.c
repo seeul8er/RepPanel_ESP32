@@ -45,7 +45,7 @@ int last_status_seq = -1;
 static bool uart_request_file_info = false;
 static char request_file_path[512];
 
-const char *decode_reprap_status(const char *valuestring) {
+const char *decode_reprap2_status(const char *valuestring) {
     job_paused = false;
     switch (*valuestring) {
         case REPRAP_STATUS_PROCESS_CONFIG:
@@ -91,6 +91,20 @@ const char *decode_reprap_status(const char *valuestring) {
     return "UnknownStatus";
 }
 
+void decode_reprap3_status() {
+    if (strncmp(reppanel_status, "simulating", MAX_REPRAP_STATUS_LEN-1) == 0
+    || strncmp(reppanel_status, "printing", MAX_REPRAP_STATUS_LEN-1) == 0) {
+        job_running = true;
+        job_paused = false;
+    } else if (strncmp(reppanel_status, "paused", MAX_REPRAP_STATUS_LEN-1) == 0) {
+        job_paused = true;
+        job_running = true;
+    } else {
+        job_running = false;
+        job_paused = false;
+    }
+}
+
 /**
  * For legacy RRF2 status responses
  * @param buff raw HTTP response buffer containing the JSON
@@ -107,7 +121,7 @@ void process_reprap2_status(char *buff) {
     }
     cJSON *name = cJSON_GetObjectItem(root, DUET_STATUS);
     if (cJSON_IsString(name) && (name->valuestring != NULL)) {
-        strlcpy(reppanel_status, decode_reprap_status(name->valuestring), MAX_REPRAP_STATUS_LEN);
+        strlcpy(reppanel_status, decode_reprap2_status(name->valuestring), MAX_REPRAP_STATUS_LEN);
     }
 
     cJSON *coords = cJSON_GetObjectItem(root, "coords");
@@ -390,12 +404,11 @@ void process_reprap3_status(char *buff) {
     else if (strcmp(key->valuestring, "tools") == 0)
         reppanel_parse_rrf_tools(result, heater_states);
 
-    bool got_printjob_status = false;
     sub_object_result = cJSON_GetObjectItem(result, "job");
     if (sub_object_result)
-        got_printjob_status = reppanel_parse_rrf_job(sub_object_result);
+        reppanel_parse_rrf_job(sub_object_result);
     else if (strcmp(key->valuestring, "job") == 0)
-        got_printjob_status = reppanel_parse_rrf_job(result);
+        reppanel_parse_rrf_job(result);
 
     sub_object_result = cJSON_GetObjectItem(result, "move");
     if (sub_object_result)
@@ -409,13 +422,18 @@ void process_reprap3_status(char *buff) {
     else if (strcmp(key->valuestring, "state") == 0)
         reppanel_parse_rrf_state(result);
 
-//    sub_object_result = cJSON_GetObjectItem(result, "seqs");
-//    if (sub_object_result) {
-//        if (reppanel_parse_rrf_seqs(sub_object_result)) {
-//            // TODO request msg
-//        }
-//    }
+    sub_object_result = cJSON_GetObjectItem(result, "seqs");
+    if (sub_object_result) {
+        if (reppanel_parse_rrf_seqs(sub_object_result)) {
+            // TODO request msg via rr_model?key=state&flags=d99vn
+        }
+    } else if (strcmp(key->valuestring, "seqs") == 0)
+        if (reppanel_parse_rrf_seqs(sub_object_result)) {
+            // TODO request msg via rr_model?key=state&flags=d99vn
+        }
     cJSON_Delete(root);
+
+    decode_reprap3_status();
 
     if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
         if (label_status != NULL) lv_label_set_text(label_status, reppanel_status);
@@ -426,7 +444,7 @@ void process_reprap3_status(char *buff) {
         if (got_extended_status && label_extruder_name != NULL) {
             lv_label_set_text(label_extruder_name, reprap_tools[current_visible_tool_indx].name);
         }
-        if (got_printjob_status) update_print_job_status_ui();
+        if (job_running) update_print_job_status_ui();
 //        if (disp_msg) reppanel_disp_msg(msg_txt);
 //        if (disp_h_msgbox) show_height_adjust_dialog();
 //        if (disp_msgbox) duet_show_dialog(msg_title, msg_msg);
@@ -1357,6 +1375,12 @@ void request_reprap_status_updates(void *params) {
                     reprap_uart_download(&uart_receive_buff, "0:/sys/dwc2settings.json");   // get dummy values
                 } else {
                     reprap_uart_download(&uart_receive_buff, "0:/sys/dwc-settings.json");   // get dummy values
+                    reprap_uart_get_status(&uart_receive_buff, 2, "boards", "d99vn");
+                    reprap_uart_get_status(&uart_receive_buff, 2, "fans", "d99vn");
+                    reprap_uart_get_status(&uart_receive_buff, 2, "heat", "d99vn");
+                    reprap_uart_get_status(&uart_receive_buff, 2, "job", "d99vn");
+                    reprap_uart_get_status(&uart_receive_buff, 2, "move", "d99vn");
+                    reprap_uart_get_status(&uart_receive_buff, 2, "tools", "d99vn");
                 }
             }
             if (!got_filaments) reprap_uart_get_filelist(&uart_receive_buff, "0:/filaments");
@@ -1376,7 +1400,6 @@ void request_reprap_status_updates(void *params) {
                 reprap_uart_get_status(&uart_receive_buff, 4, "", "d99fn");
             if (i == 20) {
                 reprap_uart_get_status(&uart_receive_buff, 3, "", "d99fn");
-                reprap_wifi_get_status(&resp_buff_status_update_task, 2, "tools", "d99vn");
                 i = 0;
             } else { i++; }
         } else if (rp_conn_stat == REPPANEL_WIFI_CONNECTED ||
@@ -1387,11 +1410,12 @@ void request_reprap_status_updates(void *params) {
                         reprap_wifi_download(&resp_buff_status_update_task, "0%3A%2Fsys%2Fdwc2settings.json");
                     } else {
                         reprap_wifi_download(&resp_buff_status_update_task, "0%3A%2Fsys%2Fdwc-settings.json");
-                        reprap_wifi_get_status(&resp_buff_status_update_task, 2, "tools", "d99vn");
-                        reprap_wifi_get_status(&resp_buff_status_update_task, 2, "heat", "d99vn");
                         reprap_wifi_get_status(&resp_buff_status_update_task, 2, "boards", "d99vn");
                         reprap_wifi_get_status(&resp_buff_status_update_task, 2, "fans", "d99vn");
+                        reprap_wifi_get_status(&resp_buff_status_update_task, 2, "heat", "d99vn");
+                        reprap_wifi_get_status(&resp_buff_status_update_task, 2, "job", "d99vn");
                         reprap_wifi_get_status(&resp_buff_status_update_task, 2, "move", "d99vn");
+                        reprap_wifi_get_status(&resp_buff_status_update_task, 2, "tools", "d99vn");
                     }
                 }
                 if (!got_filaments) reprap_wifi_get_filelist(&resp_buff_status_update_task, "0:/filaments&first=0");
@@ -1414,7 +1438,7 @@ void request_reprap_status_updates(void *params) {
                 else
                     reprap_wifi_get_status(&resp_buff_status_update_task, 3, "", "d99fn");
                 if (i == 20) {
-                    reprap_wifi_get_status(&resp_buff_status_update_task, 2, "tools", "d99vn");
+                    reprap_wifi_get_status(&resp_buff_status_update_task, 2, "job", "d99vn");
 
                     // Check if we got a UART connection
                     if (reppanel_is_uart_connected()) {

@@ -15,7 +15,7 @@ void reppanel_parse_rrf_boards(cJSON *boards_result);
 void reppanel_parse_rrf_fans(cJSON *fans_result);
 void reppanel_parse_rrf_heaters(cJSON *heaters_result, int _heater_states[MAX_NUM_TOOLS]);
 void reppanel_parse_rrf_tools(cJSON *tools_result, int _heater_states[MAX_NUM_TOOLS]);
-bool reppanel_parse_rrf_job(cJSON *job_result);
+void reppanel_parse_rrf_job(cJSON *job_result);
 void reppanel_parse_rrf_move(cJSON *move_result);
 void reppanel_parse_rrf_state(cJSON *state_result);
 bool reppanel_parse_rrf_seqs(cJSON *seqs_result);

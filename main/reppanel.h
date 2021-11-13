@@ -115,7 +115,7 @@ typedef struct {
 
 typedef struct {
     bool power;
-    int fan;
+    int16_t fan;
 } reprap_params_t;
 
 typedef struct {

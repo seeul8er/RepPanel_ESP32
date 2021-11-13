@@ -3,7 +3,6 @@
 // Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
 #include <cJSON.h>
-#include <esp_log.h>
 #include "rrf3_object_model_parser.h"
 #include "reppanel.h"
 #include "rrf_objects.h"
@@ -25,9 +24,11 @@ void reppanel_parse_rrf_boards(cJSON *boards_result) {
 }
 
 void reppanel_parse_rrf_fans(cJSON *fans_result) {
-    cJSON *fan_zero = cJSON_GetArrayItem(fans_result, reprap_tools[0].fans);
-    if (fan_zero) {
-        reprap_params.fan = (int) cJSON_GetObjectItemCaseSensitive(fan_zero, "actualValue")->valuedouble * 100;
+    if (cJSON_GetArraySize(fans_result) > 0) {
+        cJSON *fan_zero = cJSON_GetArrayItem(fans_result, reprap_tools[0].fans);
+        if (fan_zero) {
+            reprap_params.fan = (int16_t) (cJSON_GetObjectItemCaseSensitive(fan_zero, "actualValue")->valuedouble * 100);
+        }
     }
 }
 
@@ -69,7 +70,6 @@ void reppanel_parse_rrf_heaters(cJSON *heat_result, int *_heater_states) {
         reprap_tools[i].temp_buff[reprap_tools[i].temp_hist_curr_pos] = cJSON_GetObjectItemCaseSensitive(heater, "current")->valuedouble;
 
         heater_state = cJSON_GetObjectItemCaseSensitive(heater, "state");
-        ESP_LOGI("RepRapParser", "Tool heater state: %s Tool heater value: %f", heater_state->valuestring, reprap_tools[i].temp_buff[reprap_tools[i].temp_hist_curr_pos]);
         if (heater_state->valuestring[0] == 'o') {
             _heater_states[i+1] = HEATER_OFF; // bed heater is always on index 0
         } else if (heater_state->valuestring[0] == 'a') {
@@ -90,35 +90,25 @@ void reppanel_parse_rrf_tools(cJSON *tools_result, int *_heater_states) {
     for (int i = 0; i < reprap_model.num_tools; i++) {
         cJSON *tool = cJSON_GetArrayItem(tools_result, i);
         cJSON *heaters = cJSON_GetObjectItemCaseSensitive(tool, "heaters");
-        if (heaters && cJSON_GetArraySize(tool) > 0) {
+        if (heaters && cJSON_GetArraySize(heaters) > 0) {
             cJSON *v = cJSON_GetArrayItem(heaters, 0);
             reprap_tools[i].heater_indx = v->valueint;
         }
 
         cJSON *val = cJSON_GetObjectItemCaseSensitive(tool, "name");
         if (val) {
-            ESP_LOGI("RRF3Parser", "Tool name: %s", val->valuestring);
             strncpy(reprap_tools[i].name, val->valuestring, MAX_TOOL_NAME_LEN);
         }
         val = cJSON_GetObjectItemCaseSensitive(tool, "number");
-        if (val) reprap_tools[i].number = val->valueint;
+        if (val && cJSON_GetArraySize(val) > 0) reprap_tools[i].number = val->valueint;
         cJSON *active_temp_array = cJSON_GetObjectItemCaseSensitive(tool, "active");
         cJSON *standby_temp_array = cJSON_GetObjectItemCaseSensitive(tool, "standby");
         reprap_tools[i].active_temp = cJSON_GetArrayItem(active_temp_array, 0)->valuedouble;
         reprap_tools[i].standby_temp = cJSON_GetArrayItem(standby_temp_array, 0)->valuedouble;
         val = cJSON_GetObjectItemCaseSensitive(tool, "fans");
-        reprap_tools[i].fans = cJSON_GetArrayItem(val, 0)->valueint;
-//        cJSON *heater_state = cJSON_GetObjectItemCaseSensitive(tool, "state");
-//        ESP_LOGI("RepRapParser", "Tool heater state: %s Tool heater value: %f", heater_state->valuestring, reprap_tools[i].temp_buff[reprap_tools[i].temp_hist_curr_pos]);
-//        if (heater_state->valuestring[0] == 'o') {
-//            _heater_states[i+1] = HEATER_OFF; // bed heater is always on index 0
-//        } else if (heater_state->valuestring[0] == 'a') {
-//            _heater_states[i+1] = HEATER_ACTIVE; // bed heater is always on index 0
-//        } else if (heater_state->valuestring[0] == 's') {
-//            _heater_states[i+1] = HEATER_STDBY; // bed heater is always on index 0
-//        } else {
-//            _heater_states[i+1] = HEATER_FAULT; // bed heater is always on index 0
-//        }
+        if (val) {
+            reprap_tools[i].fans = cJSON_GetArrayItem(val, 0)->valueint;
+        }
     }
 }
 
@@ -126,9 +116,9 @@ void reppanel_parse_rrf_tools(cJSON *tools_result, int *_heater_states) {
  * Parse RRF object model job information
  * @param job_result The json result of a job query. The "result" object (status request) or the "job" object
  * (job request)
+ * @return If a job is currently running
  */
-bool reppanel_parse_rrf_job(cJSON *job_result) {
-    bool ret = false;
+void reppanel_parse_rrf_job(cJSON *job_result) {
     reprap_job_duration = cJSON_GetObjectItemCaseSensitive(job_result, "duration")->valuedouble;
     reprap_job_curr_layer = cJSON_GetObjectItemCaseSensitive(job_result, "layer")->valueint;
     cJSON *times_left = cJSON_GetObjectItem(job_result, "timesLeft");
@@ -173,9 +163,7 @@ bool reppanel_parse_rrf_job(cJSON *job_result) {
         if (duration) reprap_job_duration = duration->valuedouble;
         cJSON *layer = cJSON_GetObjectItem(file, "layer");
         if (layer) reprap_job_curr_layer = layer->valueint;
-        ret = true;
     }
-    return ret;
 }
 
 void reppanel_parse_rrf_move(cJSON *move_result) {
