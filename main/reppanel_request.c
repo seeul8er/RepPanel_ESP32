@@ -93,7 +93,8 @@ const char *decode_reprap2_status(const char *valuestring) {
 
 void decode_rrf3_status() {
     if (strncmp(reprap_model.reprap_state.status, "simulating", REPRAP_MAX_STATUS_LEN-1) == 0
-    || strncmp(reprap_model.reprap_state.status, "printing", REPRAP_MAX_STATUS_LEN-1) == 0) {
+    || strncmp(reprap_model.reprap_state.status, "printing", REPRAP_MAX_STATUS_LEN-1) == 0
+    || strncmp(reprap_model.reprap_state.status, "processing", REPRAP_MAX_STATUS_LEN-1) == 0) {
         job_running = true;
         job_paused = false;
     } else if (strncmp(reprap_model.reprap_state.status, "paused", REPRAP_MAX_STATUS_LEN-1) == 0) {
@@ -426,7 +427,7 @@ void process_reprap3_status(char *buff) {
     if (sub_object_result) {
         reppanel_parse_rrf_seqs(sub_object_result, &reprap_model);
     } else if (strcmp(key->valuestring, "seqs") == 0) {
-        reppanel_parse_rrf_seqs(sub_object_result, &reprap_model);
+        reppanel_parse_rrf_seqs(result, &reprap_model);
     }
     cJSON_Delete(root);
 

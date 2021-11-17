@@ -62,9 +62,14 @@ void update_print_job_status_ui() {
     } else if (label_job_elapsed_time && reprap_model.reprap_job.duration > 0) {
         lv_label_set_text_fmt(label_job_elapsed_time, "%.0fs", reprap_model.reprap_job.duration);
     }
-
-    double sim_time_left = (reprap_model.reprap_job.timesLeft.simulation - reprap_model.reprap_job.duration);     // time left according to simulation
-    double file_time_left = (reprap_model.reprap_job.timesLeft.file - reprap_model.reprap_job.duration);   // time left according to file info
+    double sim_time_left, file_time_left;
+    if (reprap_model.api_level < 1) {
+        sim_time_left = (reprap_model.reprap_job.file.simulatedTime - reprap_model.reprap_job.duration);     // time left according to simulation
+        file_time_left = (reprap_model.reprap_job.file.printTime - reprap_model.reprap_job.duration);   // time left according to file info
+    } else {
+        sim_time_left = reprap_model.reprap_job.timesLeft.simulation;
+        file_time_left = reprap_model.reprap_job.timesLeft.slicer;
+    }
     if (((int) sim_time_left) > 0) {
         int job_dur_sim_h = (int) (sim_time_left / (60 * 60));
         int job_dur_sim_min = (int) ((sim_time_left - (job_dur_sim_h * 60 * 60)) / 60);
@@ -87,8 +92,9 @@ void update_print_job_status_ui() {
 
     if (label_job_filename) {
         // only update when changed. Otherwise label will not scroll
-        if (strcmp(lv_label_get_text(label_job_filename), reprap_model.reprap_job.file.fileName) != 0) {
-            lv_label_set_text(label_job_filename, reprap_model.reprap_job.file.fileName);
+        char *last = strrchr(reprap_model.reprap_job.file.fileName, '/'); // remove first part of the path
+        if (last != NULL && strcmp(lv_label_get_text(label_job_filename), last+1) != 0) {
+            lv_label_set_text(label_job_filename, last+1);
         }
     }
 

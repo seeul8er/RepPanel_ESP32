@@ -118,11 +118,12 @@ void reppanel_parse_rrf_job(cJSON *job_result, reprap_model_t *_reprap_model) {
     _reprap_model->reprap_job.duration = cJSON_GetObjectItemCaseSensitive(job_result, "duration")->valueint;
     _reprap_model->reprap_job.layer = cJSON_GetObjectItemCaseSensitive(job_result, "layer")->valueint;
     _reprap_model->reprap_job.filePosition = cJSON_GetObjectItemCaseSensitive(job_result, "filePosition")->valueint;
+    _reprap_model->reprap_job.rawExtrusion = cJSON_GetObjectItemCaseSensitive(job_result, "rawExtrusion")->valuedouble;
     cJSON *times_left = cJSON_GetObjectItem(job_result, "timesLeft");
     if (times_left) {
         cJSON *sim_time = cJSON_GetObjectItemCaseSensitive(times_left, "simulation");
         // Not so beautiful code I know
-        if (sim_time && cJSON_IsNumber(sim_time)) { // remove -> simulatedTime
+        if (sim_time && cJSON_IsNumber(sim_time)) {
             _reprap_model->reprap_job.timesLeft.simulation = sim_time->valueint;
         } else {
             cJSON *time_slicer = cJSON_GetObjectItemCaseSensitive(times_left, "slicer");
@@ -154,8 +155,18 @@ void reppanel_parse_rrf_job(cJSON *job_result, reprap_model_t *_reprap_model) {
         if (val && cJSON_IsNumber(val)) {
             _reprap_model->reprap_job.file.simulatedTime = val->valueint;
         }
+        val = cJSON_GetObjectItemCaseSensitive(file, "filament");
+        struct cJSON *filament_usage = NULL;
+        reprap_model.reprap_job.file.overall_filament_usage = 0;
+        cJSON_ArrayForEach(filament_usage, val) {
+            reprap_model.reprap_job.file.overall_filament_usage += val->valuedouble;
+        }
     }
-    reprap_job_percent = ((float) _reprap_model->reprap_job.file.size/ (float) _reprap_model->reprap_job.filePosition) * 100.0f;
+    if (_reprap_model->reprap_job.file.overall_filament_usage > 0) {
+        reprap_job_percent = (float) ((_reprap_model->reprap_job.rawExtrusion / _reprap_model->reprap_job.file.overall_filament_usage) * 100);
+    } else {
+        reprap_job_percent = ((float) _reprap_model->reprap_job.filePosition / (float) _reprap_model->reprap_job.file.size) * 100.0f;
+    }
 }
 
 void reppanel_parse_rrf_move(cJSON *move_result) {

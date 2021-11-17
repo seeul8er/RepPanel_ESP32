@@ -71,11 +71,13 @@ typedef struct {
         uint32_t printTime;
         uint16_t numLayers;
         float height;
+        double overall_filament_usage; // [mm] as preported by firmware and slicer
     } file;
     uint32_t filePosition;
     uint32_t duration;
     uint32_t lastDuration;
     uint16_t layer;
+    double rawExtrusion;
     struct {
         uint32_t simulation;
         uint32_t slicer;
