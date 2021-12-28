@@ -11,24 +11,26 @@ void reppanel_parse_rr_connect(cJSON *connect_result, reprap_model_t *_reprap_mo
         _reprap_model->api_level = cJSON_GetObjectItemCaseSensitive(connect_result, "apiLevel")->valueint;
 }
 
-void reppanel_parse_rrf_boards(cJSON *boards_result) {
+void reppanel_parse_rrf_boards(cJSON *boards_result, cJSON *flags, reprap_model_t *_reprap_model) {
     cJSON *board_temps = cJSON_GetArrayItem(boards_result, 0);
     if (board_temps) {
         cJSON *mcu_temp = cJSON_GetObjectItemCaseSensitive(board_temps, "mcuTemp");
         reprap_mcu_temp = cJSON_GetObjectItemCaseSensitive(mcu_temp, "current")->valuedouble;
     }
+    if (strcmp(flags->valuestring, "d99vn") == 0) { _reprap_model->reprap_seqs_changed.boards_changed = 0; }
 }
 
-void reppanel_parse_rrf_fans(cJSON *fans_result) {
+void reppanel_parse_rrf_fans(cJSON *fans_result, cJSON *flags, reprap_model_t *_reprap_model) {
     if (cJSON_GetArraySize(fans_result) > 0) {
         cJSON *fan_zero = cJSON_GetArrayItem(fans_result, reprap_tools[0].fans);
         if (fan_zero) {
             reprap_params.fan = (int16_t) (cJSON_GetObjectItemCaseSensitive(fan_zero, "actualValue")->valuedouble * 100);
         }
     }
+    if (strcmp(flags->valuestring, "d99vn") == 0) { _reprap_model->reprap_seqs_changed.fans_changed = 0; }
 }
 
-void reppanel_parse_rrf_heaters(cJSON *heat_result, int *_heater_states) {
+void reppanel_parse_rrf_heaters(cJSON *heat_result, int *_heater_states, cJSON *flags, reprap_model_t *_reprap_model) {
     cJSON *bedHeaters = cJSON_GetObjectItemCaseSensitive(heat_result, "bedHeaters");
     if (bedHeaters)
         reprap_bed.heater_indx = cJSON_GetArrayItem(bedHeaters, 0)->valueint;  // only support one heater per bed
@@ -76,9 +78,10 @@ void reppanel_parse_rrf_heaters(cJSON *heat_result, int *_heater_states) {
             _heater_states[i+1] = HEATER_FAULT; // bed heater is always on index 0
         }
     }
+    if (strcmp(flags->valuestring, "d99vn") == 0) { _reprap_model->reprap_seqs_changed.heat_changed = 0; }
 }
 
-void reppanel_parse_rrf_tools(cJSON *tools_result, int *_heater_states) {
+void reppanel_parse_rrf_tools(cJSON *tools_result, int *_heater_states, cJSON *flags, reprap_model_t *_reprap_model) {
     if (!cJSON_IsArray(tools_result))
         return;
     reprap_model.num_tools = cJSON_GetArraySize(tools_result);
@@ -106,6 +109,7 @@ void reppanel_parse_rrf_tools(cJSON *tools_result, int *_heater_states) {
             reprap_tools[i].fans = cJSON_GetArrayItem(val, 0)->valueint;
         }
     }
+    if (strcmp(flags->valuestring, "d99vn") == 0) { _reprap_model->reprap_seqs_changed.tools_changed = 0; }
 }
 
 /**
@@ -114,7 +118,7 @@ void reppanel_parse_rrf_tools(cJSON *tools_result, int *_heater_states) {
  * (job request)
  * @return If a job is currently running
  */
-void reppanel_parse_rrf_job(cJSON *job_result, reprap_model_t *_reprap_model) {
+void reppanel_parse_rrf_job(cJSON *job_result, cJSON *flags, reprap_model_t *_reprap_model) {
     _reprap_model->reprap_job.duration = cJSON_GetObjectItemCaseSensitive(job_result, "duration")->valueint;
     _reprap_model->reprap_job.layer = cJSON_GetObjectItemCaseSensitive(job_result, "layer")->valueint;
     _reprap_model->reprap_job.filePosition = cJSON_GetObjectItemCaseSensitive(job_result, "filePosition")->valueint;
@@ -167,9 +171,10 @@ void reppanel_parse_rrf_job(cJSON *job_result, reprap_model_t *_reprap_model) {
     } else {
         reprap_job_percent = ((float) _reprap_model->reprap_job.filePosition / (float) _reprap_model->reprap_job.file.size) * 100.0f;
     }
+    if (strcmp(flags->valuestring, "d99vn") == 0) { _reprap_model->reprap_seqs_changed.job_changed = 0; }
 }
 
-void reppanel_parse_rrf_move(cJSON *move_result) {
+void reppanel_parse_rrf_move(cJSON *move_result, cJSON *flags, reprap_model_t *_reprap_model) {
     cJSON *axes = cJSON_GetObjectItemCaseSensitive(move_result, "axes");
     const cJSON *axis = NULL;
     int i = 0;
@@ -190,9 +195,10 @@ void reppanel_parse_rrf_move(cJSON *move_result) {
         }
         i++;
     }
+    if (strcmp(flags->valuestring, "d99vn") == 0) { _reprap_model->reprap_seqs_changed.move_changed = 0; }
 }
 
-void reppanel_parse_rrf_state(cJSON *state_result, reprap_model_t *_reprap_model) {
+void reppanel_parse_rrf_state(cJSON *state_result, cJSON *flags, reprap_model_t *_reprap_model) {
     cJSON *val = cJSON_GetObjectItemCaseSensitive(state_result, "status");
     if (val && cJSON_IsString(val) && (val->valuestring != NULL))
         strncpy(_reprap_model->reprap_state.status, val->valuestring, REPRAP_MAX_STATUS_LEN);
@@ -201,6 +207,27 @@ void reppanel_parse_rrf_state(cJSON *state_result, reprap_model_t *_reprap_model
     if (val && cJSON_IsString(val) && (val->valuestring != NULL)) {
         strncpy(_reprap_model->reprap_state.disp_msg, val->valuestring, REPRAP_MAX_DISPLAY_MSG_LEN);
     }
+    if (strcmp(flags->valuestring, "d99vn") == 0) { _reprap_model->reprap_seqs_changed.state_changed = 0; }
+}
+
+void reppanel_parse_rrf_network(cJSON *network_result, cJSON *flags, reprap_model_t *_reprap_model) {
+    if (strcmp(flags->valuestring, "d99vn") == 0) { _reprap_model->reprap_seqs_changed.network_changed = 0; }
+}
+
+void reppanel_parse_rrf_sensors(cJSON *sensors_result, cJSON *flags, reprap_model_t *_reprap_model) {
+    if (strcmp(flags->valuestring, "d99vn") == 0) { _reprap_model->reprap_seqs_changed.sensors_changed = 0; }
+}
+
+void reppanel_parse_rrf_inputs(cJSON *input_result, cJSON *flags, reprap_model_t *_reprap_model) {
+    if (strcmp(flags->valuestring, "d99vn") == 0) { _reprap_model->reprap_seqs_changed.inputs_changed = 0; }
+}
+
+void reppanel_parse_rrf_global(cJSON *global_result, cJSON *flags, reprap_model_t *_reprap_model) {
+    if (strcmp(flags->valuestring, "d99vn") == 0) { _reprap_model->reprap_seqs_changed.global_changed = 0; }
+}
+
+void reppanel_parse_rrf_directories(cJSON *directories_result, cJSON *flags, reprap_model_t *_reprap_model) {
+    if (strcmp(flags->valuestring, "d99vn") == 0) { _reprap_model->reprap_seqs_changed.directories_changed = 0; }
 }
 
 /**

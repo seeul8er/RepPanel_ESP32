@@ -380,54 +380,87 @@ void process_reprap3_status(char *buff) {
         return;
     }
     cJSON *key = cJSON_GetObjectItem(root, "key");
+    cJSON *flags = cJSON_GetObjectItem(root, "flags");
     cJSON *sub_object_result;
     sub_object_result = cJSON_GetObjectItem(result, "boards");
     if (sub_object_result)
-        reppanel_parse_rrf_boards(sub_object_result);
+        reppanel_parse_rrf_boards(sub_object_result, flags, &reprap_model);
     else if (strcmp(key->valuestring, "boards") == 0)
-        reppanel_parse_rrf_boards(result);
+        reppanel_parse_rrf_boards(result, flags, &reprap_model);
 
     sub_object_result = cJSON_GetObjectItem(result, "fans");
     if (sub_object_result)
-        reppanel_parse_rrf_fans(sub_object_result);
-    else if (strcmp(key->valuestring, "fans") == 0)
-        reppanel_parse_rrf_fans(result);
+        reppanel_parse_rrf_fans(sub_object_result, flags, &reprap_model);
+    else if (strcmp(key->valuestring, "fans") == 0) {
+        reppanel_parse_rrf_fans(result, flags, &reprap_model);
+    }
 
     sub_object_result = cJSON_GetObjectItem(result, "heat");
     if (sub_object_result)
-        reppanel_parse_rrf_heaters(sub_object_result, heater_states);
+        reppanel_parse_rrf_heaters(sub_object_result, heater_states, flags, &reprap_model);
     else if (strcmp(key->valuestring, "heat") == 0)
-        reppanel_parse_rrf_heaters(result, heater_states);
+        reppanel_parse_rrf_heaters(result, heater_states, flags, &reprap_model);
 
     sub_object_result = cJSON_GetObjectItem(result, "tools");
     if (sub_object_result)
-        reppanel_parse_rrf_tools(sub_object_result, heater_states);
+        reppanel_parse_rrf_tools(sub_object_result, heater_states, flags, &reprap_model);
     else if (strcmp(key->valuestring, "tools") == 0)
-        reppanel_parse_rrf_tools(result, heater_states);
+        reppanel_parse_rrf_tools(result, heater_states, flags, &reprap_model);
 
     sub_object_result = cJSON_GetObjectItem(result, "job");
     if (sub_object_result)
-        reppanel_parse_rrf_job(sub_object_result, &reprap_model);
+        reppanel_parse_rrf_job(sub_object_result, flags, &reprap_model);
     else if (strcmp(key->valuestring, "job") == 0)
-        reppanel_parse_rrf_job(result, &reprap_model);
+        reppanel_parse_rrf_job(result, flags, &reprap_model);
 
     sub_object_result = cJSON_GetObjectItem(result, "move");
     if (sub_object_result)
-        reppanel_parse_rrf_move(sub_object_result);
+        reppanel_parse_rrf_move(sub_object_result, flags, &reprap_model);
     else if (strcmp(key->valuestring, "move") == 0)
-        reppanel_parse_rrf_move(result);
+        reppanel_parse_rrf_move(result, flags, &reprap_model);
 
     sub_object_result = cJSON_GetObjectItem(result, "state");
     if (sub_object_result)
-        reppanel_parse_rrf_state(sub_object_result, &reprap_model);
+        reppanel_parse_rrf_state(sub_object_result, flags, &reprap_model);
     else if (strcmp(key->valuestring, "state") == 0)
-        reppanel_parse_rrf_state(result, &reprap_model);
+        reppanel_parse_rrf_state(result, flags, &reprap_model);
+
+    sub_object_result = cJSON_GetObjectItem(result, "network");
+    if (sub_object_result)
+        reppanel_parse_rrf_network(sub_object_result, flags, &reprap_model);
+    else if (strcmp(key->valuestring, "network") == 0)
+        reppanel_parse_rrf_network(result, flags, &reprap_model);
+
+    sub_object_result = cJSON_GetObjectItem(result, "sensors");
+    if (sub_object_result)
+        reppanel_parse_rrf_sensors(sub_object_result, flags, &reprap_model);
+    else if (strcmp(key->valuestring, "sensors") == 0)
+        reppanel_parse_rrf_sensors(result, flags, &reprap_model);
+
+    sub_object_result = cJSON_GetObjectItem(result, "inputs");
+    if (sub_object_result)
+        reppanel_parse_rrf_inputs(sub_object_result, flags, &reprap_model);
+    else if (strcmp(key->valuestring, "inputs") == 0)
+        reppanel_parse_rrf_inputs(result, flags, &reprap_model);
 
     sub_object_result = cJSON_GetObjectItem(result, "seqs");
     if (sub_object_result) {
         reppanel_parse_rrf_seqs(sub_object_result, &reprap_model);
     } else if (strcmp(key->valuestring, "seqs") == 0) {
         reppanel_parse_rrf_seqs(result, &reprap_model);
+    }
+
+    sub_object_result = cJSON_GetObjectItem(result, "global");
+    if (sub_object_result)
+        reppanel_parse_rrf_global(sub_object_result, flags, &reprap_model);
+    else if (strcmp(key->valuestring, "global") == 0)
+        reppanel_parse_rrf_global(result, flags, &reprap_model);
+
+    sub_object_result = cJSON_GetObjectItem(result, "directories");
+    if (sub_object_result) {
+        reppanel_parse_rrf_directories(sub_object_result, flags, &reprap_model);
+    } else if (strcmp(key->valuestring, "directories") == 0) {
+        reppanel_parse_rrf_directories(result, flags, &reprap_model);
     }
     cJSON_Delete(root);
 
@@ -1339,55 +1372,46 @@ void request_rrf_status(uart_response_buff_t *receive_buff, wifi_response_buff_t
 void request_rrf3_extended_info(uart_response_buff_t *uart_receive_buff, wifi_response_buff_t *wifi_resp_buff) {
     if (reprap_model.reprap_seqs_changed.tools_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "tools", "d99vn");
-        reprap_model.reprap_seqs_changed.tools_changed = false;
+        ESP_LOGI(TAG, "Getting extended info on tools");
     }
     if (reprap_model.reprap_seqs_changed.reply_changed) {
         duet_request_reply = true;
-        reprap_model.reprap_seqs_changed.reply_changed = false;
     }
     if (reprap_model.reprap_seqs_changed.sensors_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "sensors", "d99vn");
-        reprap_model.reprap_seqs_changed.sensors_changed = false;
     }
     if (reprap_model.reprap_seqs_changed.state_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "state", "d99vn");
-        reprap_model.reprap_seqs_changed.state_changed = false;
     }
     if (reprap_model.reprap_seqs_changed.network_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "network", "d99vn");
-        reprap_model.reprap_seqs_changed.network_changed = false;
     }
     if (reprap_model.reprap_seqs_changed.move_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "move", "d99vn");
-        reprap_model.reprap_seqs_changed.move_changed = false;
+        ESP_LOGI(TAG, "Getting extended info on move");
     }
     if (reprap_model.reprap_seqs_changed.job_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "job", "d99vn");
-        reprap_model.reprap_seqs_changed.job_changed = false;
+        ESP_LOGI(TAG, "Getting extended info on job");
     }
     if (reprap_model.reprap_seqs_changed.inputs_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "inputs", "d99vn");
-        reprap_model.reprap_seqs_changed.inputs_changed = false;
     }
     if (reprap_model.reprap_seqs_changed.heat_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "heat", "d99vn");
-        reprap_model.reprap_seqs_changed.heat_changed = false;
+        ESP_LOGI(TAG, "Getting extended info on heat");
     }
     if (reprap_model.reprap_seqs_changed.global_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "global", "d99vn");
-        reprap_model.reprap_seqs_changed.global_changed = false;
     }
     if (reprap_model.reprap_seqs_changed.fans_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "fans", "d99vn");
-        reprap_model.reprap_seqs_changed.fans_changed = false;
     }
     if (reprap_model.reprap_seqs_changed.network_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "network", "d99vn");
-        reprap_model.reprap_seqs_changed.network_changed = false;
     }
     if (reprap_model.reprap_seqs_changed.directories_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "directories", "d99vn");
-        reprap_model.reprap_seqs_changed.directories_changed = false;
     }
 }
 
@@ -1457,7 +1481,7 @@ void request_reprap_status_updates(void *params) {
                 request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "", "d99fn");
             else
                 request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 4, "", "d99fn");
-            if (reprap_model.api_level > 1) {
+            if (reprap_model.api_level >= 1) {
                 request_rrf3_extended_info(&uart_receive_buff, &resp_buff_status_update_task);
             }
             if (i == 20) {
@@ -1499,12 +1523,12 @@ void request_reprap_status_updates(void *params) {
                     request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 0, "", "d99fn");
                 else
                     request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 3, "", "d99fn");
-                if (reprap_model.api_level > 1) {
+                if (reprap_model.api_level >= 1) {
                     request_rrf3_extended_info(&uart_receive_buff, &resp_buff_status_update_task);
                 }
 
                 if (i == 20) {
-                    request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "job", "d99vn");
+//                    request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "job", "d99vn");
 
                     // Check if we got a UART connection
                     if (reppanel_is_uart_connected()) {
@@ -1517,8 +1541,8 @@ void request_reprap_status_updates(void *params) {
                     }
                     i = 0;
                 } else { i++; }
-                if (b == 20) {
-                    update_printer_addr();  // in case addres has changed
+                if (b == 100) {
+                    update_printer_addr();  // in case address has changed
                     b = 0;
                 } else { b++; }
             } else {

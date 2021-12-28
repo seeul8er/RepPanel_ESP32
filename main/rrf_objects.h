@@ -57,6 +57,8 @@ typedef struct {
     uint16_t state_changed: 1;
     uint16_t tools_changed: 1;
 } reprap_seqs_changed_t;
+// set to 1 indicating the corresponding object model was updated on the duet and the local
+// model is out of sync and needs an update. Must be reset to 0 by application when synced again
 
 typedef struct {
     char disp_msg[REPRAP_MAX_DISPLAY_MSG_LEN];
