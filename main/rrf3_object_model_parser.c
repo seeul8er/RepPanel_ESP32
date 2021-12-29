@@ -8,7 +8,13 @@
 #include "rrf_objects.h"
 
 void reppanel_parse_rr_connect(cJSON *connect_result, reprap_model_t *_reprap_model) {
-        _reprap_model->api_level = cJSON_GetObjectItemCaseSensitive(connect_result, "apiLevel")->valueint;
+    cJSON *api_level = cJSON_GetObjectItemCaseSensitive(connect_result, "apiLevel");
+    if (api_level)
+        _reprap_model->api_level = api_level->valueint;
+    // TODO: Implement session key support
+//    cJSON *sessionKey = cJSON_GetObjectItemCaseSensitive(connect_result, "sessionKey");
+//    if (sessionKey)
+//        _reprap_model->session_key = sessionKey->valueint;
 }
 
 void reppanel_parse_rrf_boards(cJSON *boards_result, cJSON *flags, reprap_model_t *_reprap_model) {

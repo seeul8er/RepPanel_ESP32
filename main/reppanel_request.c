@@ -835,7 +835,11 @@ esp_err_t http_event_handle(esp_http_client_event_t *evt) {
 
 void wifi_duet_authorise(wifi_response_buff_t *resp_buff, bool get_d2wc_config) {
     char printer_url[MAX_REQ_ADDR_LENGTH];
-    sprintf(printer_url, "%s/rr_connect?password=%s", rep_addr_resolved, rep_pass);
+    if (duet_sbc_mode) {
+        sprintf(printer_url, "%s/machine/connect?password=%s", rep_addr_resolved, rep_pass);
+    } else {
+        sprintf(printer_url, "%s/rr_connect?password=%s", rep_addr_resolved, rep_pass);
+    }
     esp_http_client_config_t config = {
             .url = printer_url,
             .timeout_ms = REQUEST_TIMEOUT_MS,

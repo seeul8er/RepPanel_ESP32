@@ -94,6 +94,7 @@ typedef struct {
 } reprap_job_t;
 
 typedef struct {
+
     uint8_t api_level;
     uint8_t num_heaters;
     uint8_t num_tools;
