@@ -24,7 +24,8 @@
 #define RRF3_SEQ_TOOLS 8192
 
 #define REPRAP_MAX_DISPLAY_MSG_LEN     128
-#define REPRAP_MAX_STATUS_LEN   15
+#define REPRAP_MAX_STATUS_LEN       15
+#define REPRAP_MAX_LEN_MSG_TITLE    32
 
 typedef struct {
     uint16_t boards;
@@ -61,8 +62,13 @@ typedef struct {
 // model is out of sync and needs an update. Must be reset to 0 by application when synced again
 
 typedef struct {
-    char disp_msg[REPRAP_MAX_DISPLAY_MSG_LEN];
     char status[REPRAP_MAX_STATUS_LEN];
+    char msg_box_title[REPRAP_MAX_LEN_MSG_TITLE];
+    char msg_box_msg[REPRAP_MAX_DISPLAY_MSG_LEN];
+    bool show_axis_controls; // true, false
+    uint8_t mode;
+    uint16_t timeout;
+    bool new_msg; // true, false
 } reprap_state_t;
 
 typedef struct {

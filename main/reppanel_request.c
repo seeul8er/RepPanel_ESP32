@@ -92,12 +92,12 @@ const char *decode_reprap2_status(const char *valuestring) {
 }
 
 void decode_rrf3_status() {
-    if (strncmp(reprap_model.reprap_state.status, "simulating", REPRAP_MAX_STATUS_LEN-1) == 0
-    || strncmp(reprap_model.reprap_state.status, "printing", REPRAP_MAX_STATUS_LEN-1) == 0
-    || strncmp(reprap_model.reprap_state.status, "processing", REPRAP_MAX_STATUS_LEN-1) == 0) {
+    if (strncmp(reprap_model.reprap_state.status, "simulating", REPRAP_MAX_STATUS_LEN - 1) == 0
+        || strncmp(reprap_model.reprap_state.status, "printing", REPRAP_MAX_STATUS_LEN - 1) == 0
+        || strncmp(reprap_model.reprap_state.status, "processing", REPRAP_MAX_STATUS_LEN - 1) == 0) {
         job_running = true;
         job_paused = false;
-    } else if (strncmp(reprap_model.reprap_state.status, "paused", REPRAP_MAX_STATUS_LEN-1) == 0) {
+    } else if (strncmp(reprap_model.reprap_state.status, "paused", REPRAP_MAX_STATUS_LEN - 1) == 0) {
         job_paused = true;
         job_running = true;
     } else {
@@ -169,24 +169,24 @@ void process_reprap2_status(char *buff) {
         // Get bed heater index
         cJSON *duet_temps_bed_heater = cJSON_GetObjectItem(duet_temps_bed,
                                                            DUET_TEMPS_BED_HEATER);    // bed heater state
-                                                           if (duet_temps_bed_heater && cJSON_IsNumber(duet_temps_bed_heater)) {
-                                                               reprap_bed.heater_indx = duet_temps_bed_heater->valueint;
-                                                           }
-                                                           // Get bed active temp
-                                                           cJSON *duet_temps_bed_active = cJSON_GetObjectItem(duet_temps_bed, DUET_TEMPS_ACTIVE);    // bed active temp
-                                                           if (duet_temps_bed_active && cJSON_IsNumber(duet_temps_bed_active)) {
-                                                               reprap_bed.active_temp = duet_temps_bed_active->valuedouble;
-                                                           }
-                                                           // Get bed standby temp
-                                                           cJSON *duet_temps_bed_standby = cJSON_GetObjectItem(duet_temps_bed, DUET_TEMPS_STANDBY);    // bed active temp
-                                                           if (duet_temps_bed_standby && cJSON_IsNumber(duet_temps_bed_standby)) {
-                                                               reprap_bed.standby_temp = duet_temps_bed_standby->valuedouble;
-                                                           }
-                                                           // Get bed heater state
-                                                           cJSON *duet_temps_bed_state = cJSON_GetObjectItem(duet_temps_bed, DUET_TEMPS_BED_STATE);    // bed heater state
-                                                           if (duet_temps_bed_state && cJSON_IsNumber(duet_temps_bed_state)) {
-                                                               _heater_states[0] = duet_temps_bed_state->valueint;
-                                                           }
+        if (duet_temps_bed_heater && cJSON_IsNumber(duet_temps_bed_heater)) {
+            reprap_bed.heater_indx = duet_temps_bed_heater->valueint;
+        }
+        // Get bed active temp
+        cJSON *duet_temps_bed_active = cJSON_GetObjectItem(duet_temps_bed, DUET_TEMPS_ACTIVE);    // bed active temp
+        if (duet_temps_bed_active && cJSON_IsNumber(duet_temps_bed_active)) {
+            reprap_bed.active_temp = duet_temps_bed_active->valuedouble;
+        }
+        // Get bed standby temp
+        cJSON *duet_temps_bed_standby = cJSON_GetObjectItem(duet_temps_bed, DUET_TEMPS_STANDBY);    // bed active temp
+        if (duet_temps_bed_standby && cJSON_IsNumber(duet_temps_bed_standby)) {
+            reprap_bed.standby_temp = duet_temps_bed_standby->valuedouble;
+        }
+        // Get bed heater state
+        cJSON *duet_temps_bed_state = cJSON_GetObjectItem(duet_temps_bed, DUET_TEMPS_BED_STATE);    // bed heater state
+        if (duet_temps_bed_state && cJSON_IsNumber(duet_temps_bed_state)) {
+            _heater_states[0] = duet_temps_bed_state->valueint;
+        }
     }
 
     bool disp_msg = false;      // Message without title
@@ -229,7 +229,8 @@ void process_reprap2_status(char *buff) {
             ESP_LOGI(TAG, "Need reply!");
             // When connected via UART the reply is already part of the msg
             cJSON *duet_resp = cJSON_GetObjectItem(root, "resp");
-            if (duet_resp && strlen(duet_resp->valuestring) > 0 && duet_resp->valuestring[0] != '\n') {      // sometimes it's just a new line char
+            if (duet_resp && strlen(duet_resp->valuestring) > 0 &&
+                duet_resp->valuestring[0] != '\n') {      // sometimes it's just a new line char
                 //ESP_LOGI(TAG, "Length MSG: %llu - %s", strlen(duet_resp->valuestring), duet_resp->valuestring);
                 disp_msg = true;
                 strncpy(msg_txt, duet_resp->valuestring, 384);
@@ -308,16 +309,18 @@ void process_reprap2_status(char *buff) {
     cJSON *duet_temps_tools_active = cJSON_GetObjectItem(duet_temps_tools, DUET_TEMPS_ACTIVE);
     cJSON *duet_temps_tools_standby = cJSON_GetObjectItem(duet_temps_tools, DUET_TEMPS_STANDBY);
     if (duet_temps_tools_active && cJSON_IsArray(duet_temps_tools_active) && duet_temps_tools_standby &&
-    cJSON_IsArray(duet_temps_tools_standby)) {
+        cJSON_IsArray(duet_temps_tools_standby)) {
         for (int i = 0; i < reprap_model.num_tools; i++) {
             cJSON *tool_active_temps_arr = cJSON_GetArrayItem(duet_temps_tools_active,
                                                               reprap_tools[i].number);
             cJSON *tool_standby_temps_arr = cJSON_GetArrayItem(duet_temps_tools_standby,
                                                                reprap_tools[i].number);
             if (tool_active_temps_arr) {
-                reprap_tools[i].active_temp = cJSON_GetArrayItem(tool_active_temps_arr,0)->valuedouble; }
+                reprap_tools[i].active_temp = cJSON_GetArrayItem(tool_active_temps_arr, 0)->valuedouble;
+            }
             if (tool_standby_temps_arr) {
-                reprap_tools[i].standby_temp = cJSON_GetArrayItem(tool_standby_temps_arr,0)->valuedouble; }
+                reprap_tools[i].standby_temp = cJSON_GetArrayItem(tool_standby_temps_arr, 0)->valuedouble;
+            }
         }
     }
     // print job status
@@ -349,9 +352,9 @@ void process_reprap2_status(char *buff) {
             lv_label_set_text(label_extruder_name, reprap_tools[current_visible_tool_indx].name);
         }
         if (got_printjob_status) update_print_job_status_ui();
-        if (disp_msg) reppanel_disp_msg(msg_txt);
-        if (disp_h_msgbox) show_height_adjust_dialog();
-        if (disp_msgbox) duet_show_dialog(msg_title, msg_msg);
+        if (disp_msg) show_reprap_dialog("", msg_txt, (const uint8_t *) 1, false);
+        if (disp_h_msgbox) show_reprap_dialog("Adjust Z", "", (const uint8_t *) 2, true);
+        if (disp_msgbox) show_reprap_dialog(msg_title, msg_msg, (const uint8_t *) 2, false);
         update_rep_panel_conn_status();
         xSemaphoreGive(xGuiSemaphore);
     }
@@ -477,6 +480,11 @@ void process_reprap3_status(char *buff) {
         }
         if (job_running) update_print_job_status_ui();
         update_rep_panel_conn_status();
+        if (reprap_model.reprap_state.new_msg) {
+            show_reprap_dialog(reprap_model.reprap_state.msg_box_title, reprap_model.reprap_state.msg_box_msg,
+                               &reprap_model.reprap_state.mode, reprap_model.reprap_state.show_axis_controls);
+            reprap_model.reprap_state.new_msg = false;
+        }
         xSemaphoreGive(xGuiSemaphore);
     }
 }
@@ -626,7 +634,8 @@ void process_reprap_filelist(char *buffer) {
                         strncpy(reprap_dir_elem[pos].name, cJSON_GetObjectItem(iterator, "name")->valuestring,
                                 MAX_LEN_FILENAME - 1);
                         strncpy(reprap_dir_elem[pos].dir, dir_name->valuestring, MAX_LEN_DIRNAME - 1);
-                        reprap_dir_elem[pos].time_stamp = datestr_2unix(cJSON_GetObjectItem(iterator, "date")->valuestring);
+                        reprap_dir_elem[pos].time_stamp = datestr_2unix(
+                                cJSON_GetObjectItem(iterator, "date")->valuestring);
                         if (strncmp("f", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0) {
                             reprap_dir_elem[pos].type = TREE_FILE_ELEM;
                         } else {
@@ -656,7 +665,8 @@ void process_reprap_filelist(char *buffer) {
                         strncpy(reprap_dir_elem[pos].name, cJSON_GetObjectItem(iterator, "name")->valuestring,
                                 MAX_LEN_FILENAME - 1);
                         strncpy(reprap_dir_elem[pos].dir, dir_name->valuestring, MAX_LEN_DIRNAME - 1);
-                        reprap_dir_elem[pos].time_stamp = datestr_2unix(cJSON_GetObjectItem(iterator, "date")->valuestring);
+                        reprap_dir_elem[pos].time_stamp = datestr_2unix(
+                                cJSON_GetObjectItem(iterator, "date")->valuestring);
                         if (strncmp("f", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0) {
                             reprap_dir_elem[pos].type = TREE_FILE_ELEM;
                         } else {
@@ -724,12 +734,12 @@ void process_reprap_fileinfo(char *data_buff) {
 }
 
 void process_reprap_reply(wifi_response_buff_t *response_buffer) {
-    duet_request_reply = false;
     if (response_buffer->buf_pos > 1) {
         if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
-            duet_show_dialog("Response to G-Code", response_buffer->buffer);
+            show_reprap_dialog("Response to G-Code", response_buffer->buffer, (const uint8_t *) 1, false);
             xSemaphoreGive(xGuiSemaphore);
         }
+        reprap_model.reprap_seqs_changed.reply_changed = 0;
     }
 }
 
@@ -869,7 +879,6 @@ void wifi_duet_authorise(wifi_response_buff_t *resp_buff, bool get_d2wc_config) 
 }
 
 void reprap_wifi_get_status(wifi_response_buff_t *resp_buff, int type, char *key, char *flags) {
-    ESP_LOGI(TAG, "Getting status");
     char request_addr[MAX_REQ_ADDR_LENGTH];
     if (duet_sbc_mode)
         sprintf(request_addr, "%s/machine/status", rep_addr_resolved);
@@ -945,12 +954,14 @@ void reprap_wifi_get_rreply(wifi_response_buff_t *response_buffer) {
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
-
+    ESP_LOGI(TAG, "Requesting rr_reply");
     if (err == ESP_OK) {
         switch (esp_http_client_get_status_code(client)) {
             case 200:
-                ESP_LOGI(TAG, "Got reply! %i", response_buffer->buf_pos);
-                process_reprap_reply(response_buffer);
+                if (response_buffer->buf_pos > 1) {
+                    ESP_LOGI(TAG, "Got reply!");
+                    process_reprap_reply(response_buffer);
+                }
                 break;
             case 401:
                 ESP_LOGI(TAG, "Authorising with Duet");
@@ -993,13 +1004,11 @@ bool reprap_wifi_send_gcode(char *gcode) {
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
-        ESP_LOGI(TAG, "Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
+        ESP_LOGI(TAG, "Status = %d, content_length = %d", esp_http_client_get_status_code(client),
+                 esp_http_client_get_content_length(client));
         switch (esp_http_client_get_status_code(client)) {
             case 200:
                 success = true;
-                if (duet_sbc_mode) {
-                    // TODO: Get reply
-                }
                 break;
             case 401:
                 //ESP_LOGI(TAG, "Authorising with Duet");
@@ -1023,6 +1032,13 @@ bool reprap_wifi_send_gcode(char *gcode) {
         success = false;
     }
     esp_http_client_cleanup(client);
+    if (success) {
+        if (duet_sbc_mode) {
+            // TODO: Get reply
+        } else {
+            reprap_wifi_get_rreply(&resp_buff_gui_task);
+        }
+    }
     return success;
 }
 
@@ -1360,7 +1376,8 @@ void request_jobs(char *folder_path) {
     }
 }
 
-void request_rrf_status(uart_response_buff_t *receive_buff, wifi_response_buff_t *resp_buff, int type, char *key, char *flags) {
+void request_rrf_status(uart_response_buff_t *receive_buff, wifi_response_buff_t *resp_buff, int type, char *key,
+                        char *flags) {
     if (rp_conn_stat == REPPANEL_UART_CONNECTED) {
         reprap_uart_get_status(receive_buff, type, key, flags);
     } else if (rp_conn_stat == REPPANEL_WIFI_CONNECTED ||
@@ -1372,10 +1389,6 @@ void request_rrf_status(uart_response_buff_t *receive_buff, wifi_response_buff_t
 void request_rrf3_extended_info(uart_response_buff_t *uart_receive_buff, wifi_response_buff_t *wifi_resp_buff) {
     if (reprap_model.reprap_seqs_changed.tools_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "tools", "d99vn");
-        ESP_LOGI(TAG, "Getting extended info on tools");
-    }
-    if (reprap_model.reprap_seqs_changed.reply_changed) {
-        duet_request_reply = true;
     }
     if (reprap_model.reprap_seqs_changed.sensors_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "sensors", "d99vn");
@@ -1388,18 +1401,15 @@ void request_rrf3_extended_info(uart_response_buff_t *uart_receive_buff, wifi_re
     }
     if (reprap_model.reprap_seqs_changed.move_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "move", "d99vn");
-        ESP_LOGI(TAG, "Getting extended info on move");
     }
     if (reprap_model.reprap_seqs_changed.job_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "job", "d99vn");
-        ESP_LOGI(TAG, "Getting extended info on job");
     }
     if (reprap_model.reprap_seqs_changed.inputs_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "inputs", "d99vn");
     }
     if (reprap_model.reprap_seqs_changed.heat_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "heat", "d99vn");
-        ESP_LOGI(TAG, "Getting extended info on heat");
     }
     if (reprap_model.reprap_seqs_changed.global_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "global", "d99vn");
@@ -1506,9 +1516,9 @@ void request_reprap_status_updates(void *params) {
                 }
                 if (!got_filaments) reprap_wifi_get_filelist(&resp_buff_status_update_task, "0:/filaments&first=0");
                 if (reprap_model.api_level < 1) {  // RRF2
-                    if (!got_extended_status) request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "", "d99fn");
+                    if (!got_extended_status)
+                        request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "", "d99fn");
                 }
-                if (duet_request_reply) reprap_wifi_get_rreply(&resp_buff_status_update_task);
                 // for synchron request of jobs
                 if (duet_request_jobs) {
                     reprap_wifi_get_filelist(&resp_buff_status_update_task, request_file_path);
@@ -1523,13 +1533,14 @@ void request_reprap_status_updates(void *params) {
                     request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 0, "", "d99fn");
                 else
                     request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 3, "", "d99fn");
+//                if (reprap_model.reprap_seqs_changed.reply_changed) {
+//                    reprap_wifi_get_rreply(&resp_buff_status_update_task);
+//                }
                 if (reprap_model.api_level >= 1) {
                     request_rrf3_extended_info(&uart_receive_buff, &resp_buff_status_update_task);
                 }
 
                 if (i == 20) {
-//                    request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "job", "d99vn");
-
                     // Check if we got a UART connection
                     if (reppanel_is_uart_connected()) {
                         rp_conn_stat = REPPANEL_UART_CONNECTED;

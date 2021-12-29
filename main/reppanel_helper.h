@@ -22,10 +22,6 @@ void init_reprap_buffers();
 
 lv_obj_t *create_button(lv_obj_t *parent, lv_obj_t *button_pnt, char *text, void *event_handler);
 
-void reppanel_disp_msg(char *msg_txt);
-
-void duet_show_dialog(char *title, char *msg);
-
 void get_avail_duets(char *txt_buffer);
 
 time_t datestr_2unix(const char *input);

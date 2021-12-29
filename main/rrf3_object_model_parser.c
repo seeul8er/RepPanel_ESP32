@@ -202,10 +202,23 @@ void reppanel_parse_rrf_state(cJSON *state_result, cJSON *flags, reprap_model_t 
     cJSON *val = cJSON_GetObjectItemCaseSensitive(state_result, "status");
     if (val && cJSON_IsString(val) && (val->valuestring != NULL))
         strncpy(_reprap_model->reprap_state.status, val->valuestring, REPRAP_MAX_STATUS_LEN);
-
-    val = cJSON_GetObjectItemCaseSensitive(state_result, "displayMessage");
-    if (val && cJSON_IsString(val) && (val->valuestring != NULL)) {
-        strncpy(_reprap_model->reprap_state.disp_msg, val->valuestring, REPRAP_MAX_DISPLAY_MSG_LEN);
+//    val = cJSON_GetObjectItemCaseSensitive(state_result, "displayMessage");
+//    if (val && cJSON_IsString(val) && (val->valuestring != NULL)) {
+//        strncpy(_reprap_model->reprap_state.msg_box_msg, val->valuestring, REPRAP_MAX_DISPLAY_MSG_LEN);
+//    }
+    val = cJSON_GetObjectItemCaseSensitive(state_result, "messageBox");
+    if (val && !cJSON_IsNull(val)) {
+        _reprap_model->reprap_state.new_msg = true;
+        cJSON *new_val = cJSON_GetObjectItemCaseSensitive(val, "title");
+        strncpy(_reprap_model->reprap_state.msg_box_title, new_val->valuestring, REPRAP_MAX_LEN_MSG_TITLE);
+        new_val = cJSON_GetObjectItemCaseSensitive(val, "message");
+        strncpy(_reprap_model->reprap_state.msg_box_msg, new_val->valuestring, REPRAP_MAX_DISPLAY_MSG_LEN);
+        new_val = cJSON_GetObjectItemCaseSensitive(val, "axisControls");
+        _reprap_model->reprap_state.show_axis_controls = new_val->valueint;
+        new_val = cJSON_GetObjectItemCaseSensitive(val, "mode");
+        _reprap_model->reprap_state.mode = new_val->valueint;
+        new_val = cJSON_GetObjectItemCaseSensitive(val, "timeout");
+        _reprap_model->reprap_state.timeout = new_val->valueint;
     }
     if (strcmp(flags->valuestring, "d99vn") == 0) { _reprap_model->reprap_seqs_changed.state_changed = 0; }
 }

@@ -8,7 +8,7 @@
 #define LVGL_REPPANEL_MACHINE_H
 
 void update_ui_machine();
-void show_height_adjust_dialog();
+void show_reprap_dialog(char *title, char *msg, const uint8_t *mode, bool show_height_adjust);
 void draw_machine(lv_obj_t *parent_screen);
 
 #endif //LVGL_REPPANEL_MACHINE_H
