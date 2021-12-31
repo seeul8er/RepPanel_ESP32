@@ -191,34 +191,35 @@ void process_reprap2_status(char *buff) {
 
     bool disp_msg = false;      // Message without title
     bool disp_msgbox = false;   // Message box with title
-    bool disp_h_msgbox = false; // height adjust dialog
+    bool disp_z_jog_buttons = false; // height adjust dialog
     static char msg_title[384];
     static char msg_msg[384];
     static char msg_txt[384];
+    static int msg_mode = 2;
     cJSON *duet_seq = cJSON_GetObjectItem(root, "seq");
     cJSON *duet_output = cJSON_GetObjectItem(root, "output");
     if (duet_output) {
-        cJSON *duet_output_msg = cJSON_GetObjectItem(duet_output, "message");
-        if (duet_output_msg && cJSON_IsString(duet_output_msg) && duet_seq && duet_seq->valueint != last_status_seq) {
-            disp_msg = true;
-            strncpy(msg_txt, duet_output_msg->valuestring, 384);
-        }
+//        cJSON *duet_output_msg = cJSON_GetObjectItem(duet_output, "message");
+//        if (duet_output_msg && cJSON_IsString(duet_output_msg) && duet_seq && duet_seq->valueint != last_status_seq) {
+//            disp_msg = true;
+//            strncpy(msg_txt, duet_output_msg->valuestring, 384);
+//        }
         // Right now we only have a msg box for manual bed calibration
         cJSON *duet_output_msgbox = cJSON_GetObjectItem(duet_output, "msgBox");
         if (duet_output_msgbox) {
             cJSON *seq = cJSON_GetObjectItem(duet_output_msgbox, "seq");
             cJSON *title = cJSON_GetObjectItem(duet_output_msgbox, "title");
             cJSON *duet_msg = cJSON_GetObjectItem(duet_output_msgbox, "msg");
+            cJSON *controls = cJSON_GetObjectItem(duet_output_msgbox, "controls");
+            cJSON *mode = cJSON_GetObjectItem(duet_output_msgbox, "mode");
+            msg_mode = mode->valueint;
             strncpy(msg_title, title->valuestring, 384);
             strncpy(msg_msg, duet_msg->valuestring, 384);
             // Beware. This is dirty. Check if we want to show this msg box. We might already display it
             if (seq->valueint != seq_num_msgbox) {
                 seq_num_msgbox = seq->valueint;
-                if (strcmp(duet_msg->valuestring,
-                           "Adjust height until the nozzle just touches the bed, then press OK") == 0)
-                    disp_h_msgbox = true;
-                else
-                    disp_msgbox = true;
+                disp_msgbox = true;
+                if (controls->valueint == 4) disp_z_jog_buttons = true;
             }
         }
     }
@@ -352,9 +353,8 @@ void process_reprap2_status(char *buff) {
             lv_label_set_text(label_extruder_name, reprap_tools[current_visible_tool_indx].name);
         }
         if (got_printjob_status) update_print_job_status_ui();
-        if (disp_msg) show_reprap_dialog("", msg_txt, (const uint8_t *) 1, false);
-        if (disp_h_msgbox) show_reprap_dialog("Adjust Z", "", (const uint8_t *) 2, true);
-        if (disp_msgbox) show_reprap_dialog(msg_title, msg_msg, (const uint8_t *) 2, false);
+        if (disp_msg) show_reprap_dialog("", msg_txt,  1, false);
+        if (disp_msgbox) show_reprap_dialog(msg_title, msg_msg, msg_mode, disp_z_jog_buttons);
         update_rep_panel_conn_status();
         xSemaphoreGive(xGuiSemaphore);
     }
@@ -482,7 +482,7 @@ void process_reprap3_status(char *buff) {
         update_rep_panel_conn_status();
         if (reprap_model.reprap_state.new_msg) {
             show_reprap_dialog(reprap_model.reprap_state.msg_box_title, reprap_model.reprap_state.msg_box_msg,
-                               &reprap_model.reprap_state.mode, reprap_model.reprap_state.show_axis_controls);
+                               reprap_model.reprap_state.mode, reprap_model.reprap_state.show_axis_controls);
             reprap_model.reprap_state.new_msg = false;
         }
         xSemaphoreGive(xGuiSemaphore);
@@ -736,7 +736,7 @@ void process_reprap_fileinfo(char *data_buff) {
 void process_reprap_reply(wifi_response_buff_t *response_buffer) {
     if (response_buffer->buf_pos > 1) {
         if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
-            show_reprap_dialog("Response to G-Code", response_buffer->buffer, (const uint8_t *) 1, false);
+            show_reprap_dialog("Response to G-Code", response_buffer->buffer, 1, false);
             xSemaphoreGive(xGuiSemaphore);
         }
         reprap_model.reprap_seqs_changed.reply_changed = 0;
@@ -749,7 +749,7 @@ void reprap_uart_send_gcode(char *gcode) {
 }
 
 void reprap_uart_get_status(uart_response_buff_t *receive_buff, int type, char *key, char *flags) {
-    ESP_LOGI(TAG, "Getting status (UART) %i", type);
+    ESP_LOGI(TAG, "Getting status (UART) %i - API Level %i", type, reprap_model.api_level);
     char buff[32];
     if (reprap_model.api_level < 1) {
         sprintf(buff, "M408 S%i", type);
@@ -758,6 +758,7 @@ void reprap_uart_get_status(uart_response_buff_t *receive_buff, int type, char *
     }
     reprap_uart_send_gcode(buff);
     if (reppanel_read_response(receive_buff)) {
+//        ESP_LOGI(TAG, "%s", receive_buff->buffer);
         process_reprap_status((char *) receive_buff->buffer);
     }
 }

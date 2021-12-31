@@ -136,7 +136,7 @@ bool reppanel_read_response(uart_response_buff_t *receive_buff) {
         }
     }
     timeout_cnt = 0;
-    ESP_LOGI(TAG, "---> Response complete with %i bytes", receive_buff->buf_pos);
+    ESP_LOGD(TAG, "---> Response complete with %i bytes", receive_buff->buf_pos);
     receive_buff->buffer[receive_buff->buf_pos-1] = '\0';   // replace new line with string end char to pars JSON
     ESP_LOGD(TAG, "%s", receive_buff->buffer);
     return true;

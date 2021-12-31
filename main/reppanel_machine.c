@@ -181,7 +181,7 @@ static void nonblocking_close_msg_box_event(lv_obj_t *obj, lv_event_t event) {
  * @param mode Accoding to https://reprap.org/wiki/G-code#M291:_Display_message_and_optionally_wait_for_response
  * @param show_height_adjust Display Z jog buttons (true, false)
  */
-void show_reprap_dialog(char *title, char *msg, const uint8_t *mode, bool show_height_adjust) {
+void show_reprap_dialog(char *title, char *msg, const uint8_t mode, bool show_height_adjust) {
     static const char *btns[] = {"5", "2.5", "0.5", "0.1", "0.05", "0.02", ""};
     cont_heigh_adj_diag = lv_cont_create(lv_layer_top(), NULL);
     static lv_style_t somestyle;
@@ -269,7 +269,7 @@ void show_reprap_dialog(char *title, char *msg, const uint8_t *mode, bool show_h
 
     static lv_obj_t *btn_close_ok;
     static lv_obj_t *btn_cancel;
-    switch (*mode) {
+    switch (mode) {
         case 0: // RepRap defines this to have no buttons. But we need to trigger a close event so we ignore it for now
         case 1:
             create_button(cont_closer_away, btn_close_ok, "Close", nonblocking_close_msg_box_event);
