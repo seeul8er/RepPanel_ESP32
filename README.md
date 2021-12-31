@@ -42,6 +42,8 @@ browser.
  - Run manual and automated bed leveling
  - Automatic reconnection
  - Low latency
+ - Screen Saver feature
+ - Support for RRF 3.4+ Object Model
 
 
 [![First release of RepPanel](https://img.youtube.com/vi/FfghWz1Lrw4/0.jpg)](https://youtu.be/FfghWz1Lrw4)  
@@ -160,9 +162,10 @@ Or simply add:
 - Entries per directory listing limited to 16 for jobs and macros
 - Directory path limited to 128 characters
 - Filament listing (all filament names separated by one character) limited to 1014
+- No support for Duet3 + SBC via Wifi because of a different API
+  - Workaround: Use wired UART/PanelDue connection
 - Can not list all files within a directory in case DuetWebControl API requires multiple requests per listing
   - Workaround: Delete files to reduce file count to make all files fit within one response
   
 ## Known Bugs
-- Messages printed by G-Code commands can not be "clicked away"
-- Irregular freezes of the screen with RRF 3.1
+- Irregular freezes of the screen with RRF 3.x
