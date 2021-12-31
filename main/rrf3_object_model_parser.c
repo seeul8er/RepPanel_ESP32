@@ -11,7 +11,8 @@ void reppanel_parse_rr_connect(cJSON *connect_result, reprap_model_t *_reprap_mo
     cJSON *api_level = cJSON_GetObjectItemCaseSensitive(connect_result, "apiLevel");
     if (api_level)
         _reprap_model->api_level = api_level->valueint;
-    // TODO: Implement session key support
+    // TODO: Implement session key support - Normal ESP32 Modules will not have enought RAM to receive the entire
+    //  Object Model JSON at once. No use for now to support Duet3 SBC
 //    cJSON *sessionKey = cJSON_GetObjectItemCaseSensitive(connect_result, "sessionKey");
 //    if (sessionKey)
 //        _reprap_model->session_key = sessionKey->valueint;
