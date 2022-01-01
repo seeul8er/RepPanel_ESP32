@@ -66,8 +66,7 @@ Other display modules with a resolution of 480x320 should also work as long as t
 As of now RepPanel is optimized for 3.5" displays with a resolution of 480x320 pixels. The display is connected via SPI.
 
 **Tested Firmware**
-  - Duet2 WiFi running RepRap Firmware v3.0 and corresponding Duet2WebControl
-  - Duet2 WiFi running RepRap Firmware v3.1 and corresponding Duet2WebControl
+  - Duet2 WiFi running RepRap Firmware v3.0, v3.1, v3.2 and corresponding Duet2WebControl
 
 ## Installation
 Use ready made images or compile yourself.
@@ -137,6 +136,8 @@ Pin configuration of ready made images:
 
 ## For Developers
 [Check out the simulator project.](https://github.com/seeul8er/RepPanel_sim) Simulates the RepPanel GUI on Desktop computers for more efficient testing and implementation.
+
+Use the provided for of lvgl for ESP32. This one contains the supported version of LVGL with some additional config options regarding the screen saver timeout. It is the only one maintained for RepPanel.
 
 **Custom changes to lv_conf.h**  
 Copy file content of `main/lv_conf_back.h` over to `externals/lv_port_esp32/components/lvgl/lv_conf.h`.  
