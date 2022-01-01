@@ -65,6 +65,12 @@ bool reppanel_is_uart_connected() {
     return (length > 0);
 }
 
+void esp32_flush_uart() {
+    if (uart_inited) {
+        uart_flush(uart_num);
+    }
+}
+
 void reppanel_write_uart(char *buffer, int buffer_len) {
     if (uart_inited) {
         if (uart_write_bytes(uart_num, (const char *) buffer, buffer_len) != buffer_len)
@@ -136,7 +142,7 @@ bool reppanel_read_response(uart_response_buff_t *receive_buff) {
         }
     }
     timeout_cnt = 0;
-    ESP_LOGI(TAG, "---> Response complete with %i bytes", receive_buff->buf_pos);
+    ESP_LOGD(TAG, "---> Response complete with %i bytes", receive_buff->buf_pos);
     receive_buff->buffer[receive_buff->buf_pos-1] = '\0';   // replace new line with string end char to pars JSON
     ESP_LOGD(TAG, "%s", receive_buff->buffer);
     return true;

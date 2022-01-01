@@ -43,7 +43,7 @@ lv_obj_t *btn_power, *label_power;
 lv_obj_t *btn_fan_off, *label_fan, *slider;
 
 #ifdef USE_LIGHTNING
-    lv_obj_t *btn_light_off, *btn_light_half, *btn_light_on;
+lv_obj_t *btn_light_off, *btn_light_half, *btn_light_on;
 #endif
 
 
@@ -103,25 +103,24 @@ static void fan_off_event(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
-static void slider_event_cb(lv_obj_t * slider, lv_event_t event)
-{
-    if(event == LV_EVENT_RELEASED) {        
+static void slider_event_cb(lv_obj_t *slider, lv_event_t event) {
+    if (event == LV_EVENT_RELEASED) {
         static char buf[11]; /* max 10 bytes for number plus 1 null terminating byte */
         snprintf(buf, 11, "M106 S%.2f", (lv_slider_get_value(slider) / 100.));
         reprap_send_gcode(buf);
     }
 }
 
-static void next_height_adjust_event(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_CLICKED) {
-        if (reprap_send_gcode("M292")) {
-            lv_obj_del(label_z_pos_cali);
-            label_z_pos_cali = 0;               // otherwise crash in update_ui
-            lv_obj_del(cont_heigh_adj_diag);
-            seq_num_msgbox = 0;    // reset so we know msg GUI is not showing anymore - little dirty I know...
-        }
-    }
-}
+//static void next_height_adjust_event(lv_obj_t *obj, lv_event_t event) {
+//    if (event == LV_EVENT_CLICKED) {
+//        if (reprap_send_gcode("M292")) {
+//            lv_obj_del(label_z_pos_cali);
+//            label_z_pos_cali = 0;               // otherwise crash in update_ui
+//            lv_obj_del(cont_heigh_adj_diag);
+//            seq_num_msgbox = 0;    // reset so we know msg GUI is not showing anymore - little dirty I know...
+//        }
+//    }
+//}
 
 static void height_adjust_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_VALUE_CHANGED) {
@@ -157,13 +156,38 @@ static void away_closer_changed(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
-void show_height_adjust_dialog() {
+static void ack_msg_box_event(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
+        if (reprap_send_gcode("M292")) {
+            if (label_z_pos_cali)
+                lv_obj_del(label_z_pos_cali);
+            label_z_pos_cali = 0;               // otherwise crash in update_ui
+            lv_obj_del(cont_heigh_adj_diag);
+            seq_num_msgbox = 0;    // RRF2 legacy: reset so we know msg GUI is not showing anymore - a little dirty...
+        }
+    }
+}
+
+static void nonblocking_close_msg_box_event(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
+        lv_obj_del_async(cont_heigh_adj_diag);
+    }
+}
+
+/**
+ * Displays a dialog according to M291
+ * @param title Dialog title
+ * @param msg Dialog message
+ * @param mode Accoding to https://reprap.org/wiki/G-code#M291:_Display_message_and_optionally_wait_for_response
+ * @param show_height_adjust Display Z jog buttons (true, false)
+ */
+void show_reprap_dialog(char *title, char *msg, const uint8_t mode, bool show_height_adjust) {
     static const char *btns[] = {"5", "2.5", "0.5", "0.1", "0.05", "0.02", ""};
     cont_heigh_adj_diag = lv_cont_create(lv_layer_top(), NULL);
     static lv_style_t somestyle;
     lv_style_copy(&somestyle, lv_cont_get_style(cont_heigh_adj_diag, LV_CONT_STYLE_MAIN));
     somestyle.body.border.width = 1;
-    somestyle.body.border.color = somestyle.body.main_color;
+    somestyle.body.border.color = REP_PANEL_DARK_ACCENT;
     somestyle.body.padding.left = LV_DPI / 6;
     somestyle.body.padding.right = LV_DPI / 6;
     somestyle.body.padding.top = LV_DPI / 12;
@@ -173,51 +197,94 @@ void show_height_adjust_dialog() {
     lv_cont_set_fit2(cont_heigh_adj_diag, LV_FIT_TIGHT, LV_FIT_TIGHT);
     lv_cont_set_layout(cont_heigh_adj_diag, LV_LAYOUT_COL_M);
 
-    btnm_height = lv_btnm_create(cont_heigh_adj_diag, NULL);
+    // Title and message
+    static lv_style_t title_style;
+    lv_style_copy(&title_style, lv_label_get_style(cont_heigh_adj_diag, LV_LABEL_STYLE_MAIN));
+    title_style.text.font = &reppanel_font_roboto_bold_22;
+    title_style.text.color = REP_PANEL_DARK_ACCENT;
+    lv_obj_t *title_label = lv_label_create(cont_heigh_adj_diag, NULL);
+    lv_label_set_align(title_label, LV_LABEL_ALIGN_CENTER);
+    lv_label_set_text_fmt(title_label, title);
+    lv_label_set_style(title_label, LV_LABEL_STYLE_MAIN, &title_style);
 
-    lv_btnm_set_map(btnm_height, btns);
-    lv_obj_set_event_cb(btnm_height, height_adjust_event);
-    lv_obj_set_height(btnm_height, 65);
-    lv_obj_set_width(btnm_height, 350);
+    lv_obj_t *msg_label = lv_label_create(cont_heigh_adj_diag, NULL);
+    lv_label_set_align(msg_label, LV_LABEL_ALIGN_CENTER);
+    lv_label_set_long_mode(msg_label, LV_LABEL_LONG_BREAK);
+    lv_obj_set_width(msg_label, 350);
+    lv_label_set_text_fmt(msg_label, msg);
 
-    label_z_pos_cali = lv_label_create(cont_heigh_adj_diag, NULL);
-    lv_label_set_text_fmt(label_z_pos_cali, "%.02f mm", reprap_axes.z);
+    // Height adjust buttons
+    if (show_height_adjust) {
+        btnm_height = lv_btnm_create(cont_heigh_adj_diag, NULL);
+
+        lv_btnm_set_map(btnm_height, btns);
+        lv_obj_set_event_cb(btnm_height, height_adjust_event);
+        lv_obj_set_height(btnm_height, 65);
+        lv_obj_set_width(btnm_height, 350);
+
+        label_z_pos_cali = lv_label_create(cont_heigh_adj_diag, NULL);
+        lv_label_set_text_fmt(label_z_pos_cali, "%.02f mm", reprap_axes.axes[2]);
+    }
 
     lv_obj_t *cont_closer_away = lv_cont_create(cont_heigh_adj_diag, NULL);
     lv_cont_set_layout(cont_closer_away, LV_LAYOUT_ROW_M);
     lv_cont_set_fit(cont_closer_away, LV_FIT_TIGHT);
 
-    const lv_style_t *panel_style = lv_cont_get_style(cont_closer_away, LV_CONT_STYLE_MAIN);
-    static lv_style_t new_released_style;
-    btn_closer = lv_btn_create(cont_closer_away, NULL);
-    lv_style_copy(&new_released_style, lv_btn_get_style(btn_closer, LV_BTN_STYLE_REL));
-    new_released_style.body.main_color = panel_style->body.main_color;
-    new_released_style.body.grad_color = panel_style->body.grad_color;
-    new_released_style.body.border.width = 0;
-    new_released_style.body.padding.top = LV_DPI / 12;
-    new_released_style.body.padding.bottom = LV_DPI / 12;
+    // Direction buttons for z axis
+    if (show_height_adjust) {
+        const lv_style_t *panel_style = lv_cont_get_style(cont_closer_away, LV_CONT_STYLE_MAIN);
+        static lv_style_t new_released_style;
+        btn_closer = lv_btn_create(cont_closer_away, NULL);
+        lv_style_copy(&new_released_style, lv_btn_get_style(btn_closer, LV_BTN_STYLE_REL));
+        new_released_style.body.main_color = panel_style->body.main_color;
+        new_released_style.body.grad_color = panel_style->body.grad_color;
+        new_released_style.body.border.width = 0;
+        new_released_style.body.padding.top = LV_DPI / 12;
+        new_released_style.body.padding.bottom = LV_DPI / 12;
 
-    LV_IMG_DECLARE(closer_icon);
-    lv_btn_set_fit(btn_closer, LV_FIT_TIGHT);
-    lv_btn_set_style(btn_closer, LV_BTN_STYLE_REL, &new_released_style);
-    lv_obj_t *img1 = lv_img_create(btn_closer, NULL);
-    lv_img_set_src(img1, &closer_icon);
-    lv_btn_set_toggle(btn_closer, true);
-    lv_btn_set_state(btn_closer, LV_BTN_STATE_TGL_REL);
-    lv_obj_set_event_cb(btn_closer, away_closer_changed);
-    lv_obj_set_user_data(btn_closer, (lv_obj_user_data_t) CLOSER_BTN);
+        LV_IMG_DECLARE(closer_icon);
+        lv_btn_set_fit(btn_closer, LV_FIT_TIGHT);
+        lv_btn_set_style(btn_closer, LV_BTN_STYLE_REL, &new_released_style);
+        lv_obj_t *img1 = lv_img_create(btn_closer, NULL);
+        lv_img_set_src(img1, &closer_icon);
+        lv_btn_set_toggle(btn_closer, true);
+        lv_btn_set_state(btn_closer, LV_BTN_STATE_TGL_REL);
+        lv_obj_set_event_cb(btn_closer, away_closer_changed);
+        lv_obj_set_user_data(btn_closer, (lv_obj_user_data_t) CLOSER_BTN);
 
-    LV_IMG_DECLARE(away_icon);
-    btn_away = lv_btn_create(cont_closer_away, btn_closer);
-    lv_obj_t *img2 = lv_img_create(btn_away, NULL);
-    lv_img_set_src(img2, &away_icon);
-    lv_btn_set_state(btn_away, LV_BTN_STATE_REL);
-    lv_obj_set_user_data(btn_away, (lv_obj_user_data_t) AWAY_BTN);
+        LV_IMG_DECLARE(away_icon);
+        btn_away = lv_btn_create(cont_closer_away, btn_closer);
+        lv_obj_t *img2 = lv_img_create(btn_away, NULL);
+        lv_img_set_src(img2, &away_icon);
+        lv_btn_set_state(btn_away, LV_BTN_STATE_REL);
+        lv_obj_set_user_data(btn_away, (lv_obj_user_data_t) AWAY_BTN);
 
-    lv_obj_t *spacer = lv_cont_create(cont_closer_away, NULL);
-    lv_obj_set_width(spacer, 50);
-    static lv_obj_t *btn_close;
-    create_button(cont_closer_away, btn_close, "Next", next_height_adjust_event);
+        lv_obj_t *spacer = lv_cont_create(cont_closer_away, NULL);
+        lv_obj_set_width(spacer, 50);
+    }
+
+    // Buttons to close dialog etc.
+    lv_cont_set_layout(cont_closer_away, LV_LAYOUT_ROW_M);
+    lv_cont_set_fit(cont_closer_away, LV_FIT_TIGHT);
+
+    static lv_obj_t *btn_close_ok;
+    static lv_obj_t *btn_cancel;
+    switch (mode) {
+        case 0: // RepRap defines this to have no buttons. But we need to trigger a close event so we ignore it for now
+        case 1:
+            create_button(cont_closer_away, btn_close_ok, "Close", nonblocking_close_msg_box_event);
+            break;
+        case 2:
+            create_button(cont_closer_away, btn_close_ok, "OK", ack_msg_box_event);
+            break;
+        case 3:
+            create_button(cont_closer_away, btn_close_ok, "OK", ack_msg_box_event);
+            create_button(cont_closer_away, btn_cancel, "Cancel", nonblocking_close_msg_box_event);
+            break;
+        default:
+            create_button(cont_closer_away, btn_close_ok, "OK", nonblocking_close_msg_box_event);
+            break;
+    }
     lv_obj_align_origo(cont_heigh_adj_diag, lv_layer_top(), LV_ALIGN_CENTER, 0, 0);
 }
 
@@ -238,26 +305,26 @@ static void start_cali_event(lv_obj_t *obj, lv_event_t event) {
 void update_ui_machine() {
     portMUX_TYPE mutex = portMUX_INITIALIZER_UNLOCKED;
     portENTER_CRITICAL(&mutex); // not sure this really helps?!
-    if (label_z_pos_cali) lv_label_set_text_fmt(label_z_pos_cali, "%.02f mm", reprap_axes.z);
+    if (label_z_pos_cali) lv_label_set_text_fmt(label_z_pos_cali, "%.02f mm", reprap_axes.axes[2]);
     portEXIT_CRITICAL(&mutex);
-    
+
     if (btn_home_x) {
-        if (reprap_axes.x_homed)
+        if (reprap_axes.homed[0])
             lv_btn_set_style(btn_home_x, LV_BTN_STYLE_REL, &homed_style);
         else
             lv_btn_set_style(btn_home_x, LV_BTN_STYLE_REL, &not_homed_style);
 
-        if (reprap_axes.y_homed)
+        if (reprap_axes.homed[1])
             lv_btn_set_style(btn_home_y, LV_BTN_STYLE_REL, &homed_style);
         else
             lv_btn_set_style(btn_home_y, LV_BTN_STYLE_REL, &not_homed_style);
 
-        if (reprap_axes.z_homed)
+        if (reprap_axes.homed[2])
             lv_btn_set_style(btn_home_z, LV_BTN_STYLE_REL, &homed_style);
         else
             lv_btn_set_style(btn_home_z, LV_BTN_STYLE_REL, &not_homed_style);
 
-        if (reprap_axes.x_homed && reprap_axes.y_homed && reprap_axes.z_homed)
+        if (reprap_axes.homed[0] && reprap_axes.homed[1] && reprap_axes.homed[2])
             lv_btn_set_style(btn_home_all, LV_BTN_STYLE_REL, &homed_style);
         else
             lv_btn_set_style(btn_home_all, LV_BTN_STYLE_REL, &not_homed_style);
@@ -293,7 +360,7 @@ void draw_machine(lv_obj_t *parent_screen) {
     btn_home_x = create_button(home_cont, btn_home_x, " X ", home_x_event);
     btn_home_y = create_button(home_cont, btn_home_y, " Y ", home_y_event);
     btn_home_z = create_button(home_cont, btn_home_z, " Z ", home_z_event);
-    
+
     lv_style_copy(&not_homed_style, lv_btn_get_style(btn_home_x, LV_BTN_STYLE_REL));
     lv_style_copy(&homed_style, lv_btn_get_style(btn_home_x, LV_BTN_STYLE_REL));
     homed_style.body.main_color = REP_PANEL_DARK_ACCENT;
@@ -302,7 +369,7 @@ void draw_machine(lv_obj_t *parent_screen) {
 
     lv_obj_t *cont_cali = lv_cont_create(machine_page, NULL);
     lv_cont_set_fit(cont_cali, LV_FIT_TIGHT);
-    lv_cont_set_layout(cont_cali,  LV_LAYOUT_ROW_M);
+    lv_cont_set_layout(cont_cali, LV_LAYOUT_ROW_M);
 
     ddlist_cali_options = lv_ddlist_create(cont_cali, NULL);
     lv_ddlist_set_options(ddlist_cali_options, cali_opt_list);
@@ -315,11 +382,11 @@ void draw_machine(lv_obj_t *parent_screen) {
     create_button(cont_cali, do_cali_butn, "Start", start_cali_event);
 
     lv_obj_t *power_cont = lv_cont_create(machine_page, NULL);
-    lv_cont_set_layout(power_cont,  LV_LAYOUT_ROW_M);
+    lv_cont_set_layout(power_cont, LV_LAYOUT_ROW_M);
     lv_cont_set_fit(power_cont, LV_FIT_TIGHT);
     lv_obj_t *label_power_header = lv_label_create(power_cont, NULL);
     lv_label_set_text(label_power_header, "Power:");
-    
+
     btn_power = lv_btn_create(power_cont, NULL);
     lv_btn_set_fit(btn_power, LV_FIT_TIGHT);
     lv_obj_set_event_cb(btn_power, power_toggle_event);
@@ -327,27 +394,27 @@ void draw_machine(lv_obj_t *parent_screen) {
     label_power = lv_label_create(btn_power, NULL);
     lv_label_set_text(label_power, reprap_params.power ? "On" : "Off");
 
-    #ifdef USE_LIGHTNING
+#ifdef USE_LIGHTNING
     lv_obj_t *label_light = lv_label_create(power_cont, NULL);
     lv_label_set_text(label_light, "Light:");
     btn_light_on = create_button(power_cont, btn_light_on, "On", _light_on_event);
     btn_light_half = create_button(power_cont, btn_light_half, "50%", _light_half_event);
     btn_light_off = create_button(power_cont, btn_light_off, "Off", _light_off_event);
-    #endif
+#endif
 
     lv_obj_t *fan_cont = lv_cont_create(machine_page, NULL);
-    lv_cont_set_layout(fan_cont,  LV_LAYOUT_ROW_M);
+    lv_cont_set_layout(fan_cont, LV_LAYOUT_ROW_M);
     lv_cont_set_fit(fan_cont, LV_FIT_TIGHT);
     lv_obj_t *label_fan_title = lv_label_create(fan_cont, NULL);
-    lv_label_set_text(label_fan_title, "Fan:  ");    
-    
+    lv_label_set_text(label_fan_title, "Fan:  ");
+
     slider = lv_slider_create(fan_cont, NULL);
     lv_obj_set_width(slider, LV_DPI * 2);
     lv_obj_align(slider, NULL, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_event_cb(slider, slider_event_cb);
     lv_slider_set_range(slider, 0, 100);
     label_fan = lv_label_create(fan_cont, NULL);
-    lv_label_set_text_fmt(label_fan, " %u%% ", reprap_params.fan);    
+    lv_label_set_text_fmt(label_fan, " %u%% ", reprap_params.fan);
     btn_fan_off = create_button(fan_cont, btn_fan_off, " Off ", fan_off_event);
 
     update_ui_machine();

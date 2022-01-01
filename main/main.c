@@ -1,3 +1,4 @@
+#include <sys/cdefs.h>
 //
 // Copyright (c) 2020 Wolfgang Christl
 // Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
@@ -5,7 +6,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <nvs_flash.h>
 
 #include "freertos/FreeRTOS.h"
@@ -13,7 +13,6 @@
 #include "esp_freertos_hooks.h"
 #include "freertos/semphr.h"
 #include "esp_system.h"
-#include "driver/gpio.h"
 
 /* Littlevgl specific */
 #include "lvgl/lvgl.h"
@@ -21,8 +20,9 @@
 #include "reppanel.h"
 #include "esp32_wifi.h"
 #include "reppanel_request.h"
-#include "lvgl_driver.h"
 #include "esp32_uart.h"
+#include "rrf_objects.h"
+#include "screen_saver.h"
 
 
 #ifdef CONFIG_LVGL_TFT_DISPLAY_MONOCHROME
@@ -40,7 +40,8 @@ char reprap_firmware_name[32];
 char reprap_firmware_version[5];
 
 static void IRAM_ATTR lv_tick_task(void *arg);
-void guiTask();
+
+_Noreturn void guiTask();
 
 /**********************
  *   APPLICATION MAIN
@@ -48,7 +49,7 @@ void guiTask();
 void app_main() {
     //If you want to use a task to create the graphic, you NEED to create a Pinned task
     //Otherwise there can be problem such as memory corruption and so on
-    xTaskCreatePinnedToCore(guiTask, "gui", 512 * 15, NULL, 0, NULL, 1);
+    xTaskCreatePinnedToCore(guiTask, "gui", 512 * 17, NULL, 0, NULL, 1);
 
     TaskHandle_t printer_status_task_handle = NULL;
     xTaskCreate(request_reprap_status_updates, "Printer Status Update Task", 1024 * 15, NULL,
@@ -61,7 +62,7 @@ static void IRAM_ATTR lv_tick_task(void *arg) {
     lv_tick_inc(portTICK_RATE_MS);
 }
 
-void guiTask() {
+_Noreturn void guiTask() {
     /* Inspect our own high water mark on entering the task. */
 //    UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
     xGuiSemaphore = xSemaphoreCreateMutex();
@@ -82,7 +83,7 @@ void guiTask() {
 #endif
 
     disp_drv.buffer = &disp_buf;
-    lv_disp_drv_register(&disp_drv);
+    lv_disp_t *lcd_display = lv_disp_drv_register(&disp_drv);
 
 #if defined CONFIG_LVGL_TFT_DISPLAY_MONOCHROME
     lv_theme_mono_init(0, NULL);
@@ -117,6 +118,7 @@ void guiTask() {
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+    init_reprap_model();
     read_settings_nvs();
     rep_panel_ui_create();
 
@@ -128,11 +130,17 @@ void guiTask() {
         //Try to lock the semaphore, if success, call lvgl stuff
         if (xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
             lv_task_handler();
+            // handle screen saver stuff
+            if (lv_disp_get_inactive_time(lcd_display) > (CONFIG_REPPANEL_SCREEN_SAVER_TIMEOUT * 1000)) {
+                activate_screen_saver();
+            } else {
+                deactivate_screen_saver();
+            }
             xSemaphoreGive(xGuiSemaphore);
         }
 //        uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
 //        ESP_LOGI(TAG, "%i free bytes", uxHighWaterMark * 4);
     }
-    //A task should NEVER return
+    // This task should NEVER return
     vTaskDelete(NULL);
 }

@@ -1,0 +1,110 @@
+{
+  "key": "state",
+  "flags": "d99vn",
+  "result": {
+    "atxPower": null,
+    "beep": null,
+    "currentTool": 0,
+    "displayMessage": "",
+    "gpOut": [],
+    "laserPwm": null,
+    "logFile": "",
+    "logLevel": "off",
+    "machineMode": "FFF",
+    "messageBox": {
+      "axisControls": 0,
+      "message": "Display Close",
+      "mode": 1,
+      "seq": 9,
+      "timeout": 10000,
+      "title": "Title"
+    },
+    "msUpTime": 897,
+    "nextTool": 0,
+    "powerFailScript": "M913 X0 Y0 G91 M83 G1 Z3 E-5 F1000",
+    "previousTool": -1,
+    "restorePoints": [
+      {
+        "coords": [
+          0,
+          0,
+          0
+        ],
+        "extruderPos": 0,
+        "fanPwm": 0,
+        "feedRate": 50,
+        "ioBits": 0,
+        "laserPwm": null,
+        "toolNumber": -1
+      },
+      {
+        "coords": [
+          160.514,
+          188.119,
+          0.4
+        ],
+        "extruderPos": 0,
+        "fanPwm": 0,
+        "feedRate": 24.8,
+        "ioBits": 0,
+        "laserPwm": null,
+        "toolNumber": 0
+      },
+      {
+        "coords": [
+          0,
+          0,
+          0
+        ],
+        "extruderPos": 0,
+        "fanPwm": 0,
+        "feedRate": 50,
+        "ioBits": 0,
+        "laserPwm": null,
+        "toolNumber": -1
+      },
+      {
+        "coords": [
+          0,
+          0,
+          0
+        ],
+        "extruderPos": 0,
+        "fanPwm": 0,
+        "feedRate": 50,
+        "ioBits": 0,
+        "laserPwm": null,
+        "toolNumber": -1
+      },
+      {
+        "coords": [
+          0,
+          0,
+          0
+        ],
+        "extruderPos": 0,
+        "fanPwm": 0,
+        "feedRate": 50,
+        "ioBits": 0,
+        "laserPwm": null,
+        "toolNumber": -1
+      },
+      {
+        "coords": [
+          0,
+          0,
+          0
+        ],
+        "extruderPos": 0,
+        "fanPwm": 0,
+        "feedRate": 50,
+        "ioBits": 0,
+        "laserPwm": null,
+        "toolNumber": -1
+      }
+    ],
+    "status": "processing",
+    "time": "2021-08-28T11:55:21",
+    "upTime": 8381
+  }
+}

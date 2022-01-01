@@ -16,6 +16,7 @@
 #include "reppanel_jobstatus.h"
 #include "reppanel_console.h"
 #include "reppanel_jobselect.h"
+#include "rrf_objects.h"
 #include <stdio.h>
 
 void draw_header(lv_obj_t *parent_screen);
@@ -43,10 +44,6 @@ lv_obj_t *label_chamber_temp;
 lv_obj_t *main_menu_button;
 lv_obj_t *console_button;
 lv_obj_t *label_connection_status;
-
-char reppanel_status[MAX_REPRAP_STATUS_LEN];
-char reppanel_chamber_temp[MAX_REPRAP_STATUS_LEN];
-char reppanel_job_progess[MAX_PREPANEL_TEMP_LEN];
 
 int heater_states[MAX_NUM_TOOLS];
 int num_heaters = 1;
@@ -154,7 +151,7 @@ void draw_header(lv_obj_t *parent_screen) {
     style_status_label.text.color = REP_PANEL_DARK_ACCENT;
     style_status_label.text.font = &reppanel_font_roboto_bold_24;
     lv_obj_set_style(label_status, &style_status_label);
-    lv_label_set_text(label_status, reppanel_status);
+    lv_label_set_text(label_status, reprap_model.reprap_state.status);
 
     lv_obj_t *cont_header_right = lv_cont_create(cont_header, NULL);
     lv_cont_set_fit(cont_header_right, LV_FIT_TIGHT);

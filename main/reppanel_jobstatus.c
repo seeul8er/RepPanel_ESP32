@@ -10,19 +10,13 @@
 #include <esp_log.h>
 #include "reppanel.h"
 #include "reppanel_request.h"
+#include "rrf_objects.h"
 
 #define TAG "JobStatus"
 
-double reprap_job_percent;
-int reprap_job_file_pos;
-double reprap_job_duration;
-int reprap_job_curr_layer;
-char current_job_name[MAX_LEN_FILENAME];
-int reprap_job_time_file = 0;
-int reprap_job_time_sim = 0;
+float reprap_job_percent;
 double reprap_job_first_layer_height = 0;
 double reprap_job_layer_height = 0;
-double reprap_job_height = 0;
 
 lv_obj_t *cont_percent;
 lv_obj_t *label_job_progress_percent;
@@ -46,27 +40,36 @@ void update_print_job_status_ui() {
         }
     }
 
-    if (reprap_job_first_layer_height > 0 && reprap_job_layer_height > 0 && reprap_job_height > 0 &&
+    if (reprap_job_first_layer_height > 0 && reprap_job_layer_height > 0 && reprap_model.reprap_job.file.height > 0 &&
         label_job_layer_status) {
-        int total_layer_cnt = (int) (((reprap_job_height - reprap_job_first_layer_height) / reprap_job_layer_height) +
-                                     1);
-        lv_label_set_text_fmt(label_job_layer_status, "%i/%i", reprap_job_curr_layer, total_layer_cnt);
+        if (reprap_model.reprap_job.file.numLayers == 0) {
+            int total_layer_cnt = (int) (((reprap_model.reprap_job.file.height - reprap_job_first_layer_height) / reprap_job_layer_height) +
+                                         1);
+            lv_label_set_text_fmt(label_job_layer_status, "%i/%i", reprap_model.reprap_job.layer, total_layer_cnt);
+        } else {
+            lv_label_set_text_fmt(label_job_layer_status, "%i/%i", reprap_model.reprap_job.layer, reprap_model.reprap_job.file.numLayers);
+        }
     } else if (label_job_layer_status) {
         lv_label_set_text(label_job_layer_status, "");
     }
 
-    int job_dur_h = (int) (reprap_job_duration / (60 * 60));
-    int job_dur_min = (int) ((reprap_job_duration - (job_dur_h * 60 * 60)) / 60);
+    int job_dur_h = (int) (reprap_model.reprap_job.duration / (60 * 60));
+    int job_dur_min = (int) ((reprap_model.reprap_job.duration - (job_dur_h * 60 * 60)) / 60);
     if (job_dur_h > 0 && label_job_elapsed_time) {
         lv_label_set_text_fmt(label_job_elapsed_time, "%ih %imin", job_dur_h, job_dur_min);
     } else if (job_dur_min > 0 && label_job_elapsed_time) {
         lv_label_set_text_fmt(label_job_elapsed_time, "%imin", job_dur_min);
-    } else if (label_job_elapsed_time && reprap_job_duration > 0) {
-        lv_label_set_text_fmt(label_job_elapsed_time, "%.0fs", reprap_job_duration);
+    } else if (label_job_elapsed_time && reprap_model.reprap_job.duration > 0) {
+        lv_label_set_text_fmt(label_job_elapsed_time, "%.0fs", reprap_model.reprap_job.duration);
     }
-
-    double sim_time_left = (reprap_job_time_sim - reprap_job_duration);     // time left according to simulation
-    double file_time_left = (reprap_job_time_file - reprap_job_duration);   // time left according to file info
+    double sim_time_left, file_time_left;
+    if (reprap_model.api_level < 1) {
+        sim_time_left = (reprap_model.reprap_job.file.simulatedTime - reprap_model.reprap_job.duration);     // time left according to simulation
+        file_time_left = (reprap_model.reprap_job.file.printTime - reprap_model.reprap_job.duration);   // time left according to file info
+    } else {
+        sim_time_left = reprap_model.reprap_job.timesLeft.simulation;
+        file_time_left = reprap_model.reprap_job.timesLeft.slicer;
+    }
     if (((int) sim_time_left) > 0) {
         int job_dur_sim_h = (int) (sim_time_left / (60 * 60));
         int job_dur_sim_min = (int) ((sim_time_left - (job_dur_sim_h * 60 * 60)) / 60);
@@ -89,8 +92,9 @@ void update_print_job_status_ui() {
 
     if (label_job_filename) {
         // only update when changed. Otherwise label will not scroll
-        if (strcmp(lv_label_get_text(label_job_filename), current_job_name) != 0) {
-            lv_label_set_text(label_job_filename, current_job_name);
+        char *last = strrchr(reprap_model.reprap_job.file.fileName, '/'); // remove first part of the path
+        if (last != NULL && strcmp(lv_label_get_text(label_job_filename), last+1) != 0) {
+            lv_label_set_text(label_job_filename, last+1);
         }
     }
 

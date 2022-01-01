@@ -14,7 +14,6 @@
 extern "C" {
 #endif
 
-#define MAX_REPRAP_STATUS_LEN   15
 #define MAX_PREPANEL_TEMP_LEN   8
 
 #define BTN_BED_TMP_ACTIVE 0
@@ -39,14 +38,15 @@ extern "C" {
 
 
 #define VERSION_MAJOR           1
-#define VERSION_MINOR           1
-#define VERSION_HOTFIX          1
+#define VERSION_MINOR           2
+#define VERSION_HOTFIX          0
 
 #define NUM_TEMPS_BUFF      15
 #define MAX_FILA_NAME_LEN   32
 #define MAX_TOOL_NAME_LEN   12
 #define MAX_LEN_STR_FILAMENT_LIST   MAX_FILA_NAME_LEN*32
 #define MAX_NUM_ELEM_DIR    16      // Max number of elements per directory that can be listed
+#define REPPANEL_RRF_MAX_AXES   5
 
 #define MAX_LEN_FILENAME    64
 #define MAX_LEN_DIRNAME     128
@@ -76,8 +76,6 @@ extern lv_obj_t *button_tool_filament;
 extern lv_obj_t *ddlist_selected_filament;
 extern lv_obj_t *label_connection_status;
 
-// Temp variable for writing to label. Contains current temp + °C or °F
-extern char reppanel_status[MAX_REPRAP_STATUS_LEN];
 
 extern int reprap_chamber_temp_curr_pos;
 extern double reprap_chamber_temp_buff[NUM_TEMPS_BUFF];
@@ -88,31 +86,24 @@ extern double reprap_extruder_amounts[NUM_TEMPS_BUFF];
 extern double reprap_extruder_feedrates[NUM_TEMPS_BUFF];
 extern double reprap_move_feedrate;
 extern double reprap_mcu_temp;
-extern double reprap_job_percent;
-extern int reprap_job_file_pos;
-extern double reprap_job_duration;
-extern int reprap_job_curr_layer;
-extern int reprap_job_time_file;
-extern int reprap_job_time_sim;
+extern float reprap_job_percent;
 extern double reprap_job_first_layer_height;
 extern double reprap_job_layer_height;
-extern double reprap_job_height;
-extern char current_job_name[MAX_LEN_FILENAME];
 extern char reprap_firmware_name[32];
 extern char reprap_firmware_version[5];
 
 typedef struct {
-    double x;
-    double y;
-    double z;
-    bool x_homed;
-    bool y_homed;
-    bool z_homed;
+    double axes[REPPANEL_RRF_MAX_AXES]; // machine pos - X,Y,Z,A,B
+    bool homed[REPPANEL_RRF_MAX_AXES];
+    char letter[REPPANEL_RRF_MAX_AXES];
+    double min[REPPANEL_RRF_MAX_AXES];
+    double max[REPPANEL_RRF_MAX_AXES];
+    double babystep[REPPANEL_RRF_MAX_AXES];
 } reprap_axes_t;
 
 typedef struct {
     bool power;
-    int fan;
+    int16_t fan;
 } reprap_params_t;
 
 typedef struct {
@@ -157,8 +148,8 @@ extern file_tree_elem_t reprap_dir_elem[MAX_NUM_ELEM_DIR];  // Array used for bu
 // pos 0 is bed temp, rest are tool heaters
 enum {HEATER_OFF, HEATER_STDBY, HEATER_ACTIVE, HEATER_FAULT};
 extern int heater_states[MAX_NUM_TOOLS];       // 0=off, 1=standby, 2=active, 3=fault - Storage for incoming data
-extern int num_heaters;     // max is MAX_NUM_TOOLS
-extern int num_tools;     // max is MAX_NUM_TOOLS
+//extern int num_heaters;     // max is MAX_NUM_TOOLS
+//extern int num_tools;     // max is MAX_NUM_TOOLS
 extern int current_visible_tool_indx;   // current indx of tool where temp data is displayed on process screen
 
 extern reprap_axes_t reprap_axes;

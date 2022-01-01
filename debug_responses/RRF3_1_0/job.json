@@ -1,0 +1,52 @@
+{
+  "key": "job",
+  "flags": "d99vn",
+  "result": {
+    "build": {
+      "currentObject": 0,
+      "m486Names": false,
+      "m486Numbers": false,
+      "objects": [
+        {
+          "cancelled": false,
+          "name": "topf_210823.stl",
+          "x": [
+            56,
+            140
+          ],
+          "y": [
+            111,
+            195
+          ]
+        }
+      ]
+    },
+    "duration": 6027,
+    "file": {
+      "filament": [],
+      "fileName": "0:/gcodes/Johannes/Topf_upside_down.gcode",
+      "firstLayerHeight": 0.2,
+      "generatedBy": "ideaMaker 4.1.1.5050, 2021-08-28 10:08:29 UTC+0200",
+      "height": 170,
+      "lastModified": "2021-08-28T10:11:18",
+      "layerHeight": 0.2,
+      "numLayers": 850,
+      "printTime": 68234,
+      "simulatedTime": null,
+      "size": 27301532
+    },
+    "filePosition": 1531655,
+    "lastDuration": null,
+    "lastFileName": null,
+    "layer": 54,
+    "layerTime": 23.1,
+    "pauseDuration": 0,
+    "rawExtrusion": 14843.6,
+    "timesLeft": {
+      "filament": null,
+      "file": 152354,
+      "slicer": 62186
+    },
+    "warmUpDuration": 0
+  }
+}

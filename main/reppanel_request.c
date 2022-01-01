@@ -3,11 +3,12 @@
 // Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
 #include <lvgl/src/lv_misc/lv_task.h>
-#include <esp_log.h>
 #include <lwip/ip4_addr.h>
 #include <esp_http_client.h>
 #include <cJSON.h>
 #include <lvgl/lvgl.h>
+#include <esp_log.h>
+#include <driver/uart.h>
 #include "duet_status_json.h"
 #include "reppanel.h"
 #include "reppanel_request.h"
@@ -20,6 +21,8 @@
 #include "reppanel_machine.h"
 #include "esp32_uart.h"
 #include "esp32_wifi.h"
+#include "rrf3_object_model_parser.h"
+#include "rrf_objects.h"
 
 #define TAG                 "RequestTask"
 #define REQUEST_TIMEOUT_MS  150
@@ -35,6 +38,7 @@ static bool duet_request_macros = false;
 static bool duet_request_jobs = false;
 static bool duet_request_reply = false;
 static int status_request_err_cnt = 0;      // request errors in a row
+static bool duet_sbc_mode = false;   // false=Standalone, true=SBC
 bool job_paused = false;
 int seq_num_msgbox = 0;
 int last_status_seq = -1;
@@ -42,7 +46,7 @@ int last_status_seq = -1;
 static bool uart_request_file_info = false;
 static char request_file_path[512];
 
-const char *decode_reprap_status(const char *valuestring) {
+const char *decode_reprap2_status(const char *valuestring) {
     job_paused = false;
     switch (*valuestring) {
         case REPRAP_STATUS_PROCESS_CONFIG:
@@ -88,7 +92,26 @@ const char *decode_reprap_status(const char *valuestring) {
     return "UnknownStatus";
 }
 
-void process_reprap_status(char *buff) {
+void decode_rrf3_status() {
+    if (strncmp(reprap_model.reprap_state.status, "simulating", REPRAP_MAX_STATUS_LEN - 1) == 0
+        || strncmp(reprap_model.reprap_state.status, "printing", REPRAP_MAX_STATUS_LEN - 1) == 0
+        || strncmp(reprap_model.reprap_state.status, "processing", REPRAP_MAX_STATUS_LEN - 1) == 0) {
+        job_running = true;
+        job_paused = false;
+    } else if (strncmp(reprap_model.reprap_state.status, "paused", REPRAP_MAX_STATUS_LEN - 1) == 0) {
+        job_paused = true;
+        job_running = true;
+    } else {
+        job_running = false;
+        job_paused = false;
+    }
+}
+
+/**
+ * For legacy RRF2 status responses
+ * @param buff raw HTTP response buffer containing the JSON
+ */
+void process_reprap2_status(char *buff) {
     cJSON *root = cJSON_Parse(buff);
     if (root == NULL) {
         const char *error_ptr = cJSON_GetErrorPtr();
@@ -98,24 +121,25 @@ void process_reprap_status(char *buff) {
         cJSON_Delete(root);
         return;
     }
+
     cJSON *name = cJSON_GetObjectItem(root, DUET_STATUS);
     if (cJSON_IsString(name) && (name->valuestring != NULL)) {
-        strlcpy(reppanel_status, decode_reprap_status(name->valuestring), MAX_REPRAP_STATUS_LEN);
+        strlcpy(reprap_model.reprap_state.status, decode_reprap2_status(name->valuestring), REPRAP_MAX_STATUS_LEN);
     }
 
     cJSON *coords = cJSON_GetObjectItem(root, "coords");
     if (coords) {
         cJSON *axesHomed = cJSON_GetObjectItem(coords, "axesHomed");
         if (axesHomed && cJSON_IsArray(axesHomed)) {
-            reprap_axes.x_homed = cJSON_GetArrayItem(axesHomed, 0)->valueint == 1;
-            reprap_axes.y_homed = cJSON_GetArrayItem(axesHomed, 1)->valueint == 1;
-            reprap_axes.z_homed = cJSON_GetArrayItem(axesHomed, 2)->valueint == 1;
+            reprap_axes.homed[0] = cJSON_GetArrayItem(axesHomed, 0)->valueint == 1;
+            reprap_axes.homed[1] = cJSON_GetArrayItem(axesHomed, 1)->valueint == 1;
+            reprap_axes.homed[2] = cJSON_GetArrayItem(axesHomed, 2)->valueint == 1;
         }
         cJSON *xyz = cJSON_GetObjectItem(coords, "xyz");
         if (xyz && cJSON_IsArray(xyz)) {
-            reprap_axes.x = cJSON_GetArrayItem(xyz, 0)->valuedouble;
-            reprap_axes.y = cJSON_GetArrayItem(xyz, 1)->valuedouble;
-            reprap_axes.z = cJSON_GetArrayItem(xyz, 2)->valuedouble;
+            reprap_axes.axes[0] = cJSON_GetArrayItem(xyz, 0)->valuedouble;
+            reprap_axes.axes[1] = cJSON_GetArrayItem(xyz, 1)->valuedouble;
+            reprap_axes.axes[2] = cJSON_GetArrayItem(xyz, 2)->valuedouble;
         }
     }
 
@@ -128,8 +152,8 @@ void process_reprap_status(char *buff) {
         cJSON *fanPercent = cJSON_GetObjectItem(params, "fanPercent");
         if (fanPercent && cJSON_IsArray(fanPercent)) {
             reprap_params.fan = cJSON_GetArrayItem(fanPercent, 0)->valueint;
-        }        
-    }    
+        }
+    }
 
     int _heater_states[MAX_NUM_TOOLS];  // bed heater state must be on pos 0
     cJSON *duet_temps = cJSON_GetObjectItem(root, DUET_TEMPS);
@@ -169,34 +193,35 @@ void process_reprap_status(char *buff) {
 
     bool disp_msg = false;      // Message without title
     bool disp_msgbox = false;   // Message box with title
-    bool disp_h_msgbox = false; // height adjust dialog
+    bool disp_z_jog_buttons = false; // height adjust dialog
     static char msg_title[384];
     static char msg_msg[384];
     static char msg_txt[384];
+    static int msg_mode = 2;
     cJSON *duet_seq = cJSON_GetObjectItem(root, "seq");
     cJSON *duet_output = cJSON_GetObjectItem(root, "output");
     if (duet_output) {
-        cJSON *duet_output_msg = cJSON_GetObjectItem(duet_output, "message");
-        if (duet_output_msg && cJSON_IsString(duet_output_msg) && duet_seq && duet_seq->valueint != last_status_seq) {
-            disp_msg = true;
-            strncpy(msg_txt, duet_output_msg->valuestring, 384);
-        }
+//        cJSON *duet_output_msg = cJSON_GetObjectItem(duet_output, "message");
+//        if (duet_output_msg && cJSON_IsString(duet_output_msg) && duet_seq && duet_seq->valueint != last_status_seq) {
+//            disp_msg = true;
+//            strncpy(msg_txt, duet_output_msg->valuestring, 384);
+//        }
         // Right now we only have a msg box for manual bed calibration
         cJSON *duet_output_msgbox = cJSON_GetObjectItem(duet_output, "msgBox");
         if (duet_output_msgbox) {
             cJSON *seq = cJSON_GetObjectItem(duet_output_msgbox, "seq");
             cJSON *title = cJSON_GetObjectItem(duet_output_msgbox, "title");
             cJSON *duet_msg = cJSON_GetObjectItem(duet_output_msgbox, "msg");
+            cJSON *controls = cJSON_GetObjectItem(duet_output_msgbox, "controls");
+            cJSON *mode = cJSON_GetObjectItem(duet_output_msgbox, "mode");
+            msg_mode = mode->valueint;
             strncpy(msg_title, title->valuestring, 384);
             strncpy(msg_msg, duet_msg->valuestring, 384);
             // Beware. This is dirty. Check if we want to show this msg box. We might already display it
             if (seq->valueint != seq_num_msgbox) {
                 seq_num_msgbox = seq->valueint;
-                if (strcmp(duet_msg->valuestring,
-                           "Adjust height until the nozzle just touches the bed, then press OK") == 0)
-                    disp_h_msgbox = true;
-                else
-                    disp_msgbox = true;
+                disp_msgbox = true;
+                if (controls->valueint == 4) disp_z_jog_buttons = true;
             }
         }
     }
@@ -207,8 +232,9 @@ void process_reprap_status(char *buff) {
             ESP_LOGI(TAG, "Need reply!");
             // When connected via UART the reply is already part of the msg
             cJSON *duet_resp = cJSON_GetObjectItem(root, "resp");
-            if (duet_resp && strlen(duet_resp->valuestring) > 0 && duet_resp->valuestring[0] != '\n') {      // sometimes it's just a new line char
-                ESP_LOGI(TAG, "Length MSG: %i - %s", strlen(duet_resp->valuestring), duet_resp->valuestring);
+            if (duet_resp && strlen(duet_resp->valuestring) > 0 &&
+                duet_resp->valuestring[0] != '\n') {      // sometimes it's just a new line char
+                //ESP_LOGI(TAG, "Length MSG: %llu - %s", strlen(duet_resp->valuestring), duet_resp->valuestring);
                 disp_msg = true;
                 strncpy(msg_txt, duet_resp->valuestring, 384);
             }
@@ -228,7 +254,7 @@ void process_reprap_status(char *buff) {
             pos++;
         }
     }
-    num_heaters = pos;
+    reprap_model.num_heaters = pos;
 
     // Get tool information
     pos = 0;
@@ -254,7 +280,7 @@ void process_reprap_status(char *buff) {
             }
         }
         got_extended_status = true;
-        num_tools = pos;    // update number of tools
+        reprap_model.num_tools = pos;    // update number of tools
     }
 
     // Get firmware information
@@ -271,7 +297,7 @@ void process_reprap_status(char *buff) {
     // Get current tool temperatures
     cJSON *duet_temps_current = cJSON_GetObjectItem(duet_temps, DUET_TEMPS_CURRENT);
     if (duet_temps_current) {
-        for (int i = 0; i < num_tools; i++) {
+        for (int i = 0; i < reprap_model.num_tools; i++) {
             if (reprap_tools[i].temp_hist_curr_pos < (NUM_TEMPS_BUFF - 1)) {
                 reprap_tools[i].temp_hist_curr_pos++;
             } else {
@@ -287,15 +313,17 @@ void process_reprap_status(char *buff) {
     cJSON *duet_temps_tools_standby = cJSON_GetObjectItem(duet_temps_tools, DUET_TEMPS_STANDBY);
     if (duet_temps_tools_active && cJSON_IsArray(duet_temps_tools_active) && duet_temps_tools_standby &&
         cJSON_IsArray(duet_temps_tools_standby)) {
-        for (int i = 0; i < num_tools; i++) {
+        for (int i = 0; i < reprap_model.num_tools; i++) {
             cJSON *tool_active_temps_arr = cJSON_GetArrayItem(duet_temps_tools_active,
                                                               reprap_tools[i].number);
             cJSON *tool_standby_temps_arr = cJSON_GetArrayItem(duet_temps_tools_standby,
                                                                reprap_tools[i].number);
             if (tool_active_temps_arr) {
-                reprap_tools[i].active_temp = cJSON_GetArrayItem(tool_active_temps_arr,0)->valuedouble; }
+                reprap_tools[i].active_temp = cJSON_GetArrayItem(tool_active_temps_arr, 0)->valuedouble;
+            }
             if (tool_standby_temps_arr) {
-                reprap_tools[i].standby_temp = cJSON_GetArrayItem(tool_standby_temps_arr,0)->valuedouble; }
+                reprap_tools[i].standby_temp = cJSON_GetArrayItem(tool_standby_temps_arr, 0)->valuedouble;
+            }
         }
     }
     // print job status
@@ -308,33 +336,166 @@ void process_reprap_status(char *buff) {
 
     cJSON *job_dur = cJSON_GetObjectItem(root, REPRAP_JOB_DUR);
     if (job_dur && cJSON_IsNumber(job_dur)) {
-        reprap_job_duration = job_dur->valuedouble;
+        reprap_model.reprap_job.duration = job_dur->valueint;
     }
 
     cJSON *job_curr_layer = cJSON_GetObjectItem(root, REPRAP_CURR_LAYER);
     if (job_curr_layer && cJSON_IsNumber(job_curr_layer)) {
-        reprap_job_curr_layer = job_curr_layer->valueint;
+        reprap_model.reprap_job.layer = job_curr_layer->valueint;
     }
 
     // update UI
     if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
-        if (label_status != NULL) lv_label_set_text(label_status, reppanel_status);
+        if (label_status != NULL) lv_label_set_text(label_status, reprap_model.reprap_state.status);
         update_ui_machine();
         update_bed_temps_ui();  // update UI with new values
-        update_heater_status_ui(_heater_states, num_heaters);  // update UI with new values
+        update_heater_status_ui(_heater_states, reprap_model.num_heaters);  // update UI with new values
         update_current_tool_temps_ui();     // update UI with new values
         if (got_extended_status && label_extruder_name != NULL) {
             lv_label_set_text(label_extruder_name, reprap_tools[current_visible_tool_indx].name);
         }
         if (got_printjob_status) update_print_job_status_ui();
-        if (disp_msg) reppanel_disp_msg(msg_txt);
-        if (disp_h_msgbox) show_height_adjust_dialog();
-        if (disp_msgbox) duet_show_dialog(msg_title, msg_msg);
+        if (disp_msg) show_reprap_dialog("", msg_txt,  1, false);
+        if (disp_msgbox) show_reprap_dialog(msg_title, msg_msg, msg_mode, disp_z_jog_buttons);
         update_rep_panel_conn_status();
         xSemaphoreGive(xGuiSemaphore);
     }
 
     cJSON_Delete(root);
+
+}
+
+/**
+ * For RRF3 object model responses
+ * @param buff raw HTTP response buffer containing object model JSON
+ */
+void process_reprap3_status(char *buff) {
+    cJSON *root = cJSON_ParseWithLength(buff, JSON_BUFF_SIZE);
+    if (root == NULL) {
+        const char *error_ptr = cJSON_GetErrorPtr();
+        if (error_ptr != NULL) {
+            ESP_LOGE(TAG, "Error before: %s", error_ptr);
+        }
+        cJSON_Delete(root);
+        return;
+    }
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    if (result == NULL) {
+        cJSON_Delete(root);
+        return;
+    }
+    cJSON *key = cJSON_GetObjectItem(root, "key");
+    cJSON *flags = cJSON_GetObjectItem(root, "flags");
+    cJSON *sub_object_result;
+    sub_object_result = cJSON_GetObjectItem(result, "boards");
+    if (sub_object_result)
+        reppanel_parse_rrf_boards(sub_object_result, flags, &reprap_model);
+    else if (strcmp(key->valuestring, "boards") == 0)
+        reppanel_parse_rrf_boards(result, flags, &reprap_model);
+
+    sub_object_result = cJSON_GetObjectItem(result, "fans");
+    if (sub_object_result)
+        reppanel_parse_rrf_fans(sub_object_result, flags, &reprap_model);
+    else if (strcmp(key->valuestring, "fans") == 0) {
+        reppanel_parse_rrf_fans(result, flags, &reprap_model);
+    }
+
+    sub_object_result = cJSON_GetObjectItem(result, "heat");
+    if (sub_object_result)
+        reppanel_parse_rrf_heaters(sub_object_result, heater_states, flags, &reprap_model);
+    else if (strcmp(key->valuestring, "heat") == 0)
+        reppanel_parse_rrf_heaters(result, heater_states, flags, &reprap_model);
+
+    sub_object_result = cJSON_GetObjectItem(result, "tools");
+    if (sub_object_result)
+        reppanel_parse_rrf_tools(sub_object_result, heater_states, flags, &reprap_model);
+    else if (strcmp(key->valuestring, "tools") == 0)
+        reppanel_parse_rrf_tools(result, heater_states, flags, &reprap_model);
+
+    sub_object_result = cJSON_GetObjectItem(result, "job");
+    if (sub_object_result)
+        reppanel_parse_rrf_job(sub_object_result, flags, &reprap_model);
+    else if (strcmp(key->valuestring, "job") == 0)
+        reppanel_parse_rrf_job(result, flags, &reprap_model);
+
+    sub_object_result = cJSON_GetObjectItem(result, "move");
+    if (sub_object_result)
+        reppanel_parse_rrf_move(sub_object_result, flags, &reprap_model);
+    else if (strcmp(key->valuestring, "move") == 0)
+        reppanel_parse_rrf_move(result, flags, &reprap_model);
+
+    sub_object_result = cJSON_GetObjectItem(result, "state");
+    if (sub_object_result)
+        reppanel_parse_rrf_state(sub_object_result, flags, &reprap_model);
+    else if (strcmp(key->valuestring, "state") == 0)
+        reppanel_parse_rrf_state(result, flags, &reprap_model);
+
+    sub_object_result = cJSON_GetObjectItem(result, "network");
+    if (sub_object_result)
+        reppanel_parse_rrf_network(sub_object_result, flags, &reprap_model);
+    else if (strcmp(key->valuestring, "network") == 0)
+        reppanel_parse_rrf_network(result, flags, &reprap_model);
+
+    sub_object_result = cJSON_GetObjectItem(result, "sensors");
+    if (sub_object_result)
+        reppanel_parse_rrf_sensors(sub_object_result, flags, &reprap_model);
+    else if (strcmp(key->valuestring, "sensors") == 0)
+        reppanel_parse_rrf_sensors(result, flags, &reprap_model);
+
+    sub_object_result = cJSON_GetObjectItem(result, "inputs");
+    if (sub_object_result)
+        reppanel_parse_rrf_inputs(sub_object_result, flags, &reprap_model);
+    else if (strcmp(key->valuestring, "inputs") == 0)
+        reppanel_parse_rrf_inputs(result, flags, &reprap_model);
+
+    sub_object_result = cJSON_GetObjectItem(result, "seqs");
+    if (sub_object_result) {
+        reppanel_parse_rrf_seqs(sub_object_result, &reprap_model);
+    } else if (strcmp(key->valuestring, "seqs") == 0) {
+        reppanel_parse_rrf_seqs(result, &reprap_model);
+    }
+
+    sub_object_result = cJSON_GetObjectItem(result, "global");
+    if (sub_object_result)
+        reppanel_parse_rrf_global(sub_object_result, flags, &reprap_model);
+    else if (strcmp(key->valuestring, "global") == 0)
+        reppanel_parse_rrf_global(result, flags, &reprap_model);
+
+    sub_object_result = cJSON_GetObjectItem(result, "directories");
+    if (sub_object_result) {
+        reppanel_parse_rrf_directories(sub_object_result, flags, &reprap_model);
+    } else if (strcmp(key->valuestring, "directories") == 0) {
+        reppanel_parse_rrf_directories(result, flags, &reprap_model);
+    }
+    cJSON_Delete(root);
+
+    decode_rrf3_status();
+
+    if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
+        if (label_status != NULL) lv_label_set_text(label_status, reprap_model.reprap_state.status);
+        update_ui_machine();
+        update_bed_temps_ui();  // update UI with new values
+        update_heater_status_ui(heater_states, reprap_model.num_heaters);  // update UI with new values
+        update_current_tool_temps_ui();     // update UI with new values
+        if (got_extended_status && label_extruder_name != NULL) {
+            lv_label_set_text(label_extruder_name, reprap_tools[current_visible_tool_indx].name);
+        }
+        if (job_running) update_print_job_status_ui();
+        update_rep_panel_conn_status();
+        if (reprap_model.reprap_state.new_msg) {
+            show_reprap_dialog(reprap_model.reprap_state.msg_box_title, reprap_model.reprap_state.msg_box_msg,
+                               reprap_model.reprap_state.mode, reprap_model.reprap_state.show_axis_controls);
+            reprap_model.reprap_state.new_msg = false;
+        }
+        xSemaphoreGive(xGuiSemaphore);
+    }
+}
+
+void process_reprap_status(char *buff) {
+    if (reprap_model.api_level < 1)
+        process_reprap2_status(buff);
+    else
+        process_reprap3_status(buff);
 }
 
 void process_reprap_settings(char *buff) {
@@ -475,7 +636,8 @@ void process_reprap_filelist(char *buffer) {
                         strncpy(reprap_dir_elem[pos].name, cJSON_GetObjectItem(iterator, "name")->valuestring,
                                 MAX_LEN_FILENAME - 1);
                         strncpy(reprap_dir_elem[pos].dir, dir_name->valuestring, MAX_LEN_DIRNAME - 1);
-                        reprap_dir_elem[pos].time_stamp = datestr_2unix(cJSON_GetObjectItem(iterator, "date")->valuestring);
+                        reprap_dir_elem[pos].time_stamp = datestr_2unix(
+                                cJSON_GetObjectItem(iterator, "date")->valuestring);
                         if (strncmp("f", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0) {
                             reprap_dir_elem[pos].type = TREE_FILE_ELEM;
                         } else {
@@ -505,7 +667,8 @@ void process_reprap_filelist(char *buffer) {
                         strncpy(reprap_dir_elem[pos].name, cJSON_GetObjectItem(iterator, "name")->valuestring,
                                 MAX_LEN_FILENAME - 1);
                         strncpy(reprap_dir_elem[pos].dir, dir_name->valuestring, MAX_LEN_DIRNAME - 1);
-                        reprap_dir_elem[pos].time_stamp = datestr_2unix(cJSON_GetObjectItem(iterator, "date")->valuestring);
+                        reprap_dir_elem[pos].time_stamp = datestr_2unix(
+                                cJSON_GetObjectItem(iterator, "date")->valuestring);
                         if (strncmp("f", cJSON_GetObjectItem(iterator, "type")->valuestring, 1) == 0) {
                             reprap_dir_elem[pos].type = TREE_FILE_ELEM;
                         } else {
@@ -525,7 +688,7 @@ void process_reprap_filelist(char *buffer) {
 }
 
 void process_reprap_fileinfo(char *data_buff) {
-    cJSON *root = cJSON_Parse(data_buff);
+    cJSON *root = cJSON_ParseWithLength(data_buff, JSON_BUFF_SIZE);
     if (root == NULL) {
         const char *error_ptr = cJSON_GetErrorPtr();
         if (error_ptr != NULL) {
@@ -542,24 +705,24 @@ void process_reprap_fileinfo(char *data_buff) {
     }
     cJSON *job_time_sim = cJSON_GetObjectItem(root, REPRAP_SIMTIME);
     if (job_time_sim && cJSON_IsNumber(job_time_sim)) {
-        reprap_job_time_sim = job_time_sim->valueint;
+        reprap_model.reprap_job.file.simulatedTime = job_time_sim->valueint;
     } else {
-        reprap_job_time_sim = -1;
+        reprap_model.reprap_job.file.simulatedTime = -1;
     }
 
     cJSON *job_print_time = cJSON_GetObjectItem(root, REPRAP_PRINTTIME);
     if (job_print_time && cJSON_IsNumber(job_print_time)) {
-        reprap_job_time_file = job_print_time->valueint;
+        reprap_model.reprap_job.file.printTime = job_print_time->valueint;
     }
 
     cJSON *job_name = cJSON_GetObjectItem(root, "fileName");
     if (job_name && cJSON_IsString(job_name)) {
-        strncpy(current_job_name, &job_name->valuestring[10], MAX_LEN_FILENAME);
+        strncpy(reprap_model.reprap_job.file.fileName, &job_name->valuestring[10], MAX_LEN_FILENAME);
     }
 
     cJSON *job_height = cJSON_GetObjectItem(root, "height");
     if (job_height && cJSON_IsNumber(job_height)) {
-        reprap_job_height = job_height->valuedouble;
+        reprap_model.reprap_job.file.height = (float) job_height->valuedouble;
     }
     cJSON *job_first_layer_height = cJSON_GetObjectItem(root, "firstLayerHeight");
     if (job_first_layer_height && cJSON_IsNumber(job_first_layer_height)) {
@@ -573,12 +736,12 @@ void process_reprap_fileinfo(char *data_buff) {
 }
 
 void process_reprap_reply(wifi_response_buff_t *response_buffer) {
-    duet_request_reply = false;
     if (response_buffer->buf_pos > 1) {
         if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
-            duet_show_dialog("Response to G-Code", response_buffer->buffer);
+            show_reprap_dialog("Response to G-Code", response_buffer->buffer, 1, false);
             xSemaphoreGive(xGuiSemaphore);
         }
+        reprap_model.reprap_seqs_changed.reply_changed = 0;
     }
 }
 
@@ -587,12 +750,44 @@ void reprap_uart_send_gcode(char *gcode) {
     ESP_LOGD(TAG, "Sent %s", gcode);
 }
 
-void reprap_uart_get_status(uart_response_buff_t *receive_buff, int type) {
-    ESP_LOGI(TAG, "Getting status (UART) %i", type);
-    char buff[8];
-    sprintf(buff, "M408 S%i", type);
+void reprap_uart_check_objmodel_support(uart_response_buff_t *receive_buff) {
+    ESP_LOGI(TAG, "Checking RRF API-Level Support");
+    esp32_flush_uart();
+    reprap_uart_send_gcode("M409 F\"d2f\"");
+    if (reppanel_read_response(receive_buff)) {
+        cJSON *root = cJSON_Parse((char *) receive_buff->buffer);
+        if (root == NULL) {
+            ESP_LOGW(TAG, "Could not detect M409 Object Model query support");
+            cJSON_Delete(root);
+            reprap_model.api_level = 0;
+            return;
+        }
+        cJSON *result = cJSON_GetObjectItem(root, "result");
+        if (result == NULL) {
+            ESP_LOGW(TAG, "Could not detect M409 Object Model \"result\" as part of JSON");
+            cJSON_Delete(root);
+            reprap_model.api_level = 0;
+            return;
+        }
+        reprap_model.api_level = 1;
+    } else {
+        ESP_LOGW(TAG, "Did not receive a response on requesting M409 Object Model");
+        reprap_model.api_level = 0;
+    }
+    ESP_LOGI(TAG, "Detected API-Level Support: %i", reprap_model.api_level);
+}
+
+void reprap_uart_get_status(uart_response_buff_t *receive_buff, int type, char *key, char *flags) {
+    ESP_LOGI(TAG, "Getting status (UART) %i - API-Level %i - key: %s flags: %s", type, reprap_model.api_level, key, flags);
+    char buff[32];
+    if (reprap_model.api_level < 1) {
+        sprintf(buff, "M408 S%i", type);
+    } else {
+        sprintf(buff, "M409 K\"%s\" F\"%s\"", key, flags);
+    }
     reprap_uart_send_gcode(buff);
     if (reppanel_read_response(receive_buff)) {
+        ESP_LOGI(TAG, "%s", receive_buff->buffer);
         process_reprap_status((char *) receive_buff->buffer);
     }
 }
@@ -622,8 +817,8 @@ void reprap_uart_get_filelist(uart_response_buff_t *receive_buff, char *path) {
 void reprap_uart_download(uart_response_buff_t *receive_buff, char *path) {
     ESP_LOGI(TAG, "Setting hardcoded values for bed/tool temperatures");
     // max len NUM_TEMPS_BUFF, last must be <0
-    static double bed_temps_hardcoded[] = {0, 30, 40, 60, 63, 70, 80, 90, 100, 105, 110, -1};
-    static double tool_temps_hardcoded[] = {0, 160, 180, 190, 200, 210, 230, 240, 250, 260, 270, 280, -1};
+    static double bed_temps_hardcoded[] = {0, 40, 53, 55, 60, 70, 80, 90, 100, 105, 110, -1};
+    static double tool_temps_hardcoded[] = {0, 160, 190, 195, 200, 205, 210, 230, 235, 240, 270, 280, -1};
     memcpy(reprap_bed_poss_temps.temps_standby, bed_temps_hardcoded, sizeof(bed_temps_hardcoded));
     memcpy(reprap_bed_poss_temps.temps_active, bed_temps_hardcoded, sizeof(bed_temps_hardcoded));
     memcpy(reprap_tool_poss_temps.temps_standby, tool_temps_hardcoded, sizeof(tool_temps_hardcoded));
@@ -668,37 +863,77 @@ esp_err_t http_event_handle(esp_http_client_event_t *evt) {
     return ESP_OK;
 }
 
-void wifi_duet_authorise(wifi_response_buff_t *buffer, bool get_d2wc_config) {
+void wifi_duet_authorise(wifi_response_buff_t *resp_buff, bool get_d2wc_config) {
     char printer_url[MAX_REQ_ADDR_LENGTH];
-    sprintf(printer_url, "%s/rr_connect?password=%s", rep_addr_resolved, rep_pass);
+    if (duet_sbc_mode) {
+        sprintf(printer_url, "%s/machine/connect?password=%s", rep_addr_resolved, rep_pass);
+    } else {
+        sprintf(printer_url, "%s/rr_connect?password=%s", rep_addr_resolved, rep_pass);
+    }
     esp_http_client_config_t config = {
             .url = printer_url,
             .timeout_ms = REQUEST_TIMEOUT_MS,
             .event_handler = http_event_handle,
-            .user_data = buffer
+            .user_data = resp_buff
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
-//        ESP_LOGI(TAG, "Status = %d, content_length = %d",
-//                 esp_http_client_get_status_code(client),
-//                 esp_http_client_get_content_length(client));
+        switch (esp_http_client_get_status_code(client)) {
+            case 200:
+                status_request_err_cnt = 0;
+                if (rp_conn_stat != REPPANEL_UART_CONNECTED)
+                    rp_conn_stat = REPPANEL_WIFI_CONNECTED;
+                cJSON *root = cJSON_Parse(resp_buff->buffer);   // get JSON response to read API level
+                if (root == NULL) {
+                    ESP_LOGE(TAG, "Error parsing authorisation response");
+                    cJSON_Delete(root);
+                    return;
+                }
+                reppanel_parse_rr_connect(root, &reprap_model);
+                cJSON_Delete(root);
+                ESP_LOGI(TAG, "Detected API Level %i", reprap_model.api_level);
+                break;
+            case 500:
+                ESP_LOGE(TAG, "Generic error authorising DUET");
+                break;
+            case 502:
+                ESP_LOGE(TAG, "Incompatible DCS version");
+                break;
+            case 503:
+                ESP_LOGE(TAG, "Authorize: DCS is unavailable");
+                duet_sbc_mode = false;
+                break;
+            default:
+                break;
+        }
     }
     esp_http_client_cleanup(client);
-    // if (get_d2wc_config) reprap_wifi_download("0%3A%2Fsys%2Fdwc2settings.json");
 }
 
-void reprap_wifi_get_status(wifi_response_buff_t *resp_buff, int type) {
-    ESP_LOGI(TAG, "Getting status %i", type);
+void reprap_wifi_get_status(wifi_response_buff_t *resp_buff, int type, char *key, char *flags) {
     char request_addr[MAX_REQ_ADDR_LENGTH];
-    sprintf(request_addr, "%s/rr_status?type=%i", rep_addr_resolved, type);
+    if (duet_sbc_mode)
+        sprintf(request_addr, "%s/machine/status", rep_addr_resolved);
+    else {
+        if (reprap_model.api_level < 1) {
+            sprintf(request_addr, "%s/rr_status?type=%i", rep_addr_resolved, type);
+        } else {
+            if (strlen(key) > 0) {
+                sprintf(request_addr, "%s/rr_model?key=%s&flags=%s", rep_addr_resolved, key, flags);
+            } else {
+                sprintf(request_addr, "%s/rr_model?flags=%s", rep_addr_resolved, flags);
+            }
+        }
+    }
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
             .event_handler = http_event_handle,
             .user_data = resp_buff,
     };
+    ESP_LOGI(TAG, "Requesting: %s", request_addr);
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
 
@@ -713,6 +948,16 @@ void reprap_wifi_get_status(wifi_response_buff_t *resp_buff, int type) {
             case 401:
                 ESP_LOGI(TAG, "Authorising with Duet");
                 wifi_duet_authorise(resp_buff, true);
+                break;
+            case 500:
+                ESP_LOGE(TAG, "Generic error getting status");
+                break;
+            case 502:
+                ESP_LOGE(TAG, "Incompatible DCS version");
+                break;
+            case 503:
+                ESP_LOGE(TAG, "Get Status: DCS is unavailable %i %s %s", type, key, flags);
+                duet_sbc_mode = false;
                 break;
             default:
                 break;
@@ -743,18 +988,21 @@ void reprap_wifi_get_rreply(wifi_response_buff_t *response_buffer) {
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_err_t err = esp_http_client_perform(client);
-
+    ESP_LOGI(TAG, "Requesting rr_reply");
     if (err == ESP_OK) {
         switch (esp_http_client_get_status_code(client)) {
             case 200:
-                ESP_LOGI(TAG, "Got reply! %i", response_buffer->buf_pos);
-                process_reprap_reply(response_buffer);
+                if (response_buffer->buf_pos > 1) {
+                    ESP_LOGI(TAG, "Got reply!");
+                    process_reprap_reply(response_buffer);
+                }
                 break;
             case 401:
                 ESP_LOGI(TAG, "Authorising with Duet");
                 wifi_duet_authorise(response_buffer, false);
                 break;
             default:
+                ESP_LOGE(TAG, "Error getting reply (HTTP error code %i)!", esp_http_client_get_status_code(client));
                 break;
         }
     } else {
@@ -768,7 +1016,12 @@ bool reprap_wifi_send_gcode(char *gcode) {
     char request_addr[MAX_REQ_ADDR_LENGTH];
     char encoded_gcode[strlen(gcode) * 3];
     url_encode((unsigned char *) gcode, encoded_gcode);
-    sprintf(request_addr, "%s/rr_gcode?gcode=%s", rep_addr_resolved, encoded_gcode);
+    if (duet_sbc_mode) {
+        sprintf(request_addr, "%s/machine/code", rep_addr_resolved);
+    } else {
+        sprintf(request_addr, "%s/rr_gcode?gcode=%s", rep_addr_resolved, encoded_gcode);
+    }
+
     ESP_LOGV(TAG, "%s", request_addr);
     wifi_response_buff_t resp_buff_gui_task;
     esp_http_client_config_t config = {
@@ -778,19 +1031,32 @@ bool reprap_wifi_send_gcode(char *gcode) {
             .user_data = &resp_buff_gui_task
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
+    if (duet_sbc_mode) {
+        esp_http_client_set_method(client, HTTP_METHOD_POST);
+        esp_http_client_set_post_field(client, gcode, strlen(gcode));
+    }
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
-        ESP_LOGI(TAG, "Status = %d, content_length = %d",
-                 esp_http_client_get_status_code(client),
+        ESP_LOGI(TAG, "Status = %d, content_length = %d", esp_http_client_get_status_code(client),
                  esp_http_client_get_content_length(client));
         switch (esp_http_client_get_status_code(client)) {
             case 200:
                 success = true;
                 break;
             case 401:
-                ESP_LOGI(TAG, "Authorising with Duet");
+                //ESP_LOGI(TAG, "Authorising with Duet");
                 wifi_duet_authorise(&resp_buff_gui_task, false);
+                break;
+            case 500:
+                ESP_LOGE(TAG, "Generic error getting status");
+                break;
+            case 502:
+                ESP_LOGE(TAG, "Incompatible DCS version");
+                break;
+            case 503:
+                ESP_LOGE(TAG, "Send GCode: DCS is unavailable");
+                duet_sbc_mode = false;
                 break;
             default:
                 break;
@@ -800,6 +1066,13 @@ bool reprap_wifi_send_gcode(char *gcode) {
         success = false;
     }
     esp_http_client_cleanup(client);
+    if (success) {
+        if (duet_sbc_mode) {
+            // TODO: Get reply
+        } else {
+            reprap_wifi_get_rreply(&resp_buff_gui_task);
+        }
+    }
     return success;
 }
 
@@ -807,7 +1080,11 @@ void reprap_wifi_get_filelist(wifi_response_buff_t *resp_buffer, char *directory
     char request_addr[MAX_REQ_ADDR_LENGTH];
     char encoded_dir[strlen(directory) * 3];
     url_encode((unsigned char *) directory, encoded_dir);
-    sprintf(request_addr, "%s/rr_filelist?dir=%s", rep_addr_resolved, encoded_dir);
+    if (duet_sbc_mode) {
+        sprintf(request_addr, "%s/machine/directory/%s", rep_addr_resolved, encoded_dir);
+    } else {
+        sprintf(request_addr, "%s/rr_filelist?dir=%s&first=0", rep_addr_resolved, encoded_dir);
+    }
     ESP_LOGI(TAG, "%s", request_addr);
     esp_http_client_config_t config = {
             .url = request_addr,
@@ -819,16 +1096,25 @@ void reprap_wifi_get_filelist(wifi_response_buff_t *resp_buffer, char *directory
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
-        ESP_LOGI(TAG, "Got file list via WiFi %d",
-                 esp_http_client_get_content_length(client));
+        ESP_LOGI(TAG, "Got file list via WiFi %d", esp_http_client_get_content_length(client));
 
         switch (esp_http_client_get_status_code(client)) {
             case 200:
                 process_reprap_filelist(resp_buffer->buffer);
                 break;
             case 401:
-                ESP_LOGI(TAG, "Authorising with Duet");
+                //ESP_LOGI(TAG, "Authorising with Duet");
                 wifi_duet_authorise(resp_buffer, false);
+                break;
+            case 500:
+                ESP_LOGE(TAG, "Generic error getting file list");
+                break;
+            case 502:
+                ESP_LOGE(TAG, "Incompatible DCS version");
+                break;
+            case 503:
+                ESP_LOGE(TAG, "Get filelist: DCS is unavailable");
+                duet_sbc_mode = false;
                 break;
             default:
                 break;
@@ -848,7 +1134,11 @@ void reprap_wifi_get_filelist_task(void *params) {
     char request_addr[MAX_REQ_ADDR_LENGTH];
     char encoded_dir[strlen(directory) * 3];
     url_encode((unsigned char *) directory, encoded_dir);
-    sprintf(request_addr, "%s/rr_filelist?dir=%s&first=0", rep_addr_resolved, encoded_dir);
+    if (duet_sbc_mode) {
+        sprintf(request_addr, "%s/machine/directory/%s", rep_addr_resolved, encoded_dir);
+    } else {
+        sprintf(request_addr, "%s/rr_filelist?dir=%s&first=0", rep_addr_resolved, encoded_dir);
+    }
     ESP_LOGD("FileListTask", "Unformatted: %s", directory);
     ESP_LOGD("FileListTask", "Request: %s", request_addr);
     wifi_response_buff_t resp_buff_filelist_task;
@@ -862,17 +1152,25 @@ void reprap_wifi_get_filelist_task(void *params) {
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
-        ESP_LOGI(TAG, "Status = %d, content_length = %d",
-                 esp_http_client_get_status_code(client),
-                 esp_http_client_get_content_length(client));
+        //ESP_LOGI(TAG, "Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
 
         switch (esp_http_client_get_status_code(client)) {
             case 200:
                 process_reprap_filelist(resp_buff_filelist_task.buffer);
                 break;
             case 401:
-                ESP_LOGI(TAG, "Authorising with Duet");
+                //ESP_LOGI(TAG, "Authorising with Duet");
                 wifi_duet_authorise(&resp_buff_filelist_task, false);
+                break;
+            case 500:
+                ESP_LOGE(TAG, "Generic error getting file list");
+                break;
+            case 502:
+                ESP_LOGE(TAG, "Incompatible DCS version");
+                break;
+            case 503:
+                ESP_LOGE(TAG, "Get filelist: DCS is unavailable");
+                duet_sbc_mode = false;
                 break;
             default:
                 break;
@@ -889,9 +1187,17 @@ void reprap_wifi_get_fileinfo(wifi_response_buff_t *resp_data, char *filename) {
     if (filename != NULL) {
         char encoded_filename[strlen(filename) * 3];
         url_encode((unsigned char *) filename, encoded_filename);
-        sprintf(request_addr, "%s/rr_fileinfo?dir=%s", rep_addr_resolved, encoded_filename);
+        if (duet_sbc_mode) {
+            sprintf(request_addr, "%s/machine/fileinfo/%s", rep_addr_resolved, encoded_filename);
+        } else {
+            sprintf(request_addr, "%s/rr_fileinfo?dir=%s", rep_addr_resolved, encoded_filename);
+        }
     } else {
-        sprintf(request_addr, "%s/rr_fileinfo", rep_addr_resolved);
+        if (duet_sbc_mode) {
+            sprintf(request_addr, "%s/machine/fileinfo", rep_addr_resolved);
+        } else {
+            sprintf(request_addr, "%s/rr_fileinfo", rep_addr_resolved);
+        }
     }
     ESP_LOGI(TAG, "Getting file info %s", request_addr);
     esp_http_client_config_t config = {
@@ -909,8 +1215,18 @@ void reprap_wifi_get_fileinfo(wifi_response_buff_t *resp_data, char *filename) {
                 process_reprap_fileinfo(resp_data->buffer);
                 break;
             case 401:
-                ESP_LOGI(TAG, "Authorising with Duet");
+                //ESP_LOGI(TAG, "Authorising with Duet");
                 wifi_duet_authorise(resp_data, false);
+                break;
+            case 500:
+                ESP_LOGE(TAG, "Generic error getting file info");
+                break;
+            case 502:
+                ESP_LOGE(TAG, "Incompatible DCS version");
+                break;
+            case 503:
+                ESP_LOGE(TAG, "Fileinfo: DCS is unavailable");
+                duet_sbc_mode = false;
                 break;
             default:
                 break;
@@ -935,16 +1251,14 @@ void reprap_wifi_get_config() {
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
-        ESP_LOGI(TAG, "Status = %d, content_length = %d",
-                 esp_http_client_get_status_code(client),
-                 esp_http_client_get_content_length(client));
+        //ESP_LOGI(TAG, "Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
     }
     switch (esp_http_client_get_status_code(client)) {
         case 200:
             // TODO process_reprap_config();
             break;
         case 401:
-            ESP_LOGI(TAG, "Authorising with Duet");
+            //ESP_LOGI(TAG, "Authorising with Duet");
             wifi_duet_authorise(&resp_buff_gui_task, false);
             break;
         default:
@@ -955,9 +1269,13 @@ void reprap_wifi_get_config() {
 
 
 void reprap_wifi_download(wifi_response_buff_t *response_buffer, char *file) {
-    ESP_LOGI(TAG, "Downloading %s", file);
+    //ESP_LOGI(TAG, "Downloading %s", file);
     char request_addr[MAX_REQ_ADDR_LENGTH];
-    sprintf(request_addr, "%s/rr_download?name=%s", rep_addr_resolved, file);
+    if (duet_sbc_mode) {
+        sprintf(request_addr, "%s/machine/file/%s", rep_addr_resolved, file);
+    } else {
+        sprintf(request_addr, "%s/rr_download?name=%s", rep_addr_resolved, file);
+    }
     esp_http_client_config_t config = {
             .url = request_addr,
             .timeout_ms = REQUEST_TIMEOUT_MS,
@@ -969,9 +1287,7 @@ void reprap_wifi_download(wifi_response_buff_t *response_buffer, char *file) {
     esp_err_t err = esp_http_client_perform(client);
 
     if (err == ESP_OK) {
-        ESP_LOGI(TAG, "Status = %d, content_length = %d",
-                 esp_http_client_get_status_code(client),
-                 esp_http_client_get_content_length(client));
+        //ESP_LOGI(TAG, "Status = %d, content_length = %d", esp_http_client_get_status_code(client), esp_http_client_get_content_length(client));
 
         switch (esp_http_client_get_status_code(client)) {
             case 200:
@@ -981,8 +1297,18 @@ void reprap_wifi_download(wifi_response_buff_t *response_buffer, char *file) {
                 }
                 break;
             case 401:
-                ESP_LOGI(TAG, "Authorising with Duet");
+                //ESP_LOGI(TAG, "Authorising with Duet");
                 wifi_duet_authorise(response_buffer, false);
+                break;
+            case 500:
+                ESP_LOGE(TAG, "Generic error downloading file");
+                break;
+            case 502:
+                ESP_LOGE(TAG, "Incompatible DCS version");
+                break;
+            case 503:
+                ESP_LOGE(TAG, "Wifi download: DCS is unavailable");
+                duet_sbc_mode = false;
                 break;
             default:
                 break;
@@ -1084,6 +1410,55 @@ void request_jobs(char *folder_path) {
     }
 }
 
+void request_rrf_status(uart_response_buff_t *receive_buff, wifi_response_buff_t *resp_buff, int type, char *key,
+                        char *flags) {
+    if (rp_conn_stat == REPPANEL_UART_CONNECTED) {
+        reprap_uart_get_status(receive_buff, type, key, flags);
+    } else if (rp_conn_stat == REPPANEL_WIFI_CONNECTED ||
+               rp_conn_stat == REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED) {
+        reprap_wifi_get_status(resp_buff, type, key, flags);
+    }
+}
+
+void request_rrf3_extended_info(uart_response_buff_t *uart_receive_buff, wifi_response_buff_t *wifi_resp_buff) {
+    if (reprap_model.reprap_seqs_changed.tools_changed) {
+        request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "tools", "d99vn");
+    }
+    if (reprap_model.reprap_seqs_changed.sensors_changed) {
+        request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "sensors", "d99vn");
+    }
+    if (reprap_model.reprap_seqs_changed.state_changed) {
+        request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "state", "d99vn");
+    }
+    if (reprap_model.reprap_seqs_changed.network_changed) {
+        request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "network", "d99vn");
+    }
+    if (reprap_model.reprap_seqs_changed.move_changed) {
+        request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "move", "d99vn");
+    }
+    if (reprap_model.reprap_seqs_changed.job_changed) {
+        request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "job", "d99vn");
+    }
+    if (reprap_model.reprap_seqs_changed.inputs_changed) {
+        request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "inputs", "d99vn");
+    }
+    if (reprap_model.reprap_seqs_changed.heat_changed) {
+        request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "heat", "d99vn");
+    }
+    if (reprap_model.reprap_seqs_changed.global_changed) {
+        request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "global", "d99vn");
+    }
+    if (reprap_model.reprap_seqs_changed.fans_changed) {
+        request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "fans", "d99vn");
+    }
+    if (reprap_model.reprap_seqs_changed.network_changed) {
+        request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "network", "d99vn");
+    }
+    if (reprap_model.reprap_seqs_changed.directories_changed) {
+        request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "directories", "d99vn");
+    }
+}
+
 bool update_printer_addr() {
     ESP_LOGI(TAG, "Updating printer address");
     if (ends_with(rep_addr, ".local")) {
@@ -1123,7 +1498,18 @@ void request_reprap_status_updates(void *params) {
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
         if (rp_conn_stat == REPPANEL_UART_CONNECTED) {
             if (!got_duet_settings) {
-                reprap_uart_download(&uart_receive_buff, "0:/sys/dwc2settings.json");   // get dummy values
+                reprap_uart_check_objmodel_support(&uart_receive_buff);
+                if (reprap_model.api_level < 1) {  // RRF2
+                    reprap_uart_download(&uart_receive_buff, "0:/sys/dwc2settings.json");   // get dummy values
+                } else {
+                    reprap_uart_download(&uart_receive_buff, "0:/sys/dwc-settings.json");   // get dummy values
+                    request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "boards", "d99vn");
+                    request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "fans", "d99vn");
+                    request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "heat", "d99vn");
+                    request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "job", "d99vn");
+                    request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "move", "d99vn");
+                    request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "tools", "d99vn");
+                }
             }
             if (!got_filaments) reprap_uart_get_filelist(&uart_receive_buff, "0:/filaments");
             if (uart_request_file_info) reprap_uart_get_file_info(&uart_receive_buff);
@@ -1135,23 +1521,39 @@ void request_reprap_status_updates(void *params) {
                 reprap_uart_get_filelist(&uart_receive_buff, request_file_path);
                 duet_request_macros = false;
             }
-            if (!got_extended_status) reprap_uart_get_status(&uart_receive_buff, 3);
+            if (!got_extended_status) request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 3, "", "d99fn");
             if (!job_running)
-                reprap_uart_get_status(&uart_receive_buff, 2);
+                request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "", "d99fn");
             else
-                reprap_uart_get_status(&uart_receive_buff, 4);
+                request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 4, "", "d99fn");
+            if (reprap_model.api_level >= 1) {
+                request_rrf3_extended_info(&uart_receive_buff, &resp_buff_status_update_task);
+            }
             if (i == 20) {
-                reprap_uart_get_status(&uart_receive_buff, 3);
+                request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 3, "", "d99fn");
                 i = 0;
             } else { i++; }
         } else if (rp_conn_stat == REPPANEL_WIFI_CONNECTED ||
                    rp_conn_stat == REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED) {
             if (init_printer_addr_updated) {
-                if (!got_duet_settings)
-                    reprap_wifi_download(&resp_buff_status_update_task, "0%3A%2Fsys%2Fdwc2settings.json");
+                if (!got_duet_settings) {
+                    if (reprap_model.api_level < 1) {  // RRF2
+                        reprap_wifi_download(&resp_buff_status_update_task, "0%3A%2Fsys%2Fdwc2settings.json");
+                    } else {
+                        reprap_wifi_download(&resp_buff_status_update_task, "0%3A%2Fsys%2Fdwc-settings.json");
+                        request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "boards", "d99vn");
+                        request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "fans", "d99vn");
+                        request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "heat", "d99vn");
+                        request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "job", "d99vn");
+                        request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "move", "d99vn");
+                        request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "tools", "d99vn");
+                    }
+                }
                 if (!got_filaments) reprap_wifi_get_filelist(&resp_buff_status_update_task, "0:/filaments&first=0");
-                if (!got_extended_status) reprap_wifi_get_status(&resp_buff_status_update_task, 2);
-                if (duet_request_reply) reprap_wifi_get_rreply(&resp_buff_status_update_task);
+                if (reprap_model.api_level < 1) {  // RRF2
+                    if (!got_extended_status)
+                        request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "", "d99fn");
+                }
                 // for synchron request of jobs
                 if (duet_request_jobs) {
                     reprap_wifi_get_filelist(&resp_buff_status_update_task, request_file_path);
@@ -1163,12 +1565,17 @@ void request_reprap_status_updates(void *params) {
                     duet_request_macros = false;
                 }
                 if (!job_running)
-                    reprap_wifi_get_status(&resp_buff_status_update_task, 0);
+                    request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 0, "", "d99fn");
                 else
-                    reprap_wifi_get_status(&resp_buff_status_update_task, 3);
-                if (i == 20) {
-                    reprap_wifi_get_status(&resp_buff_status_update_task, 2);
+                    request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 3, "", "d99fn");
+//                if (reprap_model.reprap_seqs_changed.reply_changed) {
+//                    reprap_wifi_get_rreply(&resp_buff_status_update_task);
+//                }
+                if (reprap_model.api_level >= 1) {
+                    request_rrf3_extended_info(&uart_receive_buff, &resp_buff_status_update_task);
+                }
 
+                if (i == 20) {
                     // Check if we got a UART connection
                     if (reppanel_is_uart_connected()) {
                         rp_conn_stat = REPPANEL_UART_CONNECTED;
@@ -1180,8 +1587,8 @@ void request_reprap_status_updates(void *params) {
                     }
                     i = 0;
                 } else { i++; }
-                if (b == 20) {
-                    update_printer_addr();  // in case addres has changed
+                if (b == 100) {
+                    update_printer_addr();  // in case address has changed
                     b = 0;
                 } else { b++; }
             } else {
