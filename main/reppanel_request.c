@@ -120,6 +120,7 @@ void process_reprap2_status(char *buff) {
         cJSON_Delete(root);
         return;
     }
+
     cJSON *name = cJSON_GetObjectItem(root, DUET_STATUS);
     if (cJSON_IsString(name) && (name->valuestring != NULL)) {
         strlcpy(reprap_model.reprap_state.status, decode_reprap2_status(name->valuestring), REPRAP_MAX_STATUS_LEN);
@@ -746,6 +747,31 @@ void process_reprap_reply(wifi_response_buff_t *response_buffer) {
 void reprap_uart_send_gcode(char *gcode) {
     reppanel_write_uart(gcode, strlen(gcode));
     ESP_LOGD(TAG, "Sent %s", gcode);
+}
+
+void reprap_uart_check_objmodel_support(uart_response_buff_t *receive_buff) {
+    reprap_uart_send_gcode("M409 F\"d2f\"");
+    if (reppanel_read_response(receive_buff)) {
+        cJSON *root = cJSON_Parse((char *) receive_buff->buffer);
+        if (root == NULL) {
+            ESP_LOGW(TAG, "Could not detect M409 Object Model query support");
+            cJSON_Delete(root);
+            reprap_model.api_level = 0;
+            return;
+        }
+        cJSON *result = cJSON_GetObjectItem(root, "result");
+        if (result == NULL) {
+            ESP_LOGW(TAG, "Could not detect M409 Object Model \"result\" as part of JSON");
+            cJSON_Delete(root);
+            reprap_model.api_level = 0;
+            return;
+        }
+        reprap_model.api_level = 1;
+    } else {
+        ESP_LOGW(TAG, "Did not receive a response on requesting M409 Object Model");
+        reprap_model.api_level = 0;
+    }
+    ESP_LOGI(TAG, "Detected API-Level Support: %i", reprap_model.api_level);
 }
 
 void reprap_uart_get_status(uart_response_buff_t *receive_buff, int type, char *key, char *flags) {
@@ -1469,6 +1495,7 @@ void request_reprap_status_updates(void *params) {
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
         if (rp_conn_stat == REPPANEL_UART_CONNECTED) {
             if (!got_duet_settings) {
+                reprap_uart_check_objmodel_support(&uart_receive_buff);
                 if (reprap_model.api_level < 1) {  // RRF2
                     reprap_uart_download(&uart_receive_buff, "0:/sys/dwc2settings.json");   // get dummy values
                 } else {

@@ -13,6 +13,7 @@
 
 #include "esp32_settings.h"
 #include "reppanel.h"
+#include "rrf_objects.h"
 
 #define TAG "ESP32WiFi"
 #define MAXIMUM_RETRY_WIFI  5
@@ -185,7 +186,7 @@ void get_connection_info(char txt_buffer[200]) {
             strcpy(txt_buffer, "Not connected to network or UART");
             break;
         case REPPANEL_UART_CONNECTED:
-            strcpy(txt_buffer, "Connected via UART");
+            sprintf(txt_buffer, "Connected via UART\nRRF API-Level %i", reprap_model.api_level);
             break;
         case REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED:
             memset(&ap_info, 0, sizeof(ap_info));
@@ -196,7 +197,7 @@ void get_connection_info(char txt_buffer[200]) {
         case REPPANEL_WIFI_CONNECTED:
             memset(&ap_info, 0, sizeof(ap_info));
             ESP_ERROR_CHECK(esp_wifi_sta_get_ap_info(&ap_info));
-            sprintf(txt_buffer, "Connected to %s\nSignal: %ddBm", ap_info.ssid, ap_info.rssi);
+            sprintf(txt_buffer, "Connected to %s\nSignal: %ddBm\nRRF API-Level %i", ap_info.ssid, ap_info.rssi, reprap_model.api_level);
             break;
         case REPPANEL_WIFI_RECONNECTING:
             strcpy(txt_buffer, "Reconnecting");
