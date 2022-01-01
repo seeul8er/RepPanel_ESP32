@@ -8,6 +8,7 @@
 #include <cJSON.h>
 #include <lvgl/lvgl.h>
 #include <esp_log.h>
+#include <driver/uart.h>
 #include "duet_status_json.h"
 #include "reppanel.h"
 #include "reppanel_request.h"
@@ -369,7 +370,7 @@ void process_reprap2_status(char *buff) {
  * @param buff raw HTTP response buffer containing object model JSON
  */
 void process_reprap3_status(char *buff) {
-    cJSON *root = cJSON_Parse(buff);
+    cJSON *root = cJSON_ParseWithLength(buff, JSON_BUFF_SIZE);
     if (root == NULL) {
         const char *error_ptr = cJSON_GetErrorPtr();
         if (error_ptr != NULL) {
@@ -687,7 +688,7 @@ void process_reprap_filelist(char *buffer) {
 }
 
 void process_reprap_fileinfo(char *data_buff) {
-    cJSON *root = cJSON_Parse(data_buff);
+    cJSON *root = cJSON_ParseWithLength(data_buff, JSON_BUFF_SIZE);
     if (root == NULL) {
         const char *error_ptr = cJSON_GetErrorPtr();
         if (error_ptr != NULL) {
@@ -750,6 +751,8 @@ void reprap_uart_send_gcode(char *gcode) {
 }
 
 void reprap_uart_check_objmodel_support(uart_response_buff_t *receive_buff) {
+    ESP_LOGI(TAG, "Checking RRF API-Level Support");
+    esp32_flush_uart();
     reprap_uart_send_gcode("M409 F\"d2f\"");
     if (reppanel_read_response(receive_buff)) {
         cJSON *root = cJSON_Parse((char *) receive_buff->buffer);
@@ -775,7 +778,7 @@ void reprap_uart_check_objmodel_support(uart_response_buff_t *receive_buff) {
 }
 
 void reprap_uart_get_status(uart_response_buff_t *receive_buff, int type, char *key, char *flags) {
-    ESP_LOGI(TAG, "Getting status (UART) %i - API Level %i", type, reprap_model.api_level);
+    ESP_LOGI(TAG, "Getting status (UART) %i - API-Level %i - key: %s flags: %s", type, reprap_model.api_level, key, flags);
     char buff[32];
     if (reprap_model.api_level < 1) {
         sprintf(buff, "M408 S%i", type);
@@ -784,7 +787,7 @@ void reprap_uart_get_status(uart_response_buff_t *receive_buff, int type, char *
     }
     reprap_uart_send_gcode(buff);
     if (reppanel_read_response(receive_buff)) {
-//        ESP_LOGI(TAG, "%s", receive_buff->buffer);
+        ESP_LOGI(TAG, "%s", receive_buff->buffer);
         process_reprap_status((char *) receive_buff->buffer);
     }
 }
@@ -1518,7 +1521,7 @@ void request_reprap_status_updates(void *params) {
                 reprap_uart_get_filelist(&uart_receive_buff, request_file_path);
                 duet_request_macros = false;
             }
-            if (!got_extended_status) request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 3, "", "");
+            if (!got_extended_status) request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 3, "", "d99fn");
             if (!job_running)
                 request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "", "d99fn");
             else

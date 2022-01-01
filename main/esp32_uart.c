@@ -65,6 +65,12 @@ bool reppanel_is_uart_connected() {
     return (length > 0);
 }
 
+void esp32_flush_uart() {
+    if (uart_inited) {
+        uart_flush(uart_num);
+    }
+}
+
 void reppanel_write_uart(char *buffer, int buffer_len) {
     if (uart_inited) {
         if (uart_write_bytes(uart_num, (const char *) buffer, buffer_len) != buffer_len)

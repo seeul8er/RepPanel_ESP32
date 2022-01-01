@@ -13,6 +13,7 @@
 
 void init_uart();
 void reppanel_write_uart(char *buffer, int buffer_len);
+void esp32_flush_uart();
 bool reppanel_is_uart_connected();
 bool reppanel_read_response(uart_response_buff_t *receive_buff);
 

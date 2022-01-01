@@ -22,7 +22,10 @@ void reppanel_parse_rrf_boards(cJSON *boards_result, cJSON *flags, reprap_model_
     cJSON *board_temps = cJSON_GetArrayItem(boards_result, 0);
     if (board_temps) {
         cJSON *mcu_temp = cJSON_GetObjectItemCaseSensitive(board_temps, "mcuTemp");
-        reprap_mcu_temp = cJSON_GetObjectItemCaseSensitive(mcu_temp, "current")->valuedouble;
+        if (mcu_temp) {
+            cJSON *current_mcu_temp = cJSON_GetObjectItemCaseSensitive(mcu_temp, "current");
+            if (current_mcu_temp) reprap_mcu_temp = current_mcu_temp->valuedouble;
+        }
     }
     if (strcmp(flags->valuestring, "d99vn") == 0) { _reprap_model->reprap_seqs_changed.boards_changed = 0; }
 }
@@ -31,7 +34,8 @@ void reppanel_parse_rrf_fans(cJSON *fans_result, cJSON *flags, reprap_model_t *_
     if (cJSON_GetArraySize(fans_result) > 0) {
         cJSON *fan_zero = cJSON_GetArrayItem(fans_result, reprap_tools[0].fans);
         if (fan_zero) {
-            reprap_params.fan = (int16_t) (cJSON_GetObjectItemCaseSensitive(fan_zero, "actualValue")->valuedouble * 100);
+            cJSON *val = cJSON_GetObjectItemCaseSensitive(fan_zero, "actualValue");
+            if (val) { reprap_params.fan = (int16_t) (val->valuedouble * 100); }
         }
     }
     if (strcmp(flags->valuestring, "d99vn") == 0) { _reprap_model->reprap_seqs_changed.fans_changed = 0; }
@@ -109,8 +113,10 @@ void reppanel_parse_rrf_tools(cJSON *tools_result, int *_heater_states, cJSON *f
         if (val && cJSON_GetArraySize(val) > 0) reprap_tools[i].number = val->valueint;
         cJSON *active_temp_array = cJSON_GetObjectItemCaseSensitive(tool, "active");
         cJSON *standby_temp_array = cJSON_GetObjectItemCaseSensitive(tool, "standby");
-        reprap_tools[i].active_temp = cJSON_GetArrayItem(active_temp_array, 0)->valuedouble;
-        reprap_tools[i].standby_temp = cJSON_GetArrayItem(standby_temp_array, 0)->valuedouble;
+        if (cJSON_GetArraySize(active_temp_array) > 0)
+            reprap_tools[i].active_temp = cJSON_GetArrayItem(active_temp_array, 0)->valuedouble;
+        if (cJSON_GetArraySize(standby_temp_array) > 0)
+            reprap_tools[i].standby_temp = cJSON_GetArrayItem(standby_temp_array, 0)->valuedouble;
         val = cJSON_GetObjectItemCaseSensitive(tool, "fans");
         if (val) {
             reprap_tools[i].fans = cJSON_GetArrayItem(val, 0)->valueint;
