@@ -57,16 +57,27 @@ The RepPanel project is based on the [LVGL port for the ESP32](https://github.co
 In theory this means all displays and touch controllers supported by the **lv_port_esp32** project are also supported
 by RepPanel.
 
-**Tested Hardware**
-  - ESP32 DevKit
+###Tested Hardware
+The listed hardware below is tested and pre-compiled images are available under GitHub releases.
+
+####Hardware v1 (HWv1) platform
+  - ESP32 DevKit without external RAM
   - [ER-TFTM035-6 display with capacitive touch screen, 4-Wire SPI, No font chip required](https://www.buydisplay.com/lcd-3-5-inch-320x480-tft-display-module-optl-touch-screen-w-breakout-board)
 
-**Beware: There are numerous version of the ER-TFT035-6. You must choose the one with the SPI interface. Do not get the arduino shield version (no SPI config). The version with the screen breakout board is sufficient.**  
+
+**Beware:** There are numerous version of the ER-TFT035-6. You must choose the one with the SPI interface. Do not get the arduino shield version (no SPI config). The version with the screen breakout board is sufficient.**  
 Other display modules with a resolution of 480x320 should also work as long as they are supported by `lv_port_esp32`  
 As of now RepPanel is optimized for 3.5" displays with a resolution of 480x320 pixels. The display is connected via SPI.
 
+####Hardware v2 (HWv2) platform
+  - coming soon
+  
+###Differences between HWv1 & HWv2
+coming soon
+
 **Tested Firmware**
-  - Duet2 WiFi running RepRap Firmware v3.0, v3.1, v3.2 and corresponding Duet2WebControl
+  - Duet2 WiFi running RepRap Firmware v3.0, v3.1, v3.2, v3.3 and corresponding Duet2WebControl
+  - Duet3D + SBC is not supported via Wifi - only via the PanelDue serial port (wired connection)
 
 ## Installation
 Use ready made images or compile yourself.
@@ -76,14 +87,14 @@ Use ready made images or compile yourself.
 #### Set up ESP-IDF
 
 [Follow instructions](https://docs.espressif.com/projects/esp-idf/en/v4.0/get-started/index.html#step-1-install-prerequisites) on offical Espressif site.  
-ESP-IDF v4.0 is officially supported.
+ESP-IDF v4.0 is officially supported. ESP-IDF v4.3 is officially supported for the HWv2 electronics platform.
 
 #### Clone Project
 
 ```bash
 git clone --recurse-submodules https://github.com/seeul8er/RepPanel_ESP32
 ```
-LVGL v7 is not supported. Last tested release of `lv_port_esp32` is commit `c1f43bfb090df293059ab52baabbdbdd8df00712`.
+LVGL v7 is not supported. Last tested release of `lv_port_esp32` is commit `a76a3d5d9225d0cfb92c896b6b0f1867b62aa2b6`.
 The project is linked against a fork to keep the legacy support and be able to fix bugs.
 
 #### Configure Project
@@ -92,6 +103,9 @@ From its root run:
 ```bash
 idf.py menuconfig
 ```
+Under ``Component configuration`` you can change the supported TFT and Touchcontroller configuration and RepPanel 
+specific settings.  
+
 **See [Custom LVGL port for the ESP32](https://github.com/seeul8er/lv_port_esp32/tree/c1f43bfb090df293059ab52baabbdbdd8df00712) for further and more detailed instructions.**
 
 #### Compile & Flash
@@ -107,7 +121,7 @@ case you use different hardware or want a different pin connection layout
 
 Check out [releases](https://github.com/seeul8er/RepPanel_ESP32/releases) for compiled binaries.
 
-### Wiring ER-TFTM035-6 to the ESP32 DevKit
+### Wiring ER-TFTM035-6 to the ESP32 DevKit (HWv1)
 
 **Beware:** The available development boards have different pin configurations. Some have GND & 3.3V at the bottom. Others at the top.
 
@@ -143,8 +157,8 @@ Use the provided for of lvgl for ESP32. This one contains the supported version 
 Copy file content of `main/lv_conf_back.h` over to `externals/lv_port_esp32/components/lvgl/lv_conf.h`.  
 Or simply add:
 - Set `LV_USE_USER_DATA 1`
+- Set `LV_MEM_SIZE    (17U * 1024U)` to free up unused RAM
 - Add `#define LV_USE_THEME_REP_PANEL_DARK 1`
-- Set `LV_INDEV_DEF_DRAG_THROW 85` to decrease DMA usage and increase stability
 - `CONFIG_LVGL_FONT_ROBOTO16` & `CONFIG_LVGL_FONT_ROBOTO22` must be activated
 - Add
 ```C
@@ -157,16 +171,17 @@ Or simply add:
                                        LV_FONT_DECLARE(reppanel_font_roboto_regular_percent_40)
 ```
 
+**Compilation options for different hardware platforms**
+- esp-idf 4.0.x for ER-TFTM035-6 and other ILI9488 based displays (later esp-idf versions cause rendering artifacts)
+- esp-idf 4.0.x or 4.3.x for ST7796s based displays
+
 ## Known Limitations
 - Multiple tools supported but not tested
 - Auto swap from UART to WiFi connection might take up to 10s
-- Entries per directory listing limited to 16 for jobs and macros
-- Directory path limited to 128 characters
+- Entries per directory listing limited to 24 for jobs and macros for ESP32 modules without external RAM
+- Directory path limited to 160 characters for ESP32 modules without external RAM
 - Filament listing (all filament names separated by one character) limited to 1014
 - No support for Duet3 + SBC via Wifi because of a different API
   - Workaround: Use wired UART/PanelDue connection
 - Can not list all files within a directory in case DuetWebControl API requires multiple requests per listing
   - Workaround: Delete files to reduce file count to make all files fit within one response
-  
-## Known Bugs
-- Irregular freezes of the screen with RRF 3.x

@@ -143,6 +143,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
     }
 }
 
+#if ESP_IDF_VERSION_MAJOR == 4 && ESP_IDF_VERSION_MINOR == 3
 void wifi_init_sta_4_3() {
     s_wifi_event_group = xEventGroupCreate();
     ESP_ERROR_CHECK(esp_netif_init());
@@ -187,8 +188,7 @@ void wifi_init_sta_4_3() {
     ESP_LOGI(TAG, "wifi_init_sta finished.");
     start_mdns_service();
 }
-
-#if ESP_IDF_VERSION_MAJOR != 4 && ESP_IDF_VERSION_MINOR != 3
+#else
 void wifi_init_sta() {
     s_wifi_event_group = xEventGroupCreate();
     tcpip_adapter_init();

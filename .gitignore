@@ -41,3 +41,9 @@ cmake-build-debug-xtensa/
 cmake-build-debug-mingw-esp-idf-400/
 
 cmake-build-debug-mingw-esp-idf-43/
+
+cmake-build-esp-idf-404/
+
+cmake-build-esp-idf-404-release/
+
+cmake-build-esp-idf-404-debug/

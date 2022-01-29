@@ -623,6 +623,8 @@ void process_reprap_filelist(char *buffer) {
         }
     } else if (dir_name && strncmp("0:/macros", dir_name->valuestring, 9) == 0) {
         ESP_LOGI(TAG, "Processing macros");
+        // will add a back button if dir is empty
+        strncpy(reprap_dir_elem[0].dir, dir_name->valuestring, MAX_LEN_DIRNAME - 1);
         for (int i = 0; i < MAX_NUM_ELEM_DIR; i++) {
             reprap_dir_elem[i].type = TREE_EMPTY_ELEM;
         }
@@ -655,6 +657,8 @@ void process_reprap_filelist(char *buffer) {
     } else if (dir_name && strncmp("0:/gcodes", dir_name->valuestring, 9) == 0) {
         ESP_LOGI(TAG, "Processing jobs");
         cJSON *iterator = NULL;
+        // will add a back button if dir is empty
+        strncpy(reprap_dir_elem[0].dir, dir_name->valuestring, MAX_LEN_DIRNAME - 1);
         for (int i = 0; i < MAX_NUM_ELEM_DIR; i++) {  // clear array
             reprap_dir_elem[i].type = TREE_EMPTY_ELEM;
         }
