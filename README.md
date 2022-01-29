@@ -57,10 +57,10 @@ The RepPanel project is based on the [LVGL port for the ESP32](https://github.co
 In theory this means all displays and touch controllers supported by the **lv_port_esp32** project are also supported
 by RepPanel.
 
-###Tested Hardware
+### Tested Hardware
 The listed hardware below is tested and pre-compiled images are available under GitHub releases.
 
-####Hardware v1 (HWv1) platform
+#### Hardware v1 (HWv1) platform
   - ESP32 DevKit without external RAM
   - [ER-TFTM035-6 display with capacitive touch screen, 4-Wire SPI, No font chip required](https://www.buydisplay.com/lcd-3-5-inch-320x480-tft-display-module-optl-touch-screen-w-breakout-board)
 
@@ -69,10 +69,10 @@ The listed hardware below is tested and pre-compiled images are available under 
 Other display modules with a resolution of 480x320 should also work as long as they are supported by `lv_port_esp32`  
 As of now RepPanel is optimized for 3.5" displays with a resolution of 480x320 pixels. The display is connected via SPI.
 
-####Hardware v2 (HWv2) platform
+#### Hardware v2 (HWv2) platform
   - coming soon
   
-###Differences between HWv1 & HWv2
+### Differences between HWv1 & HWv2
 coming soon
 
 **Tested Firmware**
