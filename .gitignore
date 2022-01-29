@@ -37,3 +37,7 @@ cmake-build-debug-mingw/
 cmake-build-release-xtensa/
 
 cmake-build-debug-xtensa/
+
+cmake-build-debug-mingw-esp-idf-400/
+
+cmake-build-debug-mingw-esp-idf-43/

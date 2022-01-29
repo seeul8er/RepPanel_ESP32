@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <nvs_flash.h>
+#include <esp_log.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -49,10 +50,10 @@ _Noreturn void guiTask();
 void app_main() {
     //If you want to use a task to create the graphic, you NEED to create a Pinned task
     //Otherwise there can be problem such as memory corruption and so on
-    xTaskCreatePinnedToCore(guiTask, "gui", 512 * 17, NULL, 0, NULL, 1);
+    xTaskCreatePinnedToCore(guiTask, "gui", CONFIG_REPPANEL_GUI_TASK_STACK_SIZE, NULL, 0, NULL, 1);
 
     TaskHandle_t printer_status_task_handle = NULL;
-    xTaskCreate(request_reprap_status_updates, "Printer Status Update Task", 1024 * 15, NULL,
+    xTaskCreate(request_reprap_status_updates, "Printer Status Update Task", CONFIG_REPPANEL_REQUEST_TASK_STACK_SIZE, NULL,
                 tskIDLE_PRIORITY, &printer_status_task_handle);
     configASSERT(printer_status_task_handle);
 }
@@ -121,12 +122,22 @@ _Noreturn void guiTask() {
     init_reprap_model();
     read_settings_nvs();
     rep_panel_ui_create();
-
+#if defined(CONFIG_REPPANEL_ESP32_WIFI_ENABLED)
+#if ESP_IDF_VERSION_MAJOR == 4 && ESP_IDF_VERSION_MINOR == 3
+    wifi_init_sta_4_3();
+#else
     wifi_init_sta();
+#endif
+#endif
     init_uart();
 
+//    lv_mem_monitor_t m;
     while (1) {
         vTaskDelay(1);
+
+//        lv_mem_monitor(&m);
+//        ESP_LOGI(TAG, "%i free bytes in GUI, %i%% used", m.free_size, m.used_pct);
+
         //Try to lock the semaphore, if success, call lvgl stuff
         if (xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
             lv_task_handler();

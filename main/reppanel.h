@@ -28,34 +28,34 @@ extern "C" {
 #define REPPANEL_WIFI_RECONNECTING  4
 #define REPPANEL_UART_CONNECTED     5
 
-    // Masks for rp_conn_stat
-#define REPPANEL_POWERON_MASK           0x01    // Init state (dummy)
-#define REPPANEL_WIFIINITED_MASK        0x02
-#define REPPANEL_UARTINITED_MASK        0x04
-#define REPPANEL_WIFICONNECTED_MASK     0x08    // Connected to Wifi AP
-#define REPPANEL_WIFIDUETCONNECTED_MASK 0x10    // Can communicate with Duet via WiFi
-#define REPPANEL_UARTDUETCONNECTED_MASK 0x20    // Can communicate with Duet via UART
-
-
 #define VERSION_MAJOR           1
-#define VERSION_MINOR           2
+#define VERSION_MINOR           3
 #define VERSION_HOTFIX          0
 
 #define NUM_TEMPS_BUFF      15
 #define MAX_FILA_NAME_LEN   32
 #define MAX_TOOL_NAME_LEN   12
-#define MAX_LEN_STR_FILAMENT_LIST   MAX_FILA_NAME_LEN*32
-#define MAX_NUM_ELEM_DIR    16      // Max number of elements per directory that can be listed
+#define MAX_LEN_STR_FILAMENT_LIST   (MAX_FILA_NAME_LEN * 32)
+#define MAX_NUM_ELEM_DIR    CONFIG_REPPANEL_MAX_NUM_ELEM_DIR      // Max number of elements per directory that can be listed
 #define REPPANEL_RRF_MAX_AXES   5
 
-#define MAX_LEN_FILENAME    64
-#define MAX_LEN_DIRNAME     128
-#define MAX_LEN_LAST_MOD    0
-#define MAX_LEN_GENERATOR   0
+#define MAX_LEN_FILENAME    CONFIG_REPPANEL_MAX_FILENAME_LENGTH
+#define MAX_LEN_DIRNAME     CONFIG_REPPANEL_MAX_DIRECTORY_PATH_LENGTH
 
-#define TREE_EMPTY_ELEM     -1
+#define TREE_EMPTY_ELEM     (-1)
+
 #define TREE_FOLDER_ELEM    0
 #define TREE_FILE_ELEM      1
+
+// Used to prevent updating elements on a screen that does not exist anymore.
+#define REPPANEL_PROCESS_SCREEN      0
+#define REPPANEL_JOBSELECT_SCREEN    1
+#define REPPANEL_JOBSTATUS_SCREEN    2
+#define REPPANEL_MACHINE_SCREEN      3
+#define REPPANEL_MACROS_SCREEN       4
+#define REPPANEL_OTHER_SCREEN        128
+// Used to prevent updating elements on a screen that does not exist anymore.
+extern uint8_t visible_screen;
 
 extern int rp_conn_stat;    // REPPANEL_NO_CONNECTION, ... etc.
 

@@ -8,7 +8,11 @@
 void find_mdns_service(const char *service_name, const char *proto);
 int resolve_mdns_host(const char *host_name, char *result_ip);
 
+#if ESP_IDF_VERSION_MAJOR == 4 && ESP_IDF_VERSION_MINOR == 3
+void wifi_init_sta_4_3();
+#else
 void wifi_init_sta();
+#endif
 
 void reconnect_wifi();
 

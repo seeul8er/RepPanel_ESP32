@@ -149,6 +149,7 @@ static void job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
 }
 
 void update_job_list_ui() {
+    if (visible_screen != REPPANEL_JOBSELECT_SCREEN) return;
     lv_obj_del(preloader);
     if (jobs_list) {
         lv_list_clean(jobs_list);

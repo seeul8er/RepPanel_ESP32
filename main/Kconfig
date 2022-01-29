@@ -1,0 +1,48 @@
+menu "RepPanel configuration"
+
+    config REPPANEL_ESP32_WIFI_ENABLED
+        bool
+        prompt "Enable WiFi. Connect to your 3D printer via WiFi."
+        default y
+
+    config REPPANEL_ESP32_CONSOLE_ENABLED
+        bool
+        prompt "Enable RepPanel console for sending custom G-Code to the printer. Consumes additional RAM."
+        default n
+
+    config REPPANEL_ENABLE_LIGHT_CONTROL
+        bool
+        prompt "Enable control of a light connected to the Duet via: M42 P2 S1"
+        default n
+
+    config REPPANEL_MAX_DIRECTORY_PATH_LENGTH
+        int "Maximum length of a directory path."
+    range 32 10240
+        default 160 if REPPANEL_ESP32_WIFI_ENABLED
+        default 160
+
+    config REPPANEL_MAX_FILENAME_LENGTH
+        int "Maximum length of a filename."
+    range 32 512
+        default 64 if REPPANEL_ESP32_WIFI_ENABLED
+        default 64
+
+    config REPPANEL_MAX_NUM_ELEM_DIR
+        int "Maximum number of elements that can be listed within a directory."
+    range 1 1024
+        default 16 if REPPANEL_ESP32_WIFI_ENABLED
+        default 24
+
+    config REPPANEL_REQUEST_TASK_STACK_SIZE
+        int "Stack size for the task doing the requests to the Duet. 8704 bytes if Wifi is enabled"
+    range 13312 1000000
+        default 15360 if REPPANEL_ESP32_WIFI_ENABLED
+        default 15360
+
+    config REPPANEL_GUI_TASK_STACK_SIZE
+        int "GUI Task stack size. 8704 bytes if Wifi is enabled"
+    range 6656 1000000
+        default 8704 if REPPANEL_ESP32_WIFI_ENABLED
+        default 8704
+
+endmenu

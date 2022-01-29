@@ -27,10 +27,11 @@ static char *cali_opt_list = {"True Bed Leveling\nMesh Bed Leveling"};
 #define AWAY_BTN    0
 #define CLOSER_BTN  1
 
-//#define USE_LIGHTNING                     // uncomment to add menu items for switching on/off a light/pin
+#ifdef CONFIG_REPPANEL_ENABLE_LIGHT_CONTROL
 #define LIGHTNING_CMD_ON "M42 P2 S1"
 #define LIGHTNING_CMD_HALF "M42 P2 S0.5"
 #define LIGHTNING_CMD_OFF "M42 P2 S0"
+#endif
 
 lv_obj_t *machine_page;
 lv_obj_t *ddlist_cali_options;
@@ -42,7 +43,7 @@ lv_obj_t *btn_home_all, *btn_home_y, *btn_home_x, *btn_home_z;
 lv_obj_t *btn_power, *label_power;
 lv_obj_t *btn_fan_off, *label_fan, *slider;
 
-#ifdef USE_LIGHTNING
+#ifdef CONFIG_REPPANEL_ENABLE_LIGHT_CONTROL
 lv_obj_t *btn_light_off, *btn_light_half, *btn_light_on;
 #endif
 
@@ -71,7 +72,7 @@ static void home_z_event(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
-#ifdef USE_LIGHTNING
+#ifdef CONFIG_REPPANEL_ENABLE_LIGHT_CONTROL
 static void _light_off_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         reprap_send_gcode(LIGHTNING_CMD_OFF);
@@ -110,17 +111,6 @@ static void slider_event_cb(lv_obj_t *slider, lv_event_t event) {
         reprap_send_gcode(buf);
     }
 }
-
-//static void next_height_adjust_event(lv_obj_t *obj, lv_event_t event) {
-//    if (event == LV_EVENT_CLICKED) {
-//        if (reprap_send_gcode("M292")) {
-//            lv_obj_del(label_z_pos_cali);
-//            label_z_pos_cali = 0;               // otherwise crash in update_ui
-//            lv_obj_del(cont_heigh_adj_diag);
-//            seq_num_msgbox = 0;    // reset so we know msg GUI is not showing anymore - little dirty I know...
-//        }
-//    }
-//}
 
 static void height_adjust_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_VALUE_CHANGED) {
@@ -303,12 +293,13 @@ static void start_cali_event(lv_obj_t *obj, lv_event_t event) {
 }
 
 void update_ui_machine() {
+    if (visible_screen != REPPANEL_MACHINE_SCREEN) return;
     portMUX_TYPE mutex = portMUX_INITIALIZER_UNLOCKED;
     portENTER_CRITICAL(&mutex); // not sure this really helps?!
-    if (label_z_pos_cali) lv_label_set_text_fmt(label_z_pos_cali, "%.02f mm", reprap_axes.axes[2]);
+    if (label_z_pos_cali && machine_page) lv_label_set_text_fmt(label_z_pos_cali, "%.02f mm", reprap_axes.axes[2]);
     portEXIT_CRITICAL(&mutex);
 
-    if (btn_home_x) {
+    if (btn_home_x && machine_page) {
         if (reprap_axes.homed[0])
             lv_btn_set_style(btn_home_x, LV_BTN_STYLE_REL, &homed_style);
         else
@@ -329,7 +320,7 @@ void update_ui_machine() {
         else
             lv_btn_set_style(btn_home_all, LV_BTN_STYLE_REL, &not_homed_style);
     }
-    if (btn_power) {
+    if (btn_power && machine_page) {
         if (reprap_params.power) {
             lv_btn_set_style(btn_power, LV_BTN_STYLE_REL, &homed_style);
             lv_label_set_text(label_power, "On");
@@ -338,7 +329,7 @@ void update_ui_machine() {
             lv_label_set_text(label_power, "Off");
         }
     }
-    if (label_fan) {
+    if (label_fan && machine_page) {
         lv_label_set_text_fmt(label_fan, " %u%% ", reprap_params.fan);
         lv_slider_set_value(slider, reprap_params.fan, LV_ANIM_ON);
     }
@@ -394,7 +385,7 @@ void draw_machine(lv_obj_t *parent_screen) {
     label_power = lv_label_create(btn_power, NULL);
     lv_label_set_text(label_power, reprap_params.power ? "On" : "Off");
 
-#ifdef USE_LIGHTNING
+#ifdef CONFIG_REPPANEL_ENABLE_LIGHT_CONTROL
     lv_obj_t *label_light = lv_label_create(power_cont, NULL);
     lv_label_set_text(label_light, "Light:");
     btn_light_on = create_button(power_cont, btn_light_on, "On", _light_on_event);

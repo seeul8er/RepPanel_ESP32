@@ -31,6 +31,7 @@ lv_obj_t *button_job_resume;
 lv_obj_t *button_job_stop;
 
 void update_print_job_status_ui() {
+    if (visible_screen != REPPANEL_JOBSTATUS_SCREEN) return;
     if (label_job_progress_percent && cont_percent) {
         lv_label_set_text_fmt(label_job_progress_percent, "%.0f", reprap_job_percent);
         if (reprap_job_percent < 10) {
@@ -241,6 +242,7 @@ void draw_jobstatus(lv_obj_t *parent_screen) {
     lv_imgbtn_set_style(button_job_pause, LV_BTN_STATE_TGL_PR, &style_button_job_pause);
     lv_imgbtn_set_toggle(button_job_pause, true);
     lv_obj_set_event_cb(button_job_pause, pause_job_event);
+    lv_obj_set_hidden(button_job_pause, true);
 
     lv_obj_align(button_job_pause, jobstatus_page, LV_ALIGN_IN_BOTTOM_RIGHT, -32, -30);
     lv_obj_align(label_job_filename, jobstatus_page, LV_ALIGN_IN_BOTTOM_LEFT, 15, -30);
@@ -266,6 +268,7 @@ void draw_jobstatus(lv_obj_t *parent_screen) {
     lv_imgbtn_set_style(button_job_resume, LV_BTN_STATE_TGL_PR, &style_button_job_pause);
     lv_imgbtn_set_toggle(button_job_resume, true);
     lv_obj_set_event_cb(button_job_resume, resume_job_event);
+    lv_obj_set_hidden(button_job_resume, true);
 
     static lv_style_t style_button_job_stop;
     lv_style_copy(&style_button_job_stop, &lv_style_plain);
@@ -284,6 +287,7 @@ void draw_jobstatus(lv_obj_t *parent_screen) {
     lv_imgbtn_set_style(button_job_stop, LV_BTN_STATE_TGL_PR, &style_button_job_pause);
     lv_imgbtn_set_toggle(button_job_stop, true);
     lv_obj_set_event_cb(button_job_stop, stop_job_event);
+    lv_obj_set_hidden(button_job_stop, true);
 
     // hidden from the start
     lv_obj_align(button_job_resume, jobstatus_page, LV_ALIGN_IN_BOTTOM_RIGHT, -32, -30);

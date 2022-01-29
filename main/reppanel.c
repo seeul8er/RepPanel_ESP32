@@ -28,6 +28,7 @@ void draw_main_menu(lv_obj_t *parent_screen);
  **********************/
 
 int rp_conn_stat = 0;
+uint8_t visible_screen = REPPANEL_OTHER_SCREEN;
 
 lv_obj_t *process_scr;  // screen for the process settings
 lv_obj_t *machine_scr;
@@ -36,7 +37,9 @@ lv_obj_t *info_scr;     // screen for the info
 lv_obj_t *macro_scr;    // macro screen
 lv_obj_t *jobstatus_scr;
 lv_obj_t *jobselect_scr;
+#if defined(CONFIG_REPPANEL_ESP32_CONSOLE_ENABLED)
 lv_obj_t *console_scr;
+#endif
 lv_obj_t *cont_header;
 
 lv_obj_t *label_status;
@@ -58,6 +61,7 @@ void rep_panel_ui_create() {
     draw_header(mainmenu_scr);
     draw_main_menu(mainmenu_scr);
     lv_scr_load(mainmenu_scr);
+    visible_screen = REPPANEL_OTHER_SCREEN;
 }
 
 static void display_mainmenu_event(lv_obj_t *obj, lv_event_t event) {
@@ -68,6 +72,7 @@ static void display_mainmenu_event(lv_obj_t *obj, lv_event_t event) {
         draw_header(mainmenu_scr);
         draw_main_menu(mainmenu_scr);
         lv_scr_load(mainmenu_scr);
+        visible_screen = REPPANEL_OTHER_SCREEN;
     }
 }
 
@@ -91,24 +96,38 @@ static void connection_info_event(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
+#if defined(CONFIG_REPPANEL_ESP32_CONSOLE_ENABLED)
 static void display_console_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_RELEASED) {
+        clean_screens();
         if (console_scr) lv_obj_del(console_scr);
         console_scr = lv_cont_create(NULL, NULL);
         lv_cont_set_layout(console_scr, LV_LAYOUT_COL_M);
         draw_header(console_scr);
         draw_console(console_scr);
         lv_scr_load(console_scr);
+        visible_screen = REPPANEL_OTHER_SCREEN;
     }
+}
+#endif
+
+static void clean_screens() {
+    if (process_scr) lv_obj_clean(process_scr);
+    if (jobselect_scr) lv_obj_clean(jobselect_scr);
+    if (machine_scr) lv_obj_clean(machine_scr);
+    if (macro_scr) lv_obj_clean(macro_scr);
+    if (info_scr) lv_obj_clean(info_scr);
+    if (jobstatus_scr) lv_obj_clean(jobstatus_scr);
 }
 
 void display_jobstatus() {
-    if (jobstatus_scr) lv_obj_del(jobstatus_scr);
+    clean_screens();
     jobstatus_scr = lv_cont_create(NULL, NULL);
     lv_cont_set_layout(jobstatus_scr, LV_LAYOUT_COL_M);
     draw_header(jobstatus_scr);
     draw_jobstatus(jobstatus_scr);
     lv_scr_load(jobstatus_scr);
+    visible_screen = REPPANEL_JOBSTATUS_SCREEN;
 }
 
 /**
@@ -156,7 +175,11 @@ void draw_header(lv_obj_t *parent_screen) {
     lv_obj_t *cont_header_right = lv_cont_create(cont_header, NULL);
     lv_cont_set_fit(cont_header_right, LV_FIT_TIGHT);
     lv_cont_set_layout(cont_header_right, LV_LAYOUT_ROW_M);
+#ifdef CONFIG_REPPANEL_ESP32_CONSOLE_ENABLED
     lv_obj_align(cont_header_right, cont_header, LV_ALIGN_IN_TOP_RIGHT, -130, 12);
+#else
+    lv_obj_align(cont_header_right, cont_header, LV_ALIGN_IN_TOP_RIGHT, -98, 12);
+#endif
 
     lv_obj_t *click_cont = lv_cont_create(cont_header_right, NULL);
     lv_cont_set_fit(click_cont, LV_FIT_TIGHT);
@@ -174,6 +197,7 @@ void draw_header(lv_obj_t *parent_screen) {
                           reprap_tools[current_visible_tool_indx].temp_buff[reprap_tools[current_visible_tool_indx].temp_hist_curr_pos],
                           get_temp_unit());
 
+#if defined(CONFIG_REPPANEL_ESP32_CONSOLE_ENABLED)
     LV_IMG_DECLARE(consolebutton);
     static lv_style_t style_console_button;
     lv_style_copy(&style_console_button, &lv_style_plain);
@@ -190,6 +214,7 @@ void draw_header(lv_obj_t *parent_screen) {
     lv_imgbtn_set_style(console_button, LV_BTN_STATE_TGL_PR, &style_console_button);
     lv_imgbtn_set_toggle(console_button, true);
     lv_obj_set_event_cb(console_button, display_console_event);
+#endif
 }
 
 void update_rep_panel_conn_status() {
@@ -221,12 +246,13 @@ void update_rep_panel_conn_status() {
 static void show_process_screen(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         update_rep_panel_conn_status();
-        if (process_scr) lv_obj_del(process_scr);
+        clean_screens();
         process_scr = lv_cont_create(NULL, NULL);
         lv_cont_set_layout(process_scr, LV_LAYOUT_COL_M);
         draw_header(process_scr);
         draw_process(process_scr);
         lv_scr_load(process_scr);
+        visible_screen = REPPANEL_PROCESS_SCREEN;
     }
 }
 
@@ -236,12 +262,13 @@ static void show_job_screen(lv_obj_t *obj, lv_event_t event) {
         if (job_running) {
             display_jobstatus();
         } else {
-            if (jobselect_scr) lv_obj_del(jobselect_scr);
+            clean_screens();
             jobselect_scr = lv_cont_create(NULL, NULL);
             lv_cont_set_layout(jobselect_scr, LV_LAYOUT_COL_M);
             draw_header(jobselect_scr);
             draw_jobselect(jobselect_scr);
             lv_scr_load(jobselect_scr);
+            visible_screen = REPPANEL_JOBSELECT_SCREEN;
         }
     }
 }
@@ -249,40 +276,45 @@ static void show_job_screen(lv_obj_t *obj, lv_event_t event) {
 static void show_machine_screen(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         update_rep_panel_conn_status();
-        if (machine_scr) lv_obj_del(machine_scr);
+        clean_screens();
         machine_scr = lv_cont_create(NULL, NULL);
         lv_cont_set_layout(machine_scr, LV_LAYOUT_COL_M);
         draw_header(machine_scr);
         draw_machine(machine_scr);
         lv_scr_load(machine_scr);
+        visible_screen = REPPANEL_MACHINE_SCREEN;
     }
 }
 
 static void show_macros_screen(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         update_rep_panel_conn_status();
-        if (info_scr) lv_obj_del(info_scr);
+        clean_screens();
         macro_scr = lv_cont_create(NULL, NULL);
         lv_cont_set_layout(macro_scr, LV_LAYOUT_COL_M);
         draw_header(macro_scr);
         draw_macro(macro_scr);
         lv_scr_load(macro_scr);
+        visible_screen = REPPANEL_MACROS_SCREEN;
     }
 }
 
 static void show_info_screen(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         update_rep_panel_conn_status();
-        if (info_scr) lv_obj_del(info_scr);
+        clean_screens();
         info_scr = lv_cont_create(NULL, NULL);
         lv_cont_set_layout(info_scr, LV_LAYOUT_COL_M);
         draw_header(info_scr);
         draw_info(info_scr);
         lv_scr_load(info_scr);
+        visible_screen = REPPANEL_OTHER_SCREEN;
     }
 }
 
 void draw_main_menu(lv_obj_t *parent_screen) {
+    // Free some LV_MEM. Can be cleared safely since is currently not shown and the request task will not update it
+    if (info_scr) lv_obj_clean(info_scr);
     lv_obj_t *cont_row1 = lv_cont_create(parent_screen, NULL);
     lv_cont_set_layout(cont_row1, LV_LAYOUT_ROW_M);
     lv_cont_set_fit(cont_row1, LV_FIT_TIGHT);

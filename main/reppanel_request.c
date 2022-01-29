@@ -1326,14 +1326,18 @@ void reprap_wifi_download(wifi_response_buff_t *response_buffer, char *file) {
 bool reprap_send_gcode(char *gcode_command) {
     if (rp_conn_stat == REPPANEL_WIFI_CONNECTED) {
         if (reprap_wifi_send_gcode(gcode_command)) {
+#if defined(REPPANEL_ESP32_CONSOLE_ENABLED)
             add_console_hist_entry(gcode_command, CONSOLE_TYPE_REPPANEL);
             update_entries_ui();
+#endif
             return true;
         }
     } else if (rp_conn_stat == REPPANEL_UART_CONNECTED) {
         reprap_uart_send_gcode(gcode_command);
+#if defined(REPPANEL_ESP32_CONSOLE_ENABLED)
         add_console_hist_entry(gcode_command, CONSOLE_TYPE_REPPANEL);
         update_entries_ui();
+#endif
         return true;
     }
     return false;
@@ -1488,7 +1492,9 @@ void request_reprap_status_updates(void *params) {
     int i = 0, b = 0;
     UBaseType_t uxHighWaterMark;
     uart_response_buff_t uart_receive_buff;
+#if defined(CONFIG_REPPANEL_ESP32_WIFI_ENABLED)
     wifi_response_buff_t resp_buff_status_update_task;
+#endif
     while (strlen(rep_addr) < 1) {  // wait till request addr is set
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
@@ -1503,12 +1509,12 @@ void request_reprap_status_updates(void *params) {
                     reprap_uart_download(&uart_receive_buff, "0:/sys/dwc2settings.json");   // get dummy values
                 } else {
                     reprap_uart_download(&uart_receive_buff, "0:/sys/dwc-settings.json");   // get dummy values
-                    request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "boards", "d99vn");
-                    request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "fans", "d99vn");
-                    request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "heat", "d99vn");
-                    request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "job", "d99vn");
-                    request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "move", "d99vn");
-                    request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "tools", "d99vn");
+                    request_rrf_status(&uart_receive_buff, NULL, 2, "boards", "d99vn");
+                    request_rrf_status(&uart_receive_buff, NULL, 2, "fans", "d99vn");
+                    request_rrf_status(&uart_receive_buff, NULL, 2, "heat", "d99vn");
+                    request_rrf_status(&uart_receive_buff, NULL, 2, "job", "d99vn");
+                    request_rrf_status(&uart_receive_buff, NULL, 2, "move", "d99vn");
+                    request_rrf_status(&uart_receive_buff, NULL, 2, "tools", "d99vn");
                 }
             }
             if (!got_filaments) reprap_uart_get_filelist(&uart_receive_buff, "0:/filaments");
@@ -1521,19 +1527,21 @@ void request_reprap_status_updates(void *params) {
                 reprap_uart_get_filelist(&uart_receive_buff, request_file_path);
                 duet_request_macros = false;
             }
-            if (!got_extended_status) request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 3, "", "d99fn");
+            if (!got_extended_status) request_rrf_status(&uart_receive_buff, NULL, 3, "", "d99fn");
             if (!job_running)
-                request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 2, "", "d99fn");
+                request_rrf_status(&uart_receive_buff, NULL, 2, "", "d99fn");
             else
-                request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 4, "", "d99fn");
+                request_rrf_status(&uart_receive_buff, NULL, 4, "", "d99fn");
             if (reprap_model.api_level >= 1) {
-                request_rrf3_extended_info(&uart_receive_buff, &resp_buff_status_update_task);
+                request_rrf3_extended_info(&uart_receive_buff, NULL);
             }
             if (i == 20) {
-                request_rrf_status(&uart_receive_buff, &resp_buff_status_update_task, 3, "", "d99fn");
+                request_rrf_status(&uart_receive_buff, NULL, 3, "", "d99fn");
                 i = 0;
             } else { i++; }
-        } else if (rp_conn_stat == REPPANEL_WIFI_CONNECTED ||
+        }
+#if defined(CONFIG_REPPANEL_ESP32_WIFI_ENABLED)
+        else if (rp_conn_stat == REPPANEL_WIFI_CONNECTED ||
                    rp_conn_stat == REPPANEL_WIFI_CONNECTED_DUET_DISCONNECTED) {
             if (init_printer_addr_updated) {
                 if (!got_duet_settings) {
@@ -1594,10 +1602,14 @@ void request_reprap_status_updates(void *params) {
             } else {
                 init_printer_addr_updated = update_printer_addr();  // initial resolving
             }
-        } else {
+        }
+#endif
+        else {
             if (reppanel_is_uart_connected()) {
                 rp_conn_stat = REPPANEL_UART_CONNECTED;
+#if defined(CONFIG_REPPANEL_ESP32_WIFI_ENABLED)
                 memset(&resp_buff_status_update_task, 0, JSON_BUFF_SIZE);
+#endif
                 if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
                     update_rep_panel_conn_status();
                     xSemaphoreGive(xGuiSemaphore);

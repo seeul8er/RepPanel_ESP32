@@ -86,6 +86,7 @@ void apply_heater_style(int state, lv_obj_t *btn_active, lv_obj_t *bnt_standby) 
  * Update UI based on RepRap response
  */
 void update_heater_status_ui(const int *states, int _num_heaters) {
+    if (visible_screen != REPPANEL_PROCESS_SCREEN) return;
     for (int i = 0; i < _num_heaters; i++) {
         if (i == 0 && btn_bed_temp_active != NULL && btn_bed_temp_standby != NULL) {
             apply_heater_style(states[i], btn_bed_temp_active, btn_bed_temp_standby);
@@ -98,6 +99,7 @@ void update_heater_status_ui(const int *states, int _num_heaters) {
 }
 
 void update_bed_temps_ui() {
+    if (visible_screen != REPPANEL_PROCESS_SCREEN) return;
     if (label_bed_temp != NULL)
         lv_label_set_text_fmt(label_bed_temp, "%.1f°%c", reprap_bed.temp_buff[reprap_bed.temp_hist_curr_pos],
                               get_temp_unit());
@@ -108,6 +110,7 @@ void update_bed_temps_ui() {
 }
 
 void update_current_tool_temps_ui() {
+    if (visible_screen != REPPANEL_PROCESS_SCREEN) return;
     if (label_tool_temp != NULL) {
         lv_label_set_text_fmt(label_tool_temp, "%.1f°%c",
                               reprap_tools[current_visible_tool_indx].temp_buff[reprap_tools[current_visible_tool_indx].temp_hist_curr_pos],

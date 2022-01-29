@@ -26,7 +26,12 @@ static int s_retry_num = 0;
 
 int resolve_mdns_host(const char *host_name, char *result_ip) {
     ESP_LOGI(TAG, "Query A: %s", host_name);
+#if ESP_IDF_VERSION_MAJOR == 4 && ESP_IDF_VERSION_MINOR == 3
+    struct esp_ip4_addr addr;
+#else
     struct ip4_addr addr;
+#endif
+
     addr.addr = 0;
     esp_err_t err = mdns_query_a(host_name, 2000, &addr);
     if (err) {
@@ -138,6 +143,52 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
     }
 }
 
+void wifi_init_sta_4_3() {
+    s_wifi_event_group = xEventGroupCreate();
+    ESP_ERROR_CHECK(esp_netif_init());
+
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_create_default_wifi_sta();
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    esp_event_handler_instance_t instance_any_id;
+    esp_event_handler_instance_t instance_got_ip;
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
+                                                        ESP_EVENT_ANY_ID,
+                                                        &wifi_event_handler,
+                                                        NULL,
+                                                        &instance_any_id));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
+                                                        IP_EVENT_STA_GOT_IP,
+                                                        &wifi_event_handler,
+                                                        NULL,
+                                                        &instance_got_ip));
+
+    wifi_config_t wifi_config = {
+            .sta = {
+                    .ssid = "",
+                    .password = "",
+                    .threshold.authmode = WIFI_AUTH_WPA2_PSK,
+
+                    .pmf_cfg = {
+                            .capable = true,
+                            .required = false
+                    },
+            },
+    };
+    memcpy(wifi_config.sta.ssid, wifi_ssid, MAX_SSID_LEN);
+    memcpy(wifi_config.sta.password, wifi_pass, MAX_WIFI_PASS_LEN);
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config) );
+    ESP_ERROR_CHECK(esp_wifi_start() );
+
+    ESP_LOGI(TAG, "wifi_init_sta finished.");
+    start_mdns_service();
+}
+
+#if ESP_IDF_VERSION_MAJOR != 4 && ESP_IDF_VERSION_MINOR != 3
 void wifi_init_sta() {
     s_wifi_event_group = xEventGroupCreate();
     tcpip_adapter_init();
@@ -160,6 +211,7 @@ void wifi_init_sta() {
     ESP_LOGI(TAG, "wifi_init_sta finished.");
     start_mdns_service();
 }
+#endif
 
 /**
  * Call only when GUI semaphore is taken

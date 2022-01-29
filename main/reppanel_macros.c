@@ -81,9 +81,11 @@ static void macro_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
 }
 
 void update_macro_list_ui() {
+    if (visible_screen != REPPANEL_MACROS_SCREEN) return;
     lv_obj_del(preloader);
     if (macro_list) {
         lv_list_clean(macro_list);
+        ESP_LOGI(TAG, "Cleaned Macro List");
     } else {
         return;
     }
@@ -119,10 +121,10 @@ void update_macro_list_ui() {
 }
 
 void draw_macro(lv_obj_t *parent_screen) {
-    strcpy(parent_dir_macros, MACRO_EMPTY);
+//    strcpy(parent_dir_macros, MACRO_EMPTY);
     lv_obj_t *macro_container = lv_cont_create(parent_screen, NULL);
-    lv_cont_set_layout(macro_container, LV_LAYOUT_CENTER);
-    lv_cont_set_fit2(macro_container, LV_FIT_FILL, LV_FIT_TIGHT);
+    lv_cont_set_layout(macro_container, LV_LAYOUT_COL_M);
+    lv_cont_set_fit(macro_container, LV_FIT_FILL);
 
     preloader = lv_preload_create(macro_container, NULL);
     lv_obj_set_size(preloader, 75, 75);
@@ -132,5 +134,3 @@ void draw_macro(lv_obj_t *parent_screen) {
 
     request_macros(MACRO_ROOT_DIR);
 }
-
-#include "reppanel_macros.h"
