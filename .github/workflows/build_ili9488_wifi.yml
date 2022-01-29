@@ -17,4 +17,4 @@ jobs:
       with:
         submodules: 'recursive'
     - name: esp-idf build
-      uses: espressif/esp-idf-ci-action@43730d6ee9627688a634abb527110d3ce7b7b0c49b78a7039a99399acb3994df #v4.0.4
+      uses: espressif/esp-idf-ci-action@release-v4.0
