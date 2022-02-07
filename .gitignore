@@ -47,3 +47,5 @@ cmake-build-esp-idf-404/
 cmake-build-esp-idf-404-release/
 
 cmake-build-esp-idf-404-debug/
+
+cmake-build-esp-idf-43-debug/

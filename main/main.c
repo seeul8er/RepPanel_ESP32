@@ -131,12 +131,18 @@ _Noreturn void guiTask() {
 #endif
     init_uart();
 
-//    lv_mem_monitor_t m;
+    int c = 0;
+    lv_mem_monitor_t m;
     while (1) {
         vTaskDelay(1);
 
 //        lv_mem_monitor(&m);
-//        ESP_LOGI(TAG, "%i free bytes in GUI, %i%% used", m.free_size, m.used_pct);
+//        UBaseType_t uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+//        if (c%50) {
+//            ESP_LOGI(TAG, "%i free bytes in GUI, %i%% used, %i high mark of GUI Task", m.free_size, m.used_pct,
+//                     uxHighWaterMark);
+//            c = 0;
+//        } else { c++; }
 
         //Try to lock the semaphore, if success, call lvgl stuff
         if (xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
@@ -149,8 +155,6 @@ _Noreturn void guiTask() {
             }
             xSemaphoreGive(xGuiSemaphore);
         }
-//        uxHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-//        ESP_LOGI(TAG, "%i free bytes", uxHighWaterMark * 4);
     }
     // This task should NEVER return
     vTaskDelete(NULL);

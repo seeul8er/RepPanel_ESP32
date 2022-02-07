@@ -1,5 +1,10 @@
 menu "RepPanel configuration"
 
+    config REPPANEL_RRF2_SUPPORT
+        bool
+        prompt "Enable deprecated legacy RRF2 support."
+        default y
+
     config REPPANEL_ESP32_WIFI_ENABLED
         bool
         prompt "Enable WiFi. Connect to your 3D printer via WiFi."
@@ -34,15 +39,15 @@ menu "RepPanel configuration"
         default 24
 
     config REPPANEL_REQUEST_TASK_STACK_SIZE
-        int "Stack size for the task doing the requests to the Duet. 8704 bytes if Wifi is enabled"
-    range 13312 1000000
+        int "Stack size for the task doing the requests to the Duet. 13312 bytes if Wifi is enabled"
+    range 8704 1000000
         default 15360 if REPPANEL_ESP32_WIFI_ENABLED
-        default 15360
+        default 13312
 
     config REPPANEL_GUI_TASK_STACK_SIZE
-        int "GUI Task stack size. 8704 bytes if Wifi is enabled"
-    range 6656 1000000
-        default 8704 if REPPANEL_ESP32_WIFI_ENABLED
-        default 8704
+        int "GUI Task stack size. 9216 bytes if Wifi is enabled"
+    range 8704 1000000
+        default 9216 if REPPANEL_ESP32_WIFI_ENABLED
+        default 9216
 
 endmenu

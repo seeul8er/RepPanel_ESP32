@@ -27,21 +27,21 @@ static void save_reppanel_settings_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
         ESP_LOGI(TAG, "Saving settings\n");
         const char *ssid = lv_ta_get_text(ta_ssid);
-        strncpy(wifi_ssid, ssid, MAX_SSID_LEN);
+        strlcpy(wifi_ssid, ssid, sizeof(wifi_ssid));
         const char *tmp_wifi_pass = lv_ta_get_text(ta_wifi_pass);
-        strncpy(wifi_pass, tmp_wifi_pass, MAX_WIFI_PASS_LEN);
+        strlcpy(wifi_pass, tmp_wifi_pass, sizeof(wifi_pass));
 
         const char *tmp_rep_addr = lv_ta_get_text(ta_printer_addr);
         if (strncmp(tmp_rep_addr, "http://", strlen("http")) == 0 ||
             strncmp(tmp_rep_addr, "https://", strlen("https")) == 0) {
-            strncpy(rep_addr, tmp_rep_addr, MAX_REP_ADDR_LEN);
+            strlcpy(rep_addr, tmp_rep_addr, sizeof(rep_addr));
         } else {
             char temp_addr[128];
             sprintf(temp_addr, "http://%s", tmp_rep_addr);
-            strncpy(rep_addr, temp_addr, MAX_REP_ADDR_LEN);
+            strlcpy(rep_addr, temp_addr, sizeof(rep_addr));
         }
         const char *tmp_rep_pass = lv_ta_get_text(ta_reprap_pass);
-        strncpy(rep_pass, tmp_rep_pass, MAX_REP_PASS_LEN);
+        strlcpy(rep_pass, tmp_rep_pass, sizeof(rep_pass));
         write_settings_to_nvs();
         reconnect_wifi();
     }

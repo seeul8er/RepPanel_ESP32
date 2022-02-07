@@ -107,7 +107,7 @@ void reppanel_parse_rrf_tools(cJSON *tools_result, int *_heater_states, cJSON *f
 
         cJSON *val = cJSON_GetObjectItemCaseSensitive(tool, "name");
         if (val && cJSON_IsString(val) && (val->valuestring != NULL)) {
-            strncpy(reprap_tools[i].name, val->valuestring, MAX_TOOL_NAME_LEN);
+            strncpy(reprap_tools[i].name, val->valuestring, MAX_TOOL_NAME_LEN - 1);
         }
         val = cJSON_GetObjectItemCaseSensitive(tool, "number");
         if (val && cJSON_GetArraySize(val) > 0) reprap_tools[i].number = val->valueint;
@@ -167,7 +167,7 @@ void reppanel_parse_rrf_job(cJSON *job_result, cJSON *flags, reprap_model_t *_re
         val = cJSON_GetObjectItemCaseSensitive(file, "layerHeight");
         if (val && cJSON_IsNumber(val)) reprap_job_layer_height = val->valuedouble;
         val = cJSON_GetObjectItemCaseSensitive(file, "fileName");
-        if (cJSON_IsString(val) && (val->valuestring != NULL)) strncpy(_reprap_model->reprap_job.file.fileName, &val->valuestring[9], MAX_LEN_FILENAME);
+        if (cJSON_IsString(val) && (val->valuestring != NULL)) strncpy(_reprap_model->reprap_job.file.fileName, &val->valuestring[9], MAX_LEN_FILENAME - 1);
         val = cJSON_GetObjectItemCaseSensitive(file, "simulatedTime");
         if (val && cJSON_IsNumber(val)) {
             _reprap_model->reprap_job.file.simulatedTime = val->valueint;
@@ -214,18 +214,18 @@ void reppanel_parse_rrf_move(cJSON *move_result, cJSON *flags, reprap_model_t *_
 void reppanel_parse_rrf_state(cJSON *state_result, cJSON *flags, reprap_model_t *_reprap_model) {
     cJSON *val = cJSON_GetObjectItemCaseSensitive(state_result, "status");
     if (val && cJSON_IsString(val) && (val->valuestring != NULL))
-        strncpy(_reprap_model->reprap_state.status, val->valuestring, REPRAP_MAX_STATUS_LEN);
+        strncpy(_reprap_model->reprap_state.status, val->valuestring, REPRAP_MAX_STATUS_LEN - 1);
 //    val = cJSON_GetObjectItemCaseSensitive(state_result, "displayMessage");
 //    if (val && cJSON_IsString(val) && (val->valuestring != NULL)) {
-//        strncpy(_reprap_model->reprap_state.msg_box_msg, val->valuestring, REPRAP_MAX_DISPLAY_MSG_LEN);
+//        strncpy(_reprap_model->reprap_state.msg_box_msg, val->valuestring, REPRAP_MAX_DISPLAY_MSG_LEN - 1);
 //    }
     val = cJSON_GetObjectItemCaseSensitive(state_result, "messageBox");
     if (val && !cJSON_IsNull(val)) {
         _reprap_model->reprap_state.new_msg = true;
         cJSON *new_val = cJSON_GetObjectItemCaseSensitive(val, "title");
-        strncpy(_reprap_model->reprap_state.msg_box_title, new_val->valuestring, REPRAP_MAX_LEN_MSG_TITLE);
+        strncpy(_reprap_model->reprap_state.msg_box_title, new_val->valuestring, REPRAP_MAX_LEN_MSG_TITLE - 1);
         new_val = cJSON_GetObjectItemCaseSensitive(val, "message");
-        strncpy(_reprap_model->reprap_state.msg_box_msg, new_val->valuestring, REPRAP_MAX_DISPLAY_MSG_LEN);
+        strncpy(_reprap_model->reprap_state.msg_box_msg, new_val->valuestring, REPRAP_MAX_DISPLAY_MSG_LEN - 1);
         new_val = cJSON_GetObjectItemCaseSensitive(val, "axisControls");
         _reprap_model->reprap_state.show_axis_controls = new_val->valueint;
         new_val = cJSON_GetObjectItemCaseSensitive(val, "mode");

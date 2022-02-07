@@ -224,7 +224,7 @@ void draw_jobstatus(lv_obj_t *parent_screen) {
     style_label_job_filename.text.color = REP_PANEL_DARK_TEXT;
     style_label_job_filename.text.font = &reppanel_font_roboto_light_26;
     lv_obj_set_style(label_job_filename, &style_label_job_filename);
-    lv_label_set_long_mode(label_job_filename, LV_LABEL_LONG_CROP);     // circ scroll makes it run out of heap?!
+    lv_label_set_long_mode(label_job_filename, LV_LABEL_LONG_SROLL);     // circ scroll makes it run out of heap?!
     lv_obj_set_width(label_job_filename, lv_disp_get_hor_res(NULL) - 150);
 
     LV_IMG_DECLARE(pause);
@@ -293,6 +293,5 @@ void draw_jobstatus(lv_obj_t *parent_screen) {
     lv_obj_align(button_job_resume, jobstatus_page, LV_ALIGN_IN_BOTTOM_RIGHT, -32, -30);
     lv_obj_align(button_job_stop, jobstatus_page, LV_ALIGN_IN_BOTTOM_RIGHT, -84, -30);
 
-    request_fileinfo(NULL);
     update_print_job_status_ui();
 }
