@@ -173,7 +173,7 @@ void reppanel_parse_rrf_job(cJSON *job_result, cJSON *flags, reprap_model_t *_re
             _reprap_model->reprap_job.file.simulatedTime = val->valueint;
         }
         val = cJSON_GetObjectItemCaseSensitive(file, "filament");
-        struct cJSON *filament_usage = NULL;
+        cJSON *filament_usage = NULL;
         reprap_model.reprap_job.file.overall_filament_usage = 0;
         cJSON_ArrayForEach(filament_usage, val) {
             reprap_model.reprap_job.file.overall_filament_usage += val->valuedouble;
@@ -353,4 +353,67 @@ void reppanel_parse_rrf_seqs(cJSON *seqs_result, reprap_model_t *_reprap_model) 
             _reprap_model->reprap_seqs_changed.tools_changed = 1;
         }
     }
+}
+
+void reppanel_parse_rr_fileinfo(char *json_response, reprap_model_t *_reprap_model, int buff_length) {
+    cJSON *root = cJSON_ParseWithLength(json_response, buff_length);
+    if (root == NULL) {
+        cJSON_Delete(root);
+        return;
+    }
+    cJSON *err_resp = cJSON_GetObjectItem(root, "err");
+    if (err_resp && err_resp->valueint != 0) {     // maybe no active print
+        cJSON_Delete(root);
+        return;
+    }
+    cJSON *job_time_sim = cJSON_GetObjectItem(root, "simulatedTime");
+    if (job_time_sim && cJSON_IsNumber(job_time_sim)) {
+        _reprap_model->reprap_job.file.simulatedTime = job_time_sim->valueint;
+    } else {
+        _reprap_model->reprap_job.file.simulatedTime = -1;
+    }
+
+    cJSON *job_print_time = cJSON_GetObjectItem(root, "printTime");
+    if (job_print_time && cJSON_IsNumber(job_print_time)) {
+        _reprap_model->reprap_job.file.printTime = job_print_time->valueint;
+    }
+
+    cJSON *job_name = cJSON_GetObjectItem(root, "fileName");
+    if (job_name && cJSON_IsString(job_name)) {
+        strncpy(_reprap_model->reprap_job.file.fileName, &job_name->valuestring[10], MAX_LEN_FILENAME-1);
+    }
+
+    cJSON *job_height = cJSON_GetObjectItem(root, "height");
+    if (job_height && cJSON_IsNumber(job_height)) {
+        _reprap_model->reprap_job.file.height = (float) job_height->valuedouble;
+    }
+
+    cJSON *job_thumbnails = cJSON_GetObjectItem(root, "thumbnails");
+    if (job_thumbnails && cJSON_IsArray(job_thumbnails)) {
+        cJSON *thumbnail_obj = NULL;
+        cJSON_ArrayForEach(thumbnail_obj, job_thumbnails) {
+            cJSON *var = cJSON_GetObjectItemCaseSensitive(thumbnail_obj, "fmt");
+            if (var && cJSON_IsString(var)) {
+                // TODO analyze format
+            }
+            var = cJSON_GetObjectItemCaseSensitive(thumbnail_obj, "w");
+            if (var && cJSON_IsNumber(var)) {
+                // TODO analyze width
+            }
+            var = cJSON_GetObjectItemCaseSensitive(thumbnail_obj, "h");
+            if (var && cJSON_IsNumber(var)) {
+                // TODO analyze height
+            }
+        }
+    }
+
+    cJSON *job_first_layer_height = cJSON_GetObjectItem(root, "firstLayerHeight");
+    if (job_first_layer_height && cJSON_IsNumber(job_first_layer_height)) {
+        reprap_job_first_layer_height = job_first_layer_height->valuedouble;
+    }
+    cJSON *job_layer_height = cJSON_GetObjectItem(root, "layerHeight");
+    if (job_layer_height && cJSON_IsNumber(job_layer_height)) {
+        reprap_job_layer_height = job_layer_height->valuedouble;
+    }
+    cJSON_Delete(root);
 }

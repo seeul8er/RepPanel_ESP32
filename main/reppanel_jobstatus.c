@@ -92,10 +92,10 @@ void update_print_job_status_ui() {
     }
 
     if (label_job_filename) {
-        // only update when changed. Otherwise label will not scroll
         char *last = strrchr(reprap_model.reprap_job.file.fileName, '/'); // remove first part of the path
+        // only update when changed. Otherwise label will not scroll
         if (last != NULL && strcmp(lv_label_get_text(label_job_filename), last+1) != 0) {
-            lv_label_set_text(label_job_filename, last+1);
+            lv_label_set_text(label_job_filename, last + 1);
         }
     }
 
@@ -293,5 +293,8 @@ void draw_jobstatus(lv_obj_t *parent_screen) {
     lv_obj_align(button_job_resume, jobstatus_page, LV_ALIGN_IN_BOTTOM_RIGHT, -32, -30);
     lv_obj_align(button_job_stop, jobstatus_page, LV_ALIGN_IN_BOTTOM_RIGHT, -84, -30);
 
+#ifdef CONFIG_REPPANEL_RRF2_SUPPORT
+    if (reprap_model.api_level < 1) trigger_request_fileinfo();
+#endif
     update_print_job_status_ui();
 }

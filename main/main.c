@@ -131,8 +131,8 @@ _Noreturn void guiTask() {
 #endif
     init_uart();
 
-    int c = 0;
-    lv_mem_monitor_t m;
+//    int c = 0;
+//    lv_mem_monitor_t m;
     while (1) {
         vTaskDelay(1);
 

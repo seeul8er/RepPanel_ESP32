@@ -39,7 +39,7 @@ void request_jobs(char *folder_path);
 
 void request_jobs_async(char *folder_path);
 
-void request_fileinfo(char *file_name, wifi_response_buff_t *resp_buff);
+void trigger_request_fileinfo();
 
 bool reprap_send_gcode(char *gcode_command);
 

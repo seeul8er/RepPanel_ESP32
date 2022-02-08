@@ -43,7 +43,7 @@ bool job_paused = false;
 int seq_num_msgbox = 0;
 int last_status_seq = -1;
 
-static bool uart_request_file_info = false;
+static bool request_file_info = false;
 
 #ifdef CONFIG_REPPANEL_RRF2_SUPPORT
 const char *decode_reprap2_status(const char *valuestring) {
@@ -693,54 +693,6 @@ void process_reprap_filelist(char *buffer) {
     cJSON_Delete(root);
 }
 
-void process_reprap_fileinfo(char *data_buff) {
-    cJSON *root = cJSON_ParseWithLength(data_buff, JSON_BUFF_SIZE);
-    if (root == NULL) {
-        const char *error_ptr = cJSON_GetErrorPtr();
-        if (error_ptr != NULL) {
-            ESP_LOGE(TAG, "Got %s", data_buff);
-            ESP_LOGE(TAG, "Error before: %s", error_ptr);
-        }
-        cJSON_Delete(root);
-        return;
-    }
-    cJSON *err_resp = cJSON_GetObjectItem(root, DUET_ERR);
-    if (err_resp && err_resp->valueint != 0) {     // maybe no active print
-        cJSON_Delete(root);
-        return;
-    }
-    cJSON *job_time_sim = cJSON_GetObjectItem(root, REPRAP_SIMTIME);
-    if (job_time_sim && cJSON_IsNumber(job_time_sim)) {
-        reprap_model.reprap_job.file.simulatedTime = job_time_sim->valueint;
-    } else {
-        reprap_model.reprap_job.file.simulatedTime = -1;
-    }
-
-    cJSON *job_print_time = cJSON_GetObjectItem(root, REPRAP_PRINTTIME);
-    if (job_print_time && cJSON_IsNumber(job_print_time)) {
-        reprap_model.reprap_job.file.printTime = job_print_time->valueint;
-    }
-
-    cJSON *job_name = cJSON_GetObjectItem(root, "fileName");
-    if (job_name && cJSON_IsString(job_name)) {
-        strncpy(reprap_model.reprap_job.file.fileName, &job_name->valuestring[10], MAX_LEN_FILENAME-1);
-    }
-
-    cJSON *job_height = cJSON_GetObjectItem(root, "height");
-    if (job_height && cJSON_IsNumber(job_height)) {
-        reprap_model.reprap_job.file.height = (float) job_height->valuedouble;
-    }
-    cJSON *job_first_layer_height = cJSON_GetObjectItem(root, "firstLayerHeight");
-    if (job_first_layer_height && cJSON_IsNumber(job_first_layer_height)) {
-        reprap_job_first_layer_height = job_first_layer_height->valuedouble;
-    }
-    cJSON *job_layer_height = cJSON_GetObjectItem(root, "layerHeight");
-    if (job_layer_height && cJSON_IsNumber(job_layer_height)) {
-        reprap_job_layer_height = job_layer_height->valuedouble;
-    }
-    cJSON_Delete(root);
-}
-
 void process_reprap_reply(wifi_response_buff_t *response_buffer) {
     if (response_buffer->buf_pos > 1) {
         if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 10) == pdTRUE) {
@@ -803,8 +755,8 @@ void reprap_uart_get_file_info(uart_response_buff_t *receive_buff) {
     sprintf(buff, "M36 \"%s\"", request_file_path);
     reprap_uart_send_gcode(buff);
     if (reppanel_read_response(receive_buff)) {
-        process_reprap_fileinfo((char *) receive_buff->buffer);
-        uart_request_file_info = false;
+        reppanel_parse_rr_fileinfo((char *) receive_buff->buffer, &reprap_model, sizeof(uart_response_buff_t));
+        request_file_info = false;
     }
 }
 
@@ -1229,7 +1181,7 @@ void reprap_wifi_get_fileinfo(wifi_response_buff_t *resp_data, char *filename) {
     if (err == ESP_OK) {
         switch (esp_http_client_get_status_code(client)) {
             case 200:
-                process_reprap_fileinfo(resp_data->buffer);
+                reppanel_parse_rr_fileinfo(resp_data->buffer, &reprap_model,JSON_BUFF_SIZE);
                 break;
             case 401:
                 //ESP_LOGI(TAG, "Authorising with Duet");
@@ -1392,16 +1344,24 @@ void request_macros(char *folder_path) {
  * @param file_name Path to file name on printer local storage. NULL in case you need file info of currently printed file
  */
 void request_fileinfo(char *file_name, wifi_response_buff_t *resp_buff) {
-    if (rp_conn_stat == REPPANEL_WIFI_CONNECTED) {
+    if (rp_conn_stat == REPPANEL_WIFI_CONNECTED && resp_buff != NULL) {
         ESP_LOGI(TAG, "Requesting file info");
         reprap_wifi_get_fileinfo(resp_buff, file_name);
     } else if (rp_conn_stat == REPPANEL_UART_CONNECTED) {
-        uart_request_file_info = true;
+        request_file_info = true;
         if (file_name != NULL)
             strncpy(request_file_path, file_name, sizeof(request_file_path)-1);
         else
             strcpy(request_file_path, "");
     }
+}
+
+/**
+ * Set request flag for file info of current job
+ */
+void trigger_request_fileinfo() {
+    request_file_info = true;
+    strcpy(request_file_path, "");
 }
 
 /**
@@ -1458,7 +1418,6 @@ void request_rrf3_extended_info(uart_response_buff_t *uart_receive_buff, wifi_re
     }
     if (reprap_model.reprap_seqs_changed.job_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "job", "d99vn");
-        request_fileinfo(NULL, wifi_resp_buff);
     }
     if (reprap_model.reprap_seqs_changed.inputs_changed) {
         request_rrf_status(uart_receive_buff, wifi_resp_buff, 2, "inputs", "d99vn");
@@ -1559,7 +1518,7 @@ void request_reprap_status_updates(void *params) {
                 }
             }
             if (!got_filaments) reprap_uart_get_filelist(uart_receive_buff, "0:/filaments");
-            if (uart_request_file_info) reprap_uart_get_file_info(uart_receive_buff);
+            if (request_file_info) reprap_uart_get_file_info(uart_receive_buff);
             if (duet_request_jobs) {
                 reprap_uart_get_filelist(uart_receive_buff, request_file_path);
                 duet_request_jobs = false;
@@ -1573,7 +1532,7 @@ void request_reprap_status_updates(void *params) {
                 request_rrf_status(uart_receive_buff, NULL, 2, "", "d99fn");
             else
                 request_rrf_status(uart_receive_buff, NULL, 4, "", "d99fn");
-            if (reprap_model.api_level >= 1) {
+            if (reprap_model.api_level > 0) {
                 request_rrf3_extended_info(uart_receive_buff, NULL);
             }
             if (i == 20) {
@@ -1605,6 +1564,10 @@ void request_reprap_status_updates(void *params) {
                 if (reprap_model.api_level < 1) {  // RRF2
                     if (!got_extended_status)
                         request_rrf_status(NULL, resp_buff_status_update_task, 2, "", "d99fn");
+                }
+                if (request_file_info) {
+                    reprap_wifi_get_fileinfo(resp_buff_status_update_task, NULL);
+                    request_file_info = false;
                 }
                 // for synchron request of jobs
                 if (duet_request_jobs) {

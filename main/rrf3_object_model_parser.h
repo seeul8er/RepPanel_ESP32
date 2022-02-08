@@ -25,3 +25,4 @@ void reppanel_parse_rrf_inputs(cJSON *input_result, cJSON *flags, reprap_model_t
 void reppanel_parse_rrf_global(cJSON *global_result, cJSON *flags, reprap_model_t *_reprap_model);
 void reppanel_parse_rrf_directories(cJSON *directories_result, cJSON *flags, reprap_model_t *_reprap_model);
 void reppanel_parse_rrf_seqs(cJSON *seqs_result, reprap_model_t *_reprap_model);
+void reppanel_parse_rr_fileinfo(char *json_response, reprap_model_t *_reprap_model, int buff_length);

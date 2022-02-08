@@ -142,7 +142,7 @@ static void job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
         lv_mbox_set_text(msg_box1, "Select action");
         lv_mbox_add_btns(msg_box1, btns);
         lv_mbox_set_recolor(msg_box1, true);
-        lv_obj_set_width(msg_box1, lv_disp_get_hor_res(NULL) - 30);
+        lv_obj_set_width(msg_box1, lv_disp_get_hor_res(NULL) - 15);
         lv_obj_set_event_cb(msg_box1, job_action_handler);
         lv_obj_align(msg_box1, lv_layer_top(), LV_ALIGN_CENTER, 0, 0);
     }

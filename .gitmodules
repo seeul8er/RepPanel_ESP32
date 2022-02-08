@@ -1,3 +1,6 @@
 [submodule "externals/lv_port_esp32"]
 	path = externals/lv_port_esp32
 	url = https://github.com/seeul8er/lv_port_esp32.git
+[submodule "externals/qoi"]
+	path = externals/qoi
+	url = https://github.com/phoboslab/qoi.git
