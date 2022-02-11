@@ -16,5 +16,7 @@ jobs:
       uses: actions/checkout@v2
       with:
         submodules: 'recursive'
+    - name: Setting ER-TFT configuration (HWv1)
+      run: cp sdkconfig_ERTFT_WIFI sdkconfig
     - name: esp-idf build
       uses: espressif/esp-idf-ci-action@release-v4.0
