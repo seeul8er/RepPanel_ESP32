@@ -745,7 +745,7 @@ void reprap_uart_get_status(uart_response_buff_t *receive_buff, int type, char *
     }
     reprap_uart_send_gcode(buff);
     if (reppanel_read_response(receive_buff)) {
-        ESP_LOGI(TAG, "%s", receive_buff->buffer);
+        ESP_LOGD(TAG, "%s", receive_buff->buffer);
         process_reprap_status((char *) receive_buff->buffer);
     }
 }

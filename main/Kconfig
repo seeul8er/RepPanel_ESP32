@@ -10,6 +10,11 @@ menu "RepPanel configuration"
         prompt "Enable WiFi. Connect to your 3D printer via WiFi."
         default y
 
+    config REPPANEL_ENABLE_QOI_THUMBNAIL_SUPPORT
+        bool
+        prompt "Enable RRF3.4+ Thumbnail support for the QOI file format."
+        default y
+
     config REPPANEL_ESP32_CONSOLE_ENABLED
         bool
         prompt "Enable RepPanel console for sending custom G-Code to the printer. Consumes additional RAM."

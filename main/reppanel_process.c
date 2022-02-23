@@ -126,10 +126,12 @@ void update_process_status_ui() {
 }
 
 void update_header_temp_ui() {
-    if (label_chamber_temp)
-        lv_label_set_text_fmt(label_chamber_temp, "%.1f°%c",
+    if (label_chamber_temp) {
+        lv_label_set_text_fmt(label_chamber_temp, "%.01f/%.01f°%c",
+                              reprap_bed.temp_buff[reprap_bed.temp_hist_curr_pos],
                               reprap_tools[current_visible_tool_indx].temp_buff[reprap_tools[current_visible_tool_indx].temp_hist_curr_pos],
                               get_temp_unit());
+    }
 }
 
 void update_next_tool_button_visibility() {

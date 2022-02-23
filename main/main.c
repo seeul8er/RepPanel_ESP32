@@ -25,6 +25,11 @@
 #include "rrf_objects.h"
 #include "screen_saver.h"
 
+#ifdef CONFIG_REPPANEL_ENABLE_QOI_THUMBNAIL_SUPPORT
+#define QOI_IMPLEMENTATION
+#define QOI_NO_STDIO
+#include "../externals/qoi/qoi.h"
+#endif
 
 #ifdef CONFIG_LVGL_TFT_DISPLAY_MONOCHROME
 #include "lv_theme_mono.h"
