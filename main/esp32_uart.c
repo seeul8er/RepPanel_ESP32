@@ -83,22 +83,21 @@ void reppanel_write_uart(char *buffer, int buffer_len) {
 /**
  * Read from UART - Timeout not really working!
  * @param receive_buff
- * @return
+ * @return -1 on error
  */
 int reppanel_read_uart(uart_response_buff_t *receive_buff) {
     if (uart_inited) {
         int length = 0;
         ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t *) &length));
-        if (length <= UART_RESP_BUFF_SIZE)
+        if (length <= (UART_RESP_BUFF_SIZE-receive_buff->buf_pos))
             length = uart_read_bytes(uart_num, &receive_buff->buffer[receive_buff->buf_pos], length,
                                      UART_READ_TIMEOUT / portTICK_RATE_MS);
         else {
-            ESP_LOGE(TAG, "UART response too big for buffer!");
-            length = uart_read_bytes(uart_num, &receive_buff->buffer[receive_buff->buf_pos], UART_RESP_BUFF_SIZE,
-                                     UART_READ_TIMEOUT / portTICK_RATE_MS);
+            ESP_LOGE(TAG, "UART response too big for buffer %i !", length);
+            return -1;
         }
         receive_buff->buf_pos += length;
-        ESP_LOGD(TAG, "Received %i", length);
+        if (length > 0) ESP_LOGD(TAG, "Received %i", length);
         return length;
     } else {
         ESP_LOGW(TAG, "UART not inited - skipping read UART");
@@ -119,7 +118,7 @@ void read_timeout() {
 /**
  * Read a response from Duet from UART and write it to the provided buffer
  * @param receive_buff Receiving buffer
- * @return False in case of read timeout or not inited UART, True in case of valid response
+ * @return False in case of read timeout or not inited UART or overflow, True in case of valid response
  */
 bool reppanel_read_response(uart_response_buff_t *receive_buff) {
     if (!uart_inited) {
@@ -136,7 +135,10 @@ bool reppanel_read_response(uart_response_buff_t *receive_buff) {
     // get complete response
     bool response_incomplete = true;
     do {
-        reppanel_read_uart(receive_buff);
+        if (reppanel_read_uart(receive_buff) == -1) return false;
+        if (receive_buff->buf_pos >= UART_RESP_BUFF_SIZE) {
+            ESP_LOGE(TAG, "UART response buffer with receive_buff->buf_pos/%i bytes overflowed", UART_RESP_BUFF_SIZE);
+        }
         gettimeofday(&tv_now, NULL);
         int64_t current_time_us = (int64_t) tv_now.tv_sec * 1000000L + (int64_t) tv_now.tv_usec;
         if (current_time_us - start_time_us > UART_RESP_TIMEOUT) {
@@ -144,22 +146,20 @@ bool reppanel_read_response(uart_response_buff_t *receive_buff) {
             ESP_LOGW(TAG, "UART_REPS_TIMEOUT - waited %i milliseconds", (int) (UART_RESP_TIMEOUT/1e3));
             return false;
         }
-        for (int i = 0; i < receive_buff->buf_pos; i++) {
-            if(receive_buff->buffer[i] == '\n') {
+
+        if (receive_buff->buf_pos > 0) {
+            if (receive_buff->buffer[receive_buff->buf_pos - 1] == '\n') {
                 response_incomplete = false;
             }
         }
     } while(response_incomplete && receive_buff->buf_pos < UART_RESP_BUFF_SIZE);
 
     if (receive_buff->buffer[receive_buff->buf_pos - 1] == '\n') {
-        ESP_LOGI(TAG, "Found new line char at %i", receive_buff->buf_pos - 1);
-    }
-    if (receive_buff->buf_pos >= UART_RESP_BUFF_SIZE) {
-        ESP_LOGW(TAG, "UART response buffer with %i bytes overflowed", UART_RESP_BUFF_SIZE);
+        ESP_LOGD(TAG, "Found new line char at %i", receive_buff->buf_pos - 1);
     }
     timeout_cnt = 0;
-    ESP_LOGI(TAG, "---> Response complete with %i bytes", receive_buff->buf_pos);
+    ESP_LOGD(TAG, "---> Response complete with %i bytes", receive_buff->buf_pos);
     receive_buff->buffer[receive_buff->buf_pos - 1] = '\0';   // replace new line with string end char to parse JSON
-    ESP_LOGI(TAG, "%s", receive_buff->buffer);
+    ESP_LOGD(TAG, "%s", receive_buff->buffer);
     return true;
 }
