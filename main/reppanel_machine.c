@@ -152,7 +152,7 @@ static void ack_msg_box_event(lv_obj_t *obj, lv_event_t event) {
             if (label_z_pos_cali)
                 lv_obj_del(label_z_pos_cali);
             label_z_pos_cali = 0;               // otherwise crash in update_ui
-            lv_obj_del(cont_heigh_adj_diag);
+            lv_obj_del(lv_obj_get_parent(lv_obj_get_parent(obj)));
             seq_num_msgbox = 0;    // RRF2 legacy: reset so we know msg GUI is not showing anymore - a little dirty...
         }
     }
@@ -160,7 +160,7 @@ static void ack_msg_box_event(lv_obj_t *obj, lv_event_t event) {
 
 static void nonblocking_close_msg_box_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
-        lv_obj_del_async(cont_heigh_adj_diag);
+        lv_obj_del_async(lv_obj_get_parent(lv_obj_get_parent(obj)));
     }
 }
 

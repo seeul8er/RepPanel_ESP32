@@ -756,7 +756,13 @@ void reprap_uart_get_file_info(uart_response_buff_t *receive_buff) {
     reprap_uart_send_gcode(buff);
     if (reppanel_read_response(receive_buff)) {
         reppanel_parse_rr_fileinfo((char *) receive_buff->buffer, &reprap_model, sizeof(uart_response_buff_t));
+        ESP_LOGI(TAG, "Received file info");
         request_file_info = false;
+        // update UI of file dialog msg box
+        if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
+            update_file_info_dialog_ui(&reprap_model);
+            xSemaphoreGive(xGuiSemaphore);
+        }
     }
 }
 
@@ -1153,13 +1159,13 @@ void reprap_wifi_get_filelist_task(void *params) {
 
 void reprap_wifi_get_fileinfo(wifi_response_buff_t *resp_data, char *filename) {
     char request_addr[MAX_REQ_ADDR_LENGTH];
-    if (filename != NULL) {
+    if (filename != NULL || strlen(filename) == 0) {
         char encoded_filename[strlen(filename) * 3];
         url_encode((unsigned char *) filename, encoded_filename);
         if (duet_sbc_mode) {
             sprintf(request_addr, "%s/machine/fileinfo/%s", rep_addr_resolved, encoded_filename);
         } else {
-            sprintf(request_addr, "%s/rr_fileinfo?dir=%s", rep_addr_resolved, encoded_filename);
+            sprintf(request_addr, "%s/rr_fileinfo?name=%s", rep_addr_resolved, encoded_filename);
         }
     } else {
         if (duet_sbc_mode) {
@@ -1182,19 +1188,23 @@ void reprap_wifi_get_fileinfo(wifi_response_buff_t *resp_data, char *filename) {
         switch (esp_http_client_get_status_code(client)) {
             case 200:
                 reppanel_parse_rr_fileinfo(resp_data->buffer, &reprap_model,JSON_BUFF_SIZE);
+                if (xGuiSemaphore != NULL && xSemaphoreTake(xGuiSemaphore, (TickType_t) 100) == pdTRUE) {
+                    update_file_info_dialog_ui(&reprap_model);
+                    xSemaphoreGive(xGuiSemaphore);
+                }
                 break;
             case 401:
                 //ESP_LOGI(TAG, "Authorising with Duet");
                 wifi_duet_authorise(resp_data);
                 break;
             case 500:
-                ESP_LOGE(TAG, "Generic error getting file info");
+                ESP_LOGE(TAG, "File info: Generic error getting file info");
                 break;
             case 502:
-                ESP_LOGE(TAG, "Incompatible DCS version");
+                ESP_LOGE(TAG, "File info: Incompatible DCS version");
                 break;
             case 503:
-                ESP_LOGE(TAG, "Fileinfo: DCS is unavailable");
+                ESP_LOGE(TAG, "File info: DCS is unavailable");
                 duet_sbc_mode = false;
                 break;
             default:
@@ -1349,7 +1359,7 @@ void request_fileinfo(char *file_name, wifi_response_buff_t *resp_buff) {
         reprap_wifi_get_fileinfo(resp_buff, file_name);
     } else if (rp_conn_stat == REPPANEL_UART_CONNECTED) {
         request_file_info = true;
-        if (file_name != NULL)
+        if (file_name != NULL || strlen(file_name) == 0)
             strncpy(request_file_path, file_name, sizeof(request_file_path)-1);
         else
             strcpy(request_file_path, "");
@@ -1359,9 +1369,17 @@ void request_fileinfo(char *file_name, wifi_response_buff_t *resp_buff) {
 /**
  * Set request flag for file info of current job
  */
-void trigger_request_fileinfo() {
+void trigger_request_fileinfo_curr_job() {
     request_file_info = true;
     strcpy(request_file_path, "");
+}
+
+/**
+ * Set request flag for file info of defined job
+ */
+void trigger_request_fileinfo(char *filepath) {
+    request_file_info = true;
+    strncpy(request_file_path, filepath, sizeof(request_file_path) - 1);
 }
 
 /**
@@ -1566,7 +1584,7 @@ void request_reprap_status_updates(void *params) {
                         request_rrf_status(NULL, resp_buff_status_update_task, 2, "", "d99fn");
                 }
                 if (request_file_info) {
-                    reprap_wifi_get_fileinfo(resp_buff_status_update_task, NULL);
+                    reprap_wifi_get_fileinfo(resp_buff_status_update_task, request_file_path);
                     request_file_info = false;
                 }
                 // for synchron request of jobs

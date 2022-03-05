@@ -9,6 +9,7 @@
 #include <esp_log.h>
 #include "reppanel.h"
 #include "reppanel_request.h"
+#include "rrf_objects.h"
 
 #define TAG             "JobSelect"
 #define CANCEL_BTN_TXT  "#ffffff Cancel#"
@@ -21,9 +22,9 @@
 #define BACK_TXT    "Back"
 
 lv_obj_t *jobs_list;
-lv_obj_t *msg_box1;
-lv_obj_t *msg_box2;
-lv_obj_t *msg_box3;
+lv_obj_t *msg_box1; // file info msg box
+lv_obj_t *msg_box2; // delete confirmation message box
+lv_obj_t *msg_box3; // print confirmation message box
 lv_obj_t *preloader;
 
 char parent_dir_jobs[MAX_LEN_DIRNAME + 1];
@@ -92,6 +93,27 @@ static void job_action_handler(lv_obj_t *obj, lv_event_t event) {
     }
 }
 
+void update_file_info_dialog_ui(reprap_model_t *_reprap_model) {
+    if (!msg_box1) return;
+    int print_time_h = (int) (_reprap_model->reprap_job.file.printTime / (60 * 60));
+    int print_time_min = (int) ((_reprap_model->reprap_job.file.printTime - (print_time_h * 60 * 60)) / 60);
+
+    int sim_time_h = 0, sim_time_min = 0;
+    if (_reprap_model->reprap_job.file.simulatedTime > 0) {
+        sim_time_h = (int) (_reprap_model->reprap_job.file.simulatedTime / (60 * 60));
+        sim_time_min = (int) ((_reprap_model->reprap_job.file.simulatedTime - (sim_time_h * 60 * 60)) / 60);
+    }
+    static char mbox_txt[128];
+    sprintf(mbox_txt, "Print time: %ih %imin\n"
+                      "Simulated time: %ih %imin\n"
+                      "Height: %.2fmm\n"
+                      "Filament usage: %.2fmm",
+                      print_time_h, print_time_min, sim_time_h, sim_time_min, _reprap_model->reprap_job.file.height,
+                      _reprap_model->reprap_job.file.overall_filament_usage);
+    ESP_LOGI(TAG, "Updating file info dialog");
+    lv_mbox_set_text(msg_box1, mbox_txt);
+}
+
 static void job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
     int selected_indx = lv_list_get_btn_index(jobs_list, obj);
     // check if back button exists
@@ -136,7 +158,12 @@ static void job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
             ESP_LOGW(TAG, "Selected unknown file tree element -> Index: %i - Type: %i - Name: %s - Dir: %s", selected_indx,
                      reprap_dir_elem[selected_indx].type, reprap_dir_elem[selected_indx].name, reprap_dir_elem[selected_indx].dir);
         }
-    } else if (event == LV_EVENT_LONG_PRESSED && reprap_dir_elem[selected_indx].type == TREE_FILE_ELEM) {
+    } else if (event == LV_EVENT_LONG_PRESSED && reprap_dir_elem[selected_indx].type == TREE_FILE_ELEM) {   // file info dialog
+        // request file info
+        char tmp_txt[strlen(edit_job->dir) + strlen(edit_job->name) + 2];
+        sprintf(tmp_txt, "%s/%s", edit_job->dir, edit_job->name);
+        trigger_request_fileinfo(tmp_txt);
+        // build UI
         static const char *btns[] = {SIM_BTN_TXT, PRINT_BTN_TXT, DELETE_BTN_TXT, CANCEL_BTN_TXT, ""};
         msg_box1 = lv_mbox_create(lv_layer_top(), NULL);
         lv_mbox_set_text(msg_box1, "Select action");
@@ -144,7 +171,7 @@ static void job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
         lv_mbox_set_recolor(msg_box1, true);
         lv_obj_set_width(msg_box1, lv_disp_get_hor_res(NULL) - 15);
         lv_obj_set_event_cb(msg_box1, job_action_handler);
-        lv_obj_align(msg_box1, lv_layer_top(), LV_ALIGN_CENTER, 0, 0);
+        lv_obj_align(msg_box1, lv_layer_top(), LV_ALIGN_IN_TOP_MID, 0, 50);
     }
 }
 

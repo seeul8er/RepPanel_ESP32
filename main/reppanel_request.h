@@ -39,7 +39,9 @@ void request_jobs(char *folder_path);
 
 void request_jobs_async(char *folder_path);
 
-void trigger_request_fileinfo();
+void trigger_request_fileinfo_curr_job();
+
+void trigger_request_fileinfo(char *filepath);
 
 bool reprap_send_gcode(char *gcode_command);
 

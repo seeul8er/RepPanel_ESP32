@@ -294,7 +294,7 @@ void draw_jobstatus(lv_obj_t *parent_screen) {
     lv_obj_align(button_job_stop, jobstatus_page, LV_ALIGN_IN_BOTTOM_RIGHT, -84, -30);
 
 #ifdef CONFIG_REPPANEL_RRF2_SUPPORT
-    if (reprap_model.api_level < 1) trigger_request_fileinfo();
+    if (reprap_model.api_level < 1) trigger_request_fileinfo_curr_job();
 #endif
     update_print_job_status_ui();
 }
