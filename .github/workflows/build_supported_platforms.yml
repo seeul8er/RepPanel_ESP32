@@ -1,4 +1,4 @@
-name: Build RepPanel ER-TFT ILI9488
+name: Build RepPanel for all HW platforms
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  build_ER-TFT:
 
     runs-on: ubuntu-latest
 
@@ -17,6 +17,20 @@ jobs:
       with:
         submodules: 'recursive'
     - name: Setting ER-TFT configuration (HWv1)
-      run: cp sdkconfig_ERTFT_WIFI sdkconfig
+      run: cp sdkconfig_ERTFT_WIFI_esp_idf_40 sdkconfig
     - name: esp-idf build
       uses: espressif/esp-idf-ci-action@release-v4.0
+
+  build_HWv2:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+      - name: Setting ER-TFT configuration (HWv2)
+        run: cp sdkconfig_HWv2_esp_idf_43 sdkconfig
+      - name: esp-idf build
+        uses: espressif/esp-idf-ci-action@release-v4.3
