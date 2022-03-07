@@ -14,7 +14,9 @@
 #include "esp32_wifi.h"
 #include "reppanel_macros.h"
 #include "reppanel_jobstatus.h"
+#ifdef CONFIG_REPPANEL_ESP32_CONSOLE_ENABLED
 #include "reppanel_console.h"
+#endif
 #include "reppanel_jobselect.h"
 #include "rrf_objects.h"
 #include <stdio.h>
@@ -176,9 +178,9 @@ void draw_header(lv_obj_t *parent_screen) {
     lv_cont_set_fit(cont_header_right, LV_FIT_TIGHT);
     lv_cont_set_layout(cont_header_right, LV_LAYOUT_ROW_M);
 #ifdef CONFIG_REPPANEL_ESP32_CONSOLE_ENABLED
-    lv_obj_align(cont_header_right, cont_header, LV_ALIGN_IN_TOP_RIGHT, -130, 12);
+    lv_obj_align(cont_header_right, cont_header, LV_ALIGN_IN_TOP_RIGHT, -130-60, 12);
 #else
-    lv_obj_align(cont_header_right, cont_header, LV_ALIGN_IN_TOP_RIGHT, -98, 12);
+    lv_obj_align(cont_header_right, cont_header, LV_ALIGN_IN_TOP_RIGHT, -98-60, 12);
 #endif
 
     lv_obj_t *click_cont = lv_cont_create(cont_header_right, NULL);
@@ -193,7 +195,8 @@ void draw_header(lv_obj_t *parent_screen) {
     lv_img_set_src(img_chamber_tmp, &chamber_tmp);
 
     label_chamber_temp = lv_label_create(cont_header_right, NULL);
-    lv_label_set_text_fmt(label_chamber_temp, "%.01f°%c",
+    lv_label_set_text_fmt(label_chamber_temp, "%.01f/%.01f°%c",
+                          reprap_bed.temp_buff[reprap_bed.temp_hist_curr_pos],
                           reprap_tools[current_visible_tool_indx].temp_buff[reprap_tools[current_visible_tool_indx].temp_hist_curr_pos],
                           get_temp_unit());
 

@@ -21,8 +21,8 @@ reprap_axes_t reprap_axes;
 reprap_params_t reprap_params;
 
 static lv_style_t not_homed_style, homed_style;
-static char *cali_opt_map[] = {"True Bed Leveling", "Mesh Bed Leveling"};
-static char *cali_opt_list = {"True Bed Leveling\nMesh Bed Leveling"};
+static const char * yes_no_btns[] ={"Yes", "No", ""};
+lv_obj_t *mbox_mbl, *mbox_tbl;
 
 #define AWAY_BTN    0
 #define CLOSER_BTN  1
@@ -152,7 +152,7 @@ static void ack_msg_box_event(lv_obj_t *obj, lv_event_t event) {
             if (label_z_pos_cali)
                 lv_obj_del(label_z_pos_cali);
             label_z_pos_cali = 0;               // otherwise crash in update_ui
-            lv_obj_del(cont_heigh_adj_diag);
+            lv_obj_del(lv_obj_get_parent(lv_obj_get_parent(obj)));
             seq_num_msgbox = 0;    // RRF2 legacy: reset so we know msg GUI is not showing anymore - a little dirty...
         }
     }
@@ -160,7 +160,7 @@ static void ack_msg_box_event(lv_obj_t *obj, lv_event_t event) {
 
 static void nonblocking_close_msg_box_event(lv_obj_t *obj, lv_event_t event) {
     if (event == LV_EVENT_CLICKED) {
-        lv_obj_del_async(cont_heigh_adj_diag);
+        lv_obj_del_async(lv_obj_get_parent(lv_obj_get_parent(obj)));
     }
 }
 
@@ -278,26 +278,62 @@ void show_reprap_dialog(char *title, char *msg, const uint8_t mode, bool show_he
     lv_obj_align_origo(cont_heigh_adj_diag, lv_layer_top(), LV_ALIGN_CENTER, 0, 0);
 }
 
-static void start_cali_event(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_CLICKED) {
-        char val_txt_buff[50];
-        lv_ddlist_get_selected_str(ddlist_cali_options, val_txt_buff, 50);
-        if (strcmp(val_txt_buff, cali_opt_map[0]) == 0) {
+static void tbl_event_handler(lv_obj_t * obj, lv_event_t event) {
+    if(event == LV_EVENT_VALUE_CHANGED && obj == mbox_tbl) {
+        if (strcmp(lv_mbox_get_active_btn_text(obj), "Yes") == 0) {
             ESP_LOGI(TAG, "True Bed Leveling");
             reprap_send_gcode("G32");
-        } else if (strcmp(val_txt_buff, cali_opt_map[1]) == 0) {
+        }
+        lv_mbox_start_auto_close(mbox_tbl, 0);
+    } else if (event == LV_EVENT_DELETE && obj == mbox_tbl) {
+        /* Delete the parent modal background */
+        lv_obj_del_async(mbox_tbl);
+        mbox_tbl = NULL; /* happens before object is actually deleted! */
+    }
+}
+
+static void true_bed_leveling_event(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
+        mbox_tbl = lv_mbox_create(lv_layer_top(), NULL);
+        lv_mbox_set_text(mbox_tbl, "Do you really want to start true bed leveling now?");
+        lv_mbox_add_btns(mbox_tbl, yes_no_btns);
+        lv_obj_set_width(mbox_tbl, 350);
+        lv_obj_set_event_cb(mbox_tbl, tbl_event_handler);
+        lv_obj_align(mbox_tbl, NULL, LV_ALIGN_CENTER, 0, 0); /*Align to the corner*/
+    }
+}
+
+static void mbl_event_handler(lv_obj_t * obj, lv_event_t event) {
+    if(event == LV_EVENT_VALUE_CHANGED) {
+        if (strcmp(lv_mbox_get_active_btn_text(obj), "Yes") == 0) {
             ESP_LOGI(TAG, "Mesh Bed Leveling");
             reprap_send_gcode("G29");
         }
+        lv_mbox_start_auto_close(mbox_mbl, 0);
+    } else if (event == LV_EVENT_DELETE && obj == mbox_mbl) {
+        /* Delete the parent modal background */
+        lv_obj_del_async(mbox_mbl);
+        mbox_mbl = NULL; /* happens before object is actually deleted! */
+    }
+}
+
+static void mesh_bed_leveling_event(lv_obj_t *obj, lv_event_t event) {
+    if (event == LV_EVENT_CLICKED) {
+        mbox_mbl = lv_mbox_create(lv_layer_top(), NULL);
+        lv_mbox_set_text(mbox_mbl, "Do you really want to start mesh bed leveling now?");
+        lv_mbox_add_btns(mbox_mbl, yes_no_btns);
+        lv_obj_set_width(mbox_mbl, 350);
+        lv_obj_set_event_cb(mbox_mbl, mbl_event_handler);
+        lv_obj_align(mbox_mbl, NULL, LV_ALIGN_CENTER, 0, 0); /*Align to the corner*/
     }
 }
 
 void update_ui_machine() {
-    if (visible_screen != REPPANEL_MACHINE_SCREEN) return;
     portMUX_TYPE mutex = portMUX_INITIALIZER_UNLOCKED;
     portENTER_CRITICAL(&mutex); // not sure this really helps?!
-    if (label_z_pos_cali && machine_page) lv_label_set_text_fmt(label_z_pos_cali, "%.02f mm", reprap_axes.axes[2]);
+    if (label_z_pos_cali) lv_label_set_text_fmt(label_z_pos_cali, "%.02f mm", reprap_axes.axes[2]);
     portEXIT_CRITICAL(&mutex);
+    if (visible_screen != REPPANEL_MACHINE_SCREEN) return;
 
     if (btn_home_x && machine_page) {
         if (reprap_axes.homed[0])
@@ -362,15 +398,11 @@ void draw_machine(lv_obj_t *parent_screen) {
     lv_cont_set_fit(cont_cali, LV_FIT_TIGHT);
     lv_cont_set_layout(cont_cali, LV_LAYOUT_ROW_M);
 
-    ddlist_cali_options = lv_ddlist_create(cont_cali, NULL);
-    lv_ddlist_set_options(ddlist_cali_options, cali_opt_list);
-    lv_ddlist_set_draw_arrow(ddlist_cali_options, true);
-    lv_ddlist_set_fix_height(ddlist_cali_options, 110);
-    lv_ddlist_set_sb_mode(ddlist_cali_options, LV_SB_MODE_AUTO);
-    lv_ddlist_set_fix_width(ddlist_cali_options, 300);
+    static lv_obj_t *true_bed_leveling_butn;
+    create_button(cont_cali, true_bed_leveling_butn, "True Bed Leveling", true_bed_leveling_event);
 
-    static lv_obj_t *do_cali_butn;
-    create_button(cont_cali, do_cali_butn, "Start", start_cali_event);
+    static lv_obj_t *mesh_bed_leveling_butn;
+    create_button(cont_cali, mesh_bed_leveling_butn, "Mesh Bed Leveling", mesh_bed_leveling_event);
 
     lv_obj_t *power_cont = lv_cont_create(machine_page, NULL);
     lv_cont_set_layout(power_cont, LV_LAYOUT_ROW_M);

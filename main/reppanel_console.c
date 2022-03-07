@@ -2,6 +2,8 @@
 // Copyright (c) 2020 Wolfgang Christl
 // Licensed under Apache License, Version 2.0 - https://opensource.org/licenses/Apache-2.0
 
+#ifdef CONFIG_REPPANEL_ESP32_CONSOLE_ENABLED
+
 #include <stdio.h>
 #include <lvgl/src/lv_objx/lv_cont.h>
 #include <lvgl/lvgl.h>
@@ -147,7 +149,7 @@ void add_console_hist_entry(char *command, enum console_msg_type type) {
     } else
         pos_newest_entry = 0;
     console_entry_t e = {.command = "", .type = type};
-    strncpy(e.command, command, MAX_LEN_COMMAND);
+    strlcpy(e.command, command, sizeof(e.command));
     console_enties[pos_newest_entry] = e;
 }
 
@@ -184,3 +186,4 @@ void draw_console(lv_obj_t *parent_screen) {
 
     update_entries_ui();
 }
+#endif

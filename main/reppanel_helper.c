@@ -10,7 +10,9 @@
 #include <ctype.h>
 #include "esp32_settings.h"
 #include "reppanel.h"
+#ifdef CONFIG_REPPANEL_ESP32_CONSOLE_ENABLED
 #include "reppanel_console.h"
+#endif
 
 char html5[256] = {0};
 bool encoding_inited = false;
@@ -63,9 +65,11 @@ void init_reprap_buffers() {
     for (int i = 0; i < MAX_NUM_ELEM_DIR; i++) {
         reprap_dir_elem[i].type = TREE_EMPTY_ELEM;
     }
+#ifdef CONFIG_REPPANEL_ESP32_CONSOLE_ENABLED
     for (int i = 0; i < MAX_CONSOLE_ENTRY_COUNT; i++) {
         console_enties[i] = (console_entry_t) {"", CONSOLE_TYPE_EMPTY};
     }
+#endif
 
     reprap_tool_poss_temps.temps_active[0] = -1;
     memset(&reprap_axes, 0, sizeof (reprap_axes_t));

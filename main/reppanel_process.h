@@ -13,7 +13,10 @@ void update_heater_status_ui(const int *states, int _num_heaters);
 
 void update_bed_temps_ui();
 
-void update_current_tool_temps_ui();
+void update_process_status_ui();
+
+void update_header_temp_ui();
+
 
 extern lv_obj_t *label_bed_temp_active;
 extern lv_obj_t *label_bed_temp_standby;

@@ -109,8 +109,11 @@ void update_bed_temps_ui() {
         lv_label_set_text_fmt(label_bed_temp_standby, "%.0f°%c", reprap_bed.standby_temp, get_temp_unit());
 }
 
-void update_current_tool_temps_ui() {
+void update_process_status_ui() {
     if (visible_screen != REPPANEL_PROCESS_SCREEN) return;
+    if (label_extruder_name) {
+        lv_label_set_text(label_extruder_name, reprap_tools[current_visible_tool_indx].name);
+    }
     if (label_tool_temp != NULL) {
         lv_label_set_text_fmt(label_tool_temp, "%.1f°%c",
                               reprap_tools[current_visible_tool_indx].temp_buff[reprap_tools[current_visible_tool_indx].temp_hist_curr_pos],
@@ -120,10 +123,15 @@ void update_current_tool_temps_ui() {
         lv_label_set_text_fmt(label_tool_temp_standby, "%.0f°%c", reprap_tools[current_visible_tool_indx].standby_temp,
                               get_temp_unit());
     }
-    if (label_chamber_temp != NULL)
-        lv_label_set_text_fmt(label_chamber_temp, "%.1f°%c",
+}
+
+void update_header_temp_ui() {
+    if (label_chamber_temp) {
+        lv_label_set_text_fmt(label_chamber_temp, "%.01f/%.01f°%c",
+                              reprap_bed.temp_buff[reprap_bed.temp_hist_curr_pos],
                               reprap_tools[current_visible_tool_indx].temp_buff[reprap_tools[current_visible_tool_indx].temp_hist_curr_pos],
                               get_temp_unit());
+    }
 }
 
 void update_next_tool_button_visibility() {
@@ -274,28 +282,28 @@ static void change_tmp_event_handler(lv_obj_t *obj, lv_event_t event) {
             switch ((int) (lv_obj_user_data_t) obj->user_data) {
                 case BTN_BED_TMP_ACTIVE:
                     lv_label_set_text(label_bed_temp_active, val_txt_buff);
-                    strncpy(char_temp_only, val_txt_buff, 6);
+                    strlcpy(char_temp_only, val_txt_buff, sizeof(char_temp_only));
                     char_temp_only[strlen(val_txt_buff) - 3] = '\0';     // cut off °C/F
                     sprintf(gcode_buff, "M140 P%i S%s", reprap_bed.heater_indx, char_temp_only);
                     reprap_send_gcode(gcode_buff);
                     break;
                 case BTN_BED_TMP_STANDBY:
                     lv_label_set_text(label_bed_temp_standby, val_txt_buff);
-                    strncpy(char_temp_only, val_txt_buff, 6);
+                    strlcpy(char_temp_only, val_txt_buff, sizeof(char_temp_only));
                     char_temp_only[strlen(val_txt_buff) - 3] = '\0';     // cut off °C/F
                     sprintf(gcode_buff, "M140 P%i R%s", reprap_bed.heater_indx, char_temp_only);
                     reprap_send_gcode(gcode_buff);
                     break;
                 case BTN_TOOL_TMP_ACTIVE:
                     lv_label_set_text(label_tool_temp_active, val_txt_buff);
-                    strncpy(char_temp_only, val_txt_buff, 6);
+                    strlcpy(char_temp_only, val_txt_buff, sizeof(char_temp_only));
                     char_temp_only[strlen(val_txt_buff) - 3] = '\0';     // cut off °C/F
                     sprintf(gcode_buff, "G10 P%i S%s", reprap_tools[current_visible_tool_indx].number, char_temp_only);
                     reprap_send_gcode(gcode_buff);
                     break;
                 case BTN_TOOL_TMP_STANDBY:
                     lv_label_set_text(label_tool_temp_standby, val_txt_buff);
-                    strcpy(char_temp_only, val_txt_buff);
+                    strlcpy(char_temp_only, val_txt_buff, sizeof(char_temp_only));
                     char_temp_only[strlen(val_txt_buff) - 3] = '\0';     // cut off °C/F
                     sprintf(gcode_buff, "G10 P%i R%s", reprap_tools[current_visible_tool_indx].number, char_temp_only);
                     reprap_send_gcode(gcode_buff);

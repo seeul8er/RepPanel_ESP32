@@ -1,0 +1,13 @@
+{
+  "err": 0,
+  "size": 46357299,
+  "lastModified": "2022-01-25T20:49:30",
+  "height": 300.00,
+  "firstLayerHeight": 0.20,
+  "layerHeight": 0.20,
+  "printTime": 76773,
+  "filament": [
+    310244.8
+  ],
+  "generatedBy": "SuperSlicer 2.3.57 on 2022-01-25 at 19:49:05 UTC"
+}
