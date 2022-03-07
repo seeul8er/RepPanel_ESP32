@@ -29,7 +29,7 @@ extern "C" {
 #define REPPANEL_UART_CONNECTED     5
 
 #define VERSION_MAJOR           1
-#define VERSION_MINOR           3
+#define VERSION_MINOR           4
 #define VERSION_HOTFIX          0
 
 #define NUM_TEMPS_BUFF      15
