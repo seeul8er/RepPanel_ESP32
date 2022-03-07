@@ -38,7 +38,7 @@ void send_print_command() {
 }
 
 static void print_file_handler(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_CLICKED) {
+    if (event == LV_EVENT_VALUE_CHANGED) {
         if (strcmp(lv_mbox_get_active_btn_text(msg_box3), "Yes") == 0) {
             send_print_command();
             lv_obj_del_async(msg_box3);
@@ -50,7 +50,7 @@ static void print_file_handler(lv_obj_t *obj, lv_event_t event) {
 }
 
 static void delete_file_handler(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_CLICKED) {
+    if (event == LV_EVENT_VALUE_CHANGED) {
         if (strcmp(lv_mbox_get_active_btn_text(msg_box2), "Yes") == 0) {
             ESP_LOGI(TAG, "Deleting %s", edit_job->name);
             char tmp_txt[strlen(edit_job->dir) + strlen(edit_job->name) + 10];
@@ -66,7 +66,7 @@ static void delete_file_handler(lv_obj_t *obj, lv_event_t event) {
 }
 
 static void job_action_handler(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_CLICKED) {
+    if (event == LV_EVENT_VALUE_CHANGED) {
         if (strcmp(lv_mbox_get_active_btn_text(msg_box1), CANCEL_BTN_TXT) == 0) {
             ESP_LOGI(TAG, "Close window. No action");
             lv_obj_del_async(msg_box1);
@@ -99,6 +99,7 @@ void update_file_info_dialog_ui(reprap_model_t *_reprap_model) {
     int print_time_min = (int) ((_reprap_model->reprap_job.file.printTime - (print_time_h * 60 * 60)) / 60);
 
     int sim_time_h = 0, sim_time_min = 0;
+    ESP_LOGI(TAG, "Simulated time %i", _reprap_model->reprap_job.file.simulatedTime);
     if (_reprap_model->reprap_job.file.simulatedTime > 0) {
         sim_time_h = (int) (_reprap_model->reprap_job.file.simulatedTime / (60 * 60));
         sim_time_min = (int) ((_reprap_model->reprap_job.file.simulatedTime - (sim_time_h * 60 * 60)) / 60);
@@ -166,7 +167,7 @@ static void job_clicked_event_handler(lv_obj_t *obj, lv_event_t event) {
         // build UI
         static const char *btns[] = {SIM_BTN_TXT, PRINT_BTN_TXT, DELETE_BTN_TXT, CANCEL_BTN_TXT, ""};
         msg_box1 = lv_mbox_create(lv_layer_top(), NULL);
-        lv_mbox_set_text(msg_box1, "Select action");
+        lv_mbox_set_text(msg_box1, "Loading Job Information...");
         lv_mbox_add_btns(msg_box1, btns);
         lv_mbox_set_recolor(msg_box1, true);
         lv_obj_set_width(msg_box1, lv_disp_get_hor_res(NULL) - 15);

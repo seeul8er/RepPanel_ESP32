@@ -21,7 +21,7 @@ file_tree_elem_t *edit_macro;
 char parent_dir_macros[MAX_LEN_DIRNAME + 1];
 
 static void exe_macro_file_handler(lv_obj_t *obj, lv_event_t event) {
-    if (event == LV_EVENT_CLICKED) {
+    if (event == LV_EVENT_VALUE_CHANGED) {
         if (strcmp(lv_mbox_get_active_btn_text(msg_box3), "Yes") == 0) {
             ESP_LOGI(TAG, "Running file %s", lv_list_get_btn_text(obj));
             char tmp_txt[strlen(edit_macro->dir) + strlen(edit_macro->name) + 10];

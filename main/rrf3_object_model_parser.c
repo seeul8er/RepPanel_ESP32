@@ -150,7 +150,7 @@ void reppanel_parse_file_info(cJSON *root, reprap_model_t *_reprap_model) {
     if (val && cJSON_IsNumber(val)) {
         _reprap_model->reprap_job.file.simulatedTime = val->valueint;
     } else {
-        _reprap_model->reprap_job.file.simulatedTime = -1;
+        _reprap_model->reprap_job.file.simulatedTime = 0;
     }
     val = cJSON_GetObjectItemCaseSensitive(root, "printTime");
     if (val && cJSON_IsNumber(val)) { _reprap_model->reprap_job.file.printTime = val->valueint; }
@@ -159,7 +159,7 @@ void reppanel_parse_file_info(cJSON *root, reprap_model_t *_reprap_model) {
     cJSON *filament_usage = NULL;
     reprap_model.reprap_job.file.overall_filament_usage = 0;
     cJSON_ArrayForEach(filament_usage, val) {
-        reprap_model.reprap_job.file.overall_filament_usage += val->valuedouble;
+        reprap_model.reprap_job.file.overall_filament_usage += filament_usage->valuedouble;
     }
     cJSON *job_thumbnails = cJSON_GetObjectItem(root, "thumbnails");
     if (job_thumbnails && cJSON_IsArray(job_thumbnails)) {

@@ -17,20 +17,23 @@
 #include "main.h"
 #include "reppanel_macros.h"
 #include "reppanel_jobselect.h"
+#ifdef CONFIG_REPPANEL_ESP32_CONSOLE_ENABLED
 #include "reppanel_console.h"
+#endif
 #include "reppanel_machine.h"
 #include "esp32_uart.h"
 #include "esp32_wifi.h"
 #include "rrf3_object_model_parser.h"
 #include "rrf_objects.h"
 
-#define TAG                 "RequestTask"
-#define REQUEST_TIMEOUT_MS  150
+#define TAG                         "RequestTask"
+#define REQUEST_TIMEOUT_MS          50
+#define REQUEST_TIMEOUT_FILEINFO_MS 1500    // getting the file info may take very long for the duet
 
 EXT_RAM_ATTR file_tree_elem_t reprap_dir_elem[MAX_NUM_ELEM_DIR];    // put it to the external PSRAM
 static char request_file_path[512];
 
-char rep_addr_resolved[256];
+char rep_addr_resolved[512];
 
 static bool got_filaments = false;
 static bool got_extended_status = false;
@@ -1177,7 +1180,7 @@ void reprap_wifi_get_fileinfo(wifi_response_buff_t *resp_data, char *filename) {
     ESP_LOGI(TAG, "Getting file info %s", request_addr);
     esp_http_client_config_t config = {
             .url = request_addr,
-            .timeout_ms = REQUEST_TIMEOUT_MS,
+            .timeout_ms = REQUEST_TIMEOUT_FILEINFO_MS,
             .event_handler = http_event_handle,
             .user_data = resp_data,
     };

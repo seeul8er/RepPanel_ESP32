@@ -14,7 +14,9 @@
 #include "esp32_wifi.h"
 #include "reppanel_macros.h"
 #include "reppanel_jobstatus.h"
+#ifdef CONFIG_REPPANEL_ESP32_CONSOLE_ENABLED
 #include "reppanel_console.h"
+#endif
 #include "reppanel_jobselect.h"
 #include "rrf_objects.h"
 #include <stdio.h>

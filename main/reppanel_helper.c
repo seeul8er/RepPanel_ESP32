@@ -10,7 +10,6 @@
 #include <ctype.h>
 #include "esp32_settings.h"
 #include "reppanel.h"
-
 #ifdef CONFIG_REPPANEL_ESP32_CONSOLE_ENABLED
 #include "reppanel_console.h"
 #endif
