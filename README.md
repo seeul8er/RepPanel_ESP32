@@ -1,5 +1,9 @@
 # RepPanel
 
+## New Version HWv2 available
+[Check out the new version RepPanel HWv2 for RepRap-based 3D Printers! Improved performance with ready to flash hardware from your local supplier.](www.reppanel.com)
+
+## Older HWv1 version
 A simple user interface for Duet/RepRap based 3D printers. Optimized for 3.5" touch
 panels controlled via SPI & I²C using an ESP32.
 
@@ -13,7 +17,6 @@ An open source alternative to the PanelDue.
   - Wireless connection - portable with power bar
   - PanelDue-port/UART connection
 
-## [I am interested in buying a RepPanel all-in-one module (no DIY)](https://docs.google.com/forms/d/e/1FAIpQLSc41e0SKuG6xnuFPz0I5em8UYw0sTvzpZe8-aQhP_QksgwWyg/viewform)
 The all-in-one module is currently not available but you can give me an idea on how much interest there is. The module will be ready to use and thinner than a DIY solution. It includes a custom board, display and more capable ESP32 (more storage for directory listings etc.). I would try to get the price somewhere ~50-60€ + shipping from Germany. Click the link above and enter your email to get notified when a module becomes available. Thanks!
 
 ![RepPanel main menu](wiki/RepPanel_Main.png)
