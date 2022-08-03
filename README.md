@@ -1,7 +1,7 @@
 # RepPanel
 
 ## New Version HWv2 available
-[Check out the new version RepPanel HWv2 for RepRap-based 3D Printers! Improved performance with ready to flash hardware from your local supplier.](www.reppanel.com)
+[Check out the new version RepPanel HWv2 for RepRap-based 3D Printers! Improved performance with ready to flash hardware from your local supplier.](https://reppanel.com)
 
 ## Older HWv1 version
 A simple user interface for Duet/RepRap based 3D printers. Optimized for 3.5" touch
